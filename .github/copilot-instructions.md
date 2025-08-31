@@ -41,5 +41,6 @@ The tool will query the GitLab API and calculate metrics that the VP of Engineer
 - For environement variable use the .env file
 - Assume your scripts are running on windows and powershell.
 - Inject environment variable powershell style
+- Always generate docstrings for methods, functions, modules and classes and everything.
 
 Start by scaffolding the project structure with clear TODOs, then progressively implement the GitLab API clients and metric calculations.
