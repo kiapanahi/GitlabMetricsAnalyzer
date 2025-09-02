@@ -6,8 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsAspireHost>true</IsAspireHost>
-    <UserSecretsId>87776e45-0f3f-40db-915d-da46a091dc52</UserSecretsId>
+    <UserSecretsId>dd8d59f1-13ee-4ea3-980e-26a3205c4e7f</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Toman.Management.KPIAnalysis.ApiService\Toman.Management.KPIAnalysis.ApiService.csproj" />
+    <ProjectReference Include="..\Toman.Management.KPIAnalysis.Web\Toman.Management.KPIAnalysis.Web.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="8.2.2" />
