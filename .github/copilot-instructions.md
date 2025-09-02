@@ -44,3 +44,10 @@ The tool will query the GitLab API and calculate metrics that the VP of Engineer
 - Always generate docstrings for methods, functions, modules and classes and everything.
 
 Start by scaffolding the project structure with clear TODOs, then progressively implement the GitLab API clients and metric calculations.
+
+## Git
+
+- Always write clear and concise commit messages.
+- Always adhere to 50/72 rule for line length.
+- Use feature branches for new features or bug fixes.
+- Regularly pull changes from the main branch to keep your branch up to date.
