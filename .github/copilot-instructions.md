@@ -1,9 +1,10 @@
-You are building a tool to measure engineering delivery speed metrics using GitLab data. 
-The tool will query the GitLab API and calculate metrics that the VP of Engineering can use to track delivery performance. 
+You are building a tool to measure engineering delivery speed metrics using GitLab data.
+
+The tool will query the GitLab API and calculate metrics that the VP of Engineering can use to track delivery performance.
 
 ## Context
 - Source of truth: GitLab repositories, merge requests, commits, and pipelines
-- Programming language: Python
+- Programming language: C#, Python
 - Stack: pandas for processing, and optional ClickHouse/Postgres for storage
 
 ## Required Features
@@ -37,13 +38,20 @@ The tool will query the GitLab API and calculate metrics that the VP of Engineer
 
 ## Coding style
 
+### Python
+
 - Always make sure theres a python virtual environment activated at `.venv`
 - For environement variable use the .env file
 - Assume your scripts are running on windows and powershell.
 - Inject environment variable powershell style
 - Always generate docstrings for methods, functions, modules and classes and everything.
 
-Start by scaffolding the project structure with clear TODOs, then progressively implement the GitLab API clients and metric calculations.
+### .NET and C#
+
+- Use the latest .NET and C# language features.
+- Follow the SOLID principles for object-oriented design.
+- Use asynchronous programming patterns where appropriate.
+- Add comprehensive logs and traces.
 
 ## Git
 
