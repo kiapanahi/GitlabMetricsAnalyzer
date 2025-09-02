@@ -29,8 +29,8 @@ Outputs
 Metrics
 -------
 Per pipeline:
-- Status, timestamps, duration (sec) [API duration or finished − started]
-- Mean queue time (sec) across jobs [queued_duration or started − created]
+- Status, timestamps, duration (sec) [API duration or finished - started]
+- Mean queue time (sec) across jobs [queued_duration or started - created]
 - Job outcome counts (success/failed/canceled/skipped)
 
 Per stage:
@@ -182,7 +182,7 @@ class GitLab:
 
 
 def compute_job_queue_seconds(job: dict) -> Optional[float]:
-    """Compute a job's queue time in seconds using queued_duration or started − created."""
+    """Compute a job's queue time in seconds using queued_duration or started - created."""
     qd = job.get("queued_duration")
     if isinstance(qd, (int, float)):
         return float(qd)
@@ -194,7 +194,7 @@ def compute_job_queue_seconds(job: dict) -> Optional[float]:
 
 
 def compute_job_duration_seconds(job: dict) -> Optional[float]:
-    """Compute a job's duration in seconds using API `duration` or finished − started."""
+    """Compute a job's duration in seconds using API `duration` or finished - started."""
     dur = job.get("duration")
     if isinstance(dur, (int, float)):
         return float(dur)

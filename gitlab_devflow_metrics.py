@@ -28,14 +28,14 @@ Outputs
 Metrics
 -------
 Per MR:
-- Time to Merge (hours)         : merged_at – (ready_note_time or created_at)
-- Time to First Review (hours)  : first non-author comment – created_at
+- Time to Merge (hours)         : merged_at - (ready_note_time or created_at)
+- Time to First Review (hours)  : first non-author comment - created_at
 - Review Rounds (count)         : cycles of "reviewer comment → author commit"
 - Files Changed (count)         : number of files in MR changes
 
 Per Project (rollups):
 - MTTM mean/p50/p90 (hours), TTFR mean/p50/p90 (hours), Avg review rounds
-- Size bucket counts (XS ≤3, S 4–10, M 11–25, L 26–50, XL >50)
+- Size bucket counts (XS ≤3, S 4-10, M 11-25, L 26-50, XL >50)
 
 Design Notes
 ------------
@@ -218,9 +218,9 @@ class ProjectRollup:
     ttfr_p90_h: Optional[float] = None
     review_rounds_avg: Optional[float] = None
     size_xs: int = 0  # ≤3 files
-    size_s: int = 0   # 4–10 files
-    size_m: int = 0   # 11–25 files
-    size_l: int = 0   # 26–50 files
+    size_s: int = 0   # 4-10 files
+    size_m: int = 0   # 11-25 files
+    size_l: int = 0   # 26-50 files
     size_xl: int = 0  # >50 files
 
 
