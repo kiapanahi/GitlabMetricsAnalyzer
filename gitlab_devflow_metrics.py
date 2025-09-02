@@ -1,35 +1,52 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 """
-gitlab_devflow_metrics.py (local CSV only)
+GitLab Dev Flow Metrics (Concurrent, Local CSV Only)
+====================================================
 
-Collects Developer Flow metrics from a self-managed GitLab:
-- Mean/Median/P90 Time to Merge (MTTM)
-- Time to First Review (TTFR)
-- Review Rounds (heuristic)
-- PR Size (files changed buckets)
+This module collects developer-flow metrics from a self-managed GitLab and writes
+per-project CSVs plus a portfolio summary. It is optimized for on-prem installs
+with many projects/merge requests by running **concurrently**.
 
-Outputs (local only):
-- outputs/<namespace__project>.csv   -> MR-level facts
-- outputs/_summary.csv               -> per-project rollups
+Environment (required)
+----------------------
+- TOMAN_GITLAB_API_URL   : Base URL of your GitLab, e.g. https://gitlab.example.com
+- TOMAN_GITLAB_API_TOKEN : Personal Access Token with API scope
 
-Configuration (required):
-- Environment variables must be set in your user profile:
-  TOMAN_GITLAB_API_URL   -> e.g., https://gitlab.example.com
-  TOMAN_GITLAB_API_TOKEN -> personal access token with API scope
+Command-line options
+--------------------
+- --group-path "parent/subgroup" : Limit to a group (includes subgroups)
+- --days 90                      : Lookback window (default 90)
+- --workers 8                    : Project-level concurrency (default 8)
+- --per-project-workers 4        : Per-project MR concurrency (default 4)
 
-Optional:
-- --group-path "parent/subgroup" to restrict projects
-- --days 90 to adjust lookback window
+Outputs
+-------
+- outputs/<namespace__project>.csv  : MR-level facts
+- outputs/_summary.csv              : Project rollups
 
-This module provides a command-line tool for collecting and analyzing GitLab development
-metrics. It extracts data about merge requests, calculates various metrics related to
-development flow, and generates CSV reports for analysis.
+Metrics
+-------
+Per MR:
+- Time to Merge (hours)         : merged_at – (ready_note_time or created_at)
+- Time to First Review (hours)  : first non-author comment – created_at
+- Review Rounds (count)         : cycles of "reviewer comment → author commit"
+- Files Changed (count)         : number of files in MR changes
+
+Per Project (rollups):
+- MTTM mean/p50/p90 (hours), TTFR mean/p50/p90 (hours), Avg review rounds
+- Size bucket counts (XS ≤3, S 4–10, M 11–25, L 26–50, XL >50)
+
+Design Notes
+------------
+- Uses ThreadPoolExecutor at two levels:
+  * Project-level fan-out across all projects
+  * Per-project fan-out across MRs
+- Each worker instantiates its own lightweight GitLab client (requests.Session)
+  to avoid cross-thread session sharing.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
 
 import argparse
 import csv
@@ -38,41 +55,20 @@ import os
 import re
 import sys
 import time
-from typing import Iterable, List, Optional, Tuple
-from urllib.parse import quote
+from dataclasses import dataclass
+from typing import Dict, Iterable, List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
-# ------------------------------
-# Helpers
-# ------------------------------
-
-ISO8601 = "%Y-%m-%dT%H:%M:%S.%fZ"  # GitLab returns UTC in this format
+ISO8601 = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 def parse_time(s: str) -> dt.datetime:
+    """Parse a GitLab ISO8601 timestamp (UTC) into a timezone-aware datetime.
+
+    GitLab sometimes omits microseconds; this function handles both forms.
     """
-    Parse a string timestamp into a datetime object with UTC timezone.
-
-    This function handles different ISO 8601 timestamp formats that might be 
-    returned by GitLab API, including timestamps with and without microseconds.
-
-    Parameters
-    ----------
-    s : str
-        A timestamp string in ISO 8601 format.
-
-    Returns
-    -------
-    datetime.datetime
-        A datetime object with UTC timezone.
-
-    Raises
-    ------
-    ValueError
-        If the string cannot be parsed using any of the supported formats.
-    """
-    # GitLab sometimes returns without microseconds
     try:
         return dt.datetime.strptime(s, ISO8601).replace(tzinfo=dt.timezone.utc)
     except ValueError:
@@ -80,113 +76,47 @@ def parse_time(s: str) -> dt.datetime:
 
 
 def to_hours(delta: dt.timedelta) -> float:
-    """Convert a timedelta object to hours.
-
-    Args:
-        delta (dt.timedelta): The timedelta object to convert.
-
-    Returns:
-        float: The equivalent time in hours, rounded to 3 decimal places.
-    """
+    """Convert a timedelta to fractional hours rounded to milliseconds."""
     return round(delta.total_seconds() / 3600.0, 3)
 
 
 def quantiles(values: List[float], q: float) -> Optional[float]:
-    """Calculate the q-th quantile of the given values.
-    
-    This function uses the inclusive nearest-rank method to calculate quantiles.
-    
-    Args:
-        values (List[float]): List of values to calculate quantile from.
-        q (float): Quantile to calculate (between 0 and 1).
-        
-    Returns:
-        Optional[float]: The q-th quantile of the values, rounded to 3 decimal places.
-                         Returns None if the input list is empty.
-    """
+    """Return an inclusive nearest-rank quantile for a list of floats."""
     if not values:
         return None
     vals = sorted(values)
-    # inclusive nearest-rank
     idx = max(0, min(len(vals) - 1, int(round((len(vals) - 1) * q))))
     return round(vals[idx], 3)
 
 
 def sanitize_filename(s: str) -> str:
-    """Sanitize a string to be used as a filename.
-    
-    Replaces characters that are not alphanumeric, dot, underscore, or hyphen with underscores.
-    
-    Args:
-        s (str): The string to sanitize.
-        
-    Returns:
-        str: The sanitized string that can be safely used as a filename.
-    """
+    """Sanitize an arbitrary string for safe use as a filename."""
     return re.sub(r"[^A-Za-z0-9._-]+", "_", s)
 
 
 def ensure_outputs_dir() -> str:
-    """Ensure the outputs directory exists.
-    
-    Creates the 'outputs' directory in the current working directory if it doesn't exist.
-    
-    Returns:
-        str: The absolute path to the outputs directory.
-    """
+    """Create and return the `outputs` directory path if not present."""
     outdir = os.path.join(os.getcwd(), "outputs")
     os.makedirs(outdir, exist_ok=True)
     return outdir
 
-# ------------------------------
-# GitLab API client
-# ------------------------------
-
 
 class GitLab:
-    """Client for interacting with GitLab's API.
-    
-    This class provides methods to authenticate with GitLab's API and make various 
-    API requests to fetch data about projects, merge requests, and related entities.
-    It handles pagination, rate limiting, and retries automatically.
-    
-    Attributes:
-        base_url (str): The base URL of the GitLab instance.
-        s (requests.Session): A session object for making HTTP requests.
-        timeout (int): Timeout in seconds for HTTP requests.
+    """Minimal GitLab API client using requests with simple pagination.
+
+    Each instance holds its own requests.Session to avoid cross-thread sharing.
     """
-    
+
     def __init__(self, base_url: str, token: str, timeout: int = 30):
-        """Initialize a GitLab API client.
-        
-        Args:
-            base_url (str): The base URL of the GitLab instance.
-            token (str): The private access token for API authentication.
-            timeout (int, optional): Timeout in seconds for HTTP requests. Defaults to 30.
-        """
+        """Initialize client with base URL, private token, and request timeout."""
         self.base_url = base_url.rstrip("/")
         self.s = requests.Session()
         self.s.headers.update({"PRIVATE-TOKEN": token})
         self.timeout = timeout
 
     def _get(self, path: str, params: Optional[dict] = None) -> requests.Response:
-        """Make a GET request to the GitLab API.
-        
-        This method handles retries for certain HTTP status codes that indicate 
-        temporary failures or rate limiting.
-        
-        Args:
-            path (str): The API endpoint path.
-            params (Optional[dict], optional): Query parameters. Defaults to None.
-            
-        Returns:
-            requests.Response: The response from the API.
-            
-        Raises:
-            requests.exceptions.HTTPError: If the request fails after retries.
-        """
+        """Perform a GET with basic retry on transient HTTP 429/50x codes."""
         url = f"{self.base_url}{path}"
-        r = None
         for attempt in range(5):
             r = self.s.get(url, params=params, timeout=self.timeout)
             if r.status_code in (429, 502, 503, 504):
@@ -194,25 +124,11 @@ class GitLab:
                 continue
             r.raise_for_status()
             return r
-        # If we get here, all attempts failed but we have a response
-        if r:  
-            r.raise_for_status()  # This will raise an exception
-        # This should never happen, but just in case
-        raise requests.exceptions.RequestException("All retry attempts failed")
+        r.raise_for_status()
+        return r  # pragma: no cover
 
     def _paginate(self, path: str, params: Optional[dict] = None) -> Iterable[dict]:
-        """Paginate through API results.
-        
-        This method handles pagination for GitLab API endpoints that return lists.
-        It uses the X-Next-Page header to determine if there are more pages.
-        
-        Args:
-            path (str): The API endpoint path.
-            params (Optional[dict], optional): Query parameters. Defaults to None.
-            
-        Yields:
-            dict: Each item from the paginated response.
-        """
+        """Yield items across pages for list-returning API endpoints."""
         p = dict(params or {})
         p.setdefault("per_page", 100)
         page = 1
@@ -230,45 +146,21 @@ class GitLab:
                 break
             page = int(next_page)
 
-    # Projects
+    # ---- Project endpoints ----
 
     def list_projects_membership(self) -> List[dict]:
-        """List all projects that the authenticated user is a member of.
-        
-        Projects are sorted by last activity date in descending order.
-        
-        Returns:
-            List[dict]: A list of project dictionaries.
-        """
+        """Return projects where the token holder has membership."""
         return list(self._paginate("/api/v4/projects", {"membership": True, "order_by": "last_activity_at", "sort": "desc"}))
 
     def list_group_projects(self, group_path: str) -> List[dict]:
-        """List all projects in a group, including subgroups.
-        
-        Projects are sorted by last activity date in descending order.
-        
-        Args:
-            group_path (str): The path of the group, e.g., "parent/subgroup".
-            
-        Returns:
-            List[dict]: A list of project dictionaries.
-        """
-        group_enc = quote(group_path, safe="")
+        """Return all projects in a group (including subgroups)."""
+        group_enc = requests.utils.quote(group_path, safe="")
         return list(self._paginate(f"/api/v4/groups/{group_enc}/projects", {"include_subgroups": True, "order_by": "last_activity_at", "sort": "desc"}))
 
-    # Merge Requests
+    # ---- Merge Request endpoints ----
 
     def list_merge_requests(self, project_id: int, state: str, updated_after: Optional[str] = None) -> List[dict]:
-        """List merge requests for a project.
-        
-        Args:
-            project_id (int): The ID of the project.
-            state (str): The state of the merge requests to list (e.g., "merged", "opened").
-            updated_after (Optional[str], optional): ISO 8601 timestamp to filter MRs updated after this date. Defaults to None.
-            
-        Returns:
-            List[dict]: A list of merge request dictionaries.
-        """
+        """Return merge requests in a given state with optional updated_after filter."""
         params = {"state": state, "scope": "all",
                   "order_by": "updated_at", "sort": "desc", "per_page": 100}
         if updated_after:
@@ -276,80 +168,26 @@ class GitLab:
         return list(self._paginate(f"/api/v4/projects/{project_id}/merge_requests", params))
 
     def get_merge_request(self, project_id: int, iid: int) -> dict:
-        """Get a single merge request by its internal ID.
-        
-        Args:
-            project_id (int): The ID of the project.
-            iid (int): The internal ID of the merge request.
-            
-        Returns:
-            dict: The merge request details.
-        """
+        """Return details of a single merge request by IID."""
         return self._get(f"/api/v4/projects/{project_id}/merge_requests/{iid}").json()
 
     def get_merge_request_notes(self, project_id: int, iid: int) -> List[dict]:
-        """Get all notes (comments) for a merge request.
-        
-        Args:
-            project_id (int): The ID of the project.
-            iid (int): The internal ID of the merge request.
-            
-        Returns:
-            List[dict]: A list of note dictionaries, sorted by creation time in ascending order.
-        """
+        """Return notes (comments) on a merge request, ascending by time."""
         return list(self._paginate(f"/api/v4/projects/{project_id}/merge_requests/{iid}/notes", {"sort": "asc"}))
 
     def get_merge_request_commits(self, project_id: int, iid: int) -> List[dict]:
-        """Get all commits for a merge request.
-        
-        Args:
-            project_id (int): The ID of the project.
-            iid (int): The internal ID of the merge request.
-            
-        Returns:
-            List[dict]: A list of commit dictionaries.
-        """
+        """Return commits associated with a merge request."""
         return list(self._paginate(f"/api/v4/projects/{project_id}/merge_requests/{iid}/commits", {"per_page": 100}))
 
     def get_merge_request_changes(self, project_id: int, iid: int) -> dict:
-        """Get the changes (files affected) for a merge request.
-        
-        Args:
-            project_id (int): The ID of the project.
-            iid (int): The internal ID of the merge request.
-            
-        Returns:
-            dict: The merge request changes, including the list of files modified.
-        """
+        """Return file changes for a merge request (used to count files)."""
         return self._get(f"/api/v4/projects/{project_id}/merge_requests/{iid}/changes").json()
-
-# ------------------------------
-# Data Structures
-# ------------------------------
 
 
 @dataclass
 class MRFact:
-    """Represents factual data about a merge request.
-    
-    This class holds metrics and metadata for a single GitLab merge request,
-    calculated from the raw API data.
-    
-    Attributes:
-        project_id (int): The ID of the project.
-        project_path (str): The path of the project with namespace.
-        mr_id (int): The global ID of the merge request.
-        mr_iid (int): The internal ID of the merge request within the project.
-        title (str): The title of the merge request.
-        author_username (str): The username of the author.
-        created_at (dt.datetime): When the MR was created.
-        merged_at (dt.datetime): When the MR was merged.
-        start_time (dt.datetime): When work on the MR began (created or marked ready).
-        time_to_merge_h (Optional[float]): Hours from start_time to merge, if merged.
-        time_to_first_review_h (Optional[float]): Hours from creation to first review, if reviewed.
-        review_rounds (int): Number of review-commit cycles.
-        files_changed (Optional[int]): Number of files changed.
-    """
+    """A single merge request fact row suitable for CSV output."""
+
     project_id: int
     project_path: str
     mr_id: int
@@ -367,28 +205,8 @@ class MRFact:
 
 @dataclass
 class ProjectRollup:
-    """Aggregated metrics for a project.
-    
-    This class holds summarized metrics across all merge requests
-    in a specific project for a given time period.
-    
-    Attributes:
-        project_id (int): The ID of the project.
-        project_path (str): The path of the project with namespace.
-        mrs_merged (int): Number of merge requests merged.
-        mttm_mean_h (Optional[float]): Mean time to merge in hours.
-        mttm_p50_h (Optional[float]): Median (50th percentile) time to merge in hours.
-        mttm_p90_h (Optional[float]): 90th percentile time to merge in hours.
-        ttfr_mean_h (Optional[float]): Mean time to first review in hours.
-        ttfr_p50_h (Optional[float]): Median time to first review in hours.
-        ttfr_p90_h (Optional[float]): 90th percentile time to first review in hours.
-        review_rounds_avg (Optional[float]): Average number of review rounds.
-        size_xs (int): Count of MRs with ≤3 files.
-        size_s (int): Count of MRs with 4–10 files.
-        size_m (int): Count of MRs with 11–25 files.
-        size_l (int): Count of MRs with 26–50 files.
-        size_xl (int): Count of MRs with >50 files.
-    """
+    """Per-project aggregate metrics computed from MR facts."""
+
     project_id: int
     project_path: str
     mrs_merged: int = 0
@@ -405,12 +223,7 @@ class ProjectRollup:
     size_l: int = 0   # 26–50 files
     size_xl: int = 0  # >50 files
 
-# ------------------------------
-# Core logic
-# ------------------------------
 
-
-# Patterns to detect when a merge request moves between draft and ready states
 READY_PATTERNS = [
     "marked this merge request as ready",
     "marked this merge request as ready to merge",
@@ -422,18 +235,7 @@ DRAFT_PATTERNS = [
 
 
 def find_ready_time(created_at: dt.datetime, notes: List[dict]) -> dt.datetime:
-    """Find when a merge request was marked as ready for review.
-    
-    Analyzes system notes to determine when a merge request transitioned from draft
-    to ready state. If no such transition is found, defaults to the creation time.
-    
-    Args:
-        created_at (dt.datetime): When the MR was created.
-        notes (List[dict]): List of notes (comments) on the MR.
-        
-    Returns:
-        dt.datetime: The timestamp when the MR became ready for review.
-    """
+    """Return the last 'ready' timestamp if present; otherwise the MR creation time."""
     ready_time = created_at
     for n in notes:
         if not n.get("system"):
@@ -443,24 +245,13 @@ def find_ready_time(created_at: dt.datetime, notes: List[dict]) -> dt.datetime:
         if any(p in b for p in READY_PATTERNS):
             ready_time = t
         elif any(p in b for p in DRAFT_PATTERNS):
+            # Explicit draft note resets expectation; next "ready" will override.
             pass
     return ready_time
 
 
 def compute_ttfr(created_at: dt.datetime, mr_author: str, notes: List[dict]) -> Optional[float]:
-    """Compute time to first review.
-    
-    Finds the first non-system note from someone other than the MR author
-    and calculates the time between MR creation and that first review.
-    
-    Args:
-        created_at (dt.datetime): When the MR was created.
-        mr_author (str): Username of the MR author.
-        notes (List[dict]): List of notes (comments) on the MR.
-        
-    Returns:
-        Optional[float]: Time to first review in hours, or None if no review was found.
-    """
+    """Compute Time to First Review in hours from MR creation to first non-author comment."""
     for n in notes:
         if n.get("system"):
             continue
@@ -472,22 +263,9 @@ def compute_ttfr(created_at: dt.datetime, mr_author: str, notes: List[dict]) -> 
     return None
 
 
-def compute_review_rounds(mr_author: str, notes: List[dict], commits: List[dict], start_time: dt.datetime, merged_at: dt.datetime) -> int:
-    """Compute the number of review rounds.
-    
-    A review round is counted when a commit follows a review comment, indicating
-    the author responded to feedback with changes.
-    
-    Args:
-        mr_author (str): Username of the MR author.
-        notes (List[dict]): List of notes (comments) on the MR.
-        commits (List[dict]): List of commits in the MR.
-        start_time (dt.datetime): When the MR became ready for review.
-        merged_at (dt.datetime): When the MR was merged.
-        
-    Returns:
-        int: The number of review rounds.
-    """
+def compute_review_rounds(mr_author: str, notes: List[dict], commits: List[dict],
+                          start_time: dt.datetime, merged_at: dt.datetime) -> int:
+    """Count review rounds as cycles of (reviewer comment → a subsequent author commit)."""
     events: List[Tuple[dt.datetime, str]] = []
     for n in notes:
         if n.get("system"):
@@ -515,15 +293,7 @@ def compute_review_rounds(mr_author: str, notes: List[dict], commits: List[dict]
 
 
 def size_bucket(files_changed: Optional[int]) -> str:
-    """Determine the size bucket for a merge request based on files changed.
-    
-    Args:
-        files_changed (Optional[int]): Number of files changed in the MR.
-        
-    Returns:
-        str: Size category - "xs" (≤3 files), "s" (4-10), "m" (11-25), 
-             "l" (26-50), "xl" (>50), or "unknown" if files_changed is None.
-    """
+    """Bucket an MR by number of changed files into xs/s/m/l/xl."""
     if files_changed is None:
         return "unknown"
     if files_changed <= 3:
@@ -537,95 +307,84 @@ def size_bucket(files_changed: Optional[int]) -> str:
     return "xl"
 
 
-def collect_for_project(gl: GitLab, project: dict, since: dt.datetime) -> Tuple[List[MRFact], ProjectRollup]:
-    """Collect merge request metrics for a project.
-    
-    This function retrieves merge requests from GitLab, calculates various metrics
-    for each MR, and aggregates those metrics at the project level.
-    
-    Args:
-        gl (GitLab): GitLab API client.
-        project (dict): Project data from GitLab API.
-        since (dt.datetime): Start date for data collection.
-        
-    Returns:
-        Tuple[List[MRFact], ProjectRollup]: A tuple containing:
-            - A list of MRFact objects, one for each merge request
-            - A ProjectRollup object with aggregated metrics
-    """
+def process_single_mr(base_url: str, token: str, pid: int, ppath: str, iid: int,
+                      since: dt.datetime) -> Optional[MRFact]:
+    """Fetch and compute metrics for a single MR; returns MRFact or None on skip/failure."""
+    try:
+        gl = GitLab(base_url, token)
+        mr_full = gl.get_merge_request(pid, iid)
+        created_at = parse_time(mr_full["created_at"])
+        merged_at = parse_time(mr_full["merged_at"]) if mr_full.get(
+            "merged_at") else None
+        if merged_at is None or merged_at < since:
+            return None
+
+        notes = gl.get_merge_request_notes(pid, iid)
+        commits = gl.get_merge_request_commits(pid, iid)
+        changes = gl.get_merge_request_changes(pid, iid)
+        files_changed = len(changes.get("changes", []))
+
+        author_username = (mr_full.get("author") or {}
+                           ).get("username") or "unknown"
+        start_time = find_ready_time(created_at, notes)
+        ttm_h = to_hours(
+            merged_at - start_time) if merged_at and start_time else None
+        ttfr_h = compute_ttfr(created_at, author_username, notes)
+        rounds = compute_review_rounds(
+            author_username, notes, commits, start_time, merged_at)
+
+        return MRFact(
+            project_id=pid,
+            project_path=ppath,
+            mr_id=mr_full["id"],
+            mr_iid=iid,
+            title=mr_full.get("title") or "",
+            author_username=author_username,
+            created_at=created_at,
+            merged_at=merged_at,
+            start_time=start_time,
+            time_to_merge_h=ttm_h,
+            time_to_first_review_h=ttfr_h,
+            review_rounds=rounds,
+            files_changed=files_changed,
+        )
+    except Exception as e:
+        print(f"[WARN] project {ppath} MR {iid} failed: {e}", file=sys.stderr)
+        return None
+
+
+def collect_for_project(base_url: str, token: str, project: dict, since: dt.datetime,
+                        per_project_workers: int) -> Tuple[List[MRFact], ProjectRollup]:
+    """Collect MR facts and project rollup concurrently for a single project."""
     pid = project["id"]
     ppath = project["path_with_namespace"]
+    gl = GitLab(base_url, token)
     merged_mrs = gl.list_merge_requests(
         pid, state="merged", updated_after=since.isoformat())
+
     facts: List[MRFact] = []
     mttm_list: List[float] = []
     ttfr_list: List[float] = []
     review_rounds_list: List[int] = []
     size_counts = {"xs": 0, "s": 0, "m": 0, "l": 0, "xl": 0}
 
-    for mr in merged_mrs:
-        try:
-            iid = mr["iid"]
-            mr_full = gl.get_merge_request(pid, iid)
-            created_at = parse_time(mr_full["created_at"])
-            merged_at = parse_time(mr_full["merged_at"]) if mr_full.get(
-                "merged_at") else None
-            if merged_at is None or merged_at < since:
+    with ThreadPoolExecutor(max_workers=max(1, per_project_workers)) as ex:
+        futures = [ex.submit(process_single_mr, base_url, token, pid, ppath, mr["iid"], since)
+                   for mr in merged_mrs]
+        for fut in as_completed(futures):
+            fact = fut.result()
+            if not fact:
                 continue
-
-            notes = gl.get_merge_request_notes(pid, iid)
-            commits = gl.get_merge_request_commits(pid, iid)
-            changes = gl.get_merge_request_changes(pid, iid)
-            files_changed = len(changes.get("changes", []))
-
-            author_username = (mr_full.get("author") or {}
-                               ).get("username") or "unknown"
-            start_time = find_ready_time(created_at, notes)
-            ttm_h = to_hours(
-                merged_at - start_time) if merged_at and start_time else None
-            ttfr_h = compute_ttfr(created_at, author_username, notes)
-
-            rounds = compute_review_rounds(
-                author_username, notes, commits, start_time, merged_at)
-
-            facts.append(MRFact(
-                project_id=pid,
-                project_path=ppath,
-                mr_id=mr_full["id"],
-                mr_iid=iid,
-                title=mr_full.get("title") or "",
-                author_username=author_username,
-                created_at=created_at,
-                merged_at=merged_at,
-                start_time=start_time,
-                time_to_merge_h=ttm_h,
-                time_to_first_review_h=ttfr_h,
-                review_rounds=rounds,
-                files_changed=files_changed,
-            ))
-
-            if ttm_h is not None:
-                mttm_list.append(ttm_h)
-            if ttfr_h is not None:
-                ttfr_list.append(ttfr_h)
-            review_rounds_list.append(rounds)
-            size_counts[size_bucket(files_changed)] += 1
-
-        except (KeyError, ValueError, requests.exceptions.RequestException) as e:
-            print(
-                f"[WARN] project {ppath} MR {mr.get('iid')} failed: {e}", file=sys.stderr)
-            continue
+            facts.append(fact)
+            if fact.time_to_merge_h is not None:
+                mttm_list.append(fact.time_to_merge_h)
+            if fact.time_to_first_review_h is not None:
+                ttfr_list.append(fact.time_to_first_review_h)
+            review_rounds_list.append(fact.review_rounds)
+            size_counts[size_bucket(fact.files_changed)] += 1
 
     def avg(nums: List[float]) -> Optional[float]:
-        """Calculate the average of a list of numbers.
-        
-        Args:
-            nums (List[float]): List of numbers to average.
-            
-        Returns:
-            Optional[float]: The average, rounded to 3 decimal places, or None if the list is empty.
-        """
-        return round(sum(nums)/len(nums), 3) if nums else None
+        return round(sum(nums) / len(nums), 3) if nums else None
 
     rollup = ProjectRollup(
         project_id=pid,
@@ -637,7 +396,7 @@ def collect_for_project(gl: GitLab, project: dict, since: dt.datetime) -> Tuple[
         ttfr_mean_h=avg(ttfr_list),
         ttfr_p50_h=quantiles(ttfr_list, 0.50),
         ttfr_p90_h=quantiles(ttfr_list, 0.90),
-        review_rounds_avg=avg([float(r) for r in review_rounds_list]),
+        review_rounds_avg=avg(review_rounds_list),
         size_xs=size_counts["xs"],
         size_s=size_counts["s"],
         size_m=size_counts["m"],
@@ -646,28 +405,15 @@ def collect_for_project(gl: GitLab, project: dict, since: dt.datetime) -> Tuple[
     )
     return facts, rollup
 
-# ------------------------------
-# IO
-# ------------------------------
-
 
 def write_project_csv(outdir: str, facts: List[MRFact], project_path: str) -> str:
-    """Write merge request facts for a project to a CSV file.
-    
-    Args:
-        outdir (str): Output directory path.
-        facts (List[MRFact]): List of merge request facts.
-        project_path (str): Project path with namespace.
-        
-    Returns:
-        str: The path to the created CSV file.
-    """
+    """Write MR facts for a project to CSV; return file path."""
     fname = sanitize_filename(project_path.replace("/", "__")) + ".csv"
     fpath = os.path.join(outdir, fname)
     with open(fpath, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["project_path", "mr_iid", "title", "author", "created_at", "ready_or_created_at",
-                   "merged_at", "time_to_merge_h", "time_to_first_review_h", "review_rounds", "files_changed"])
+                    "merged_at", "time_to_merge_h", "time_to_first_review_h", "review_rounds", "files_changed"])
         for x in facts:
             w.writerow([
                 x.project_path,
@@ -686,15 +432,7 @@ def write_project_csv(outdir: str, facts: List[MRFact], project_path: str) -> st
 
 
 def append_summary_csv(outdir: str, rollups: List[ProjectRollup]) -> str:
-    """Write project rollups to a summary CSV file.
-    
-    Args:
-        outdir (str): Output directory path.
-        rollups (List[ProjectRollup]): List of project rollups.
-        
-    Returns:
-        str: The path to the created summary CSV file.
-    """
+    """Write the portfolio rollup CSV covering all processed projects."""
     fpath = os.path.join(outdir, "_summary.csv")
     with open(fpath, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -705,7 +443,7 @@ def append_summary_csv(outdir: str, rollups: List[ProjectRollup]) -> str:
             "review_rounds_avg",
             "size_xs", "size_s", "size_m", "size_l", "size_xl"
         ])
-        for r in rollups:
+        for r in sorted(rollups, key=lambda x: x.project_path.lower()):
             w.writerow([
                 r.project_path, r.mrs_merged,
                 r.mttm_mean_h or "",
@@ -719,33 +457,9 @@ def append_summary_csv(outdir: str, rollups: List[ProjectRollup]) -> str:
             ])
     return fpath
 
-# ------------------------------
-# Main
-# ------------------------------
 
-
-def main():
-    """Main entry point for the GitLab metrics collection script.
-    
-    This function:
-    1. Reads configuration from environment variables and command-line arguments
-    2. Initializes the GitLab API client
-    3. Discovers projects based on user membership or group path
-    4. Collects metrics for each project
-    5. Writes project-specific and summary CSV files
-    
-    Environment variables required:
-    - TOMAN_GITLAB_API_URL: URL of the GitLab instance
-    - TOMAN_GITLAB_API_TOKEN: Personal access token with API scope
-    
-    Command-line arguments:
-    - --group-path: Optional GitLab group path to limit projects
-    - --days: Lookback window in days (default 90)
-    
-    Exit codes:
-    - 0: Success
-    - 2: Missing required environment variables
-    """
+def main() -> None:
+    """Entry point: parse args, fan out across projects/MRs, write CSVs."""
     base_url = os.getenv("TOMAN_GITLAB_API_URL")
     token = os.getenv("TOMAN_GITLAB_API_TOKEN")
     if not base_url or not token:
@@ -753,38 +467,51 @@ def main():
         sys.exit(2)
 
     parser = argparse.ArgumentParser(
-        description="Collect GitLab Dev Flow metrics (local CSV outputs only).")
+        description="Collect GitLab Dev Flow metrics concurrently (local CSV outputs only).")
     parser.add_argument(
         "--group-path", help="Optional GitLab group path to limit projects, e.g., 'parent/subgroup'")
     parser.add_argument("--days", type=int, default=90,
                         help="Lookback window in days (default 90)")
+    parser.add_argument("--workers", type=int, default=8,
+                        help="Project-level concurrency (default 8)")
+    parser.add_argument("--per-project-workers", type=int,
+                        default=4, help="Per-project MR concurrency (default 4)")
     args = parser.parse_args()
 
-    gl = GitLab(base_url, token)
     outdir = ensure_outputs_dir()
     since = dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(days=args.days)
 
     # Discover projects
+    gl_discovery = GitLab(base_url, token)
     if args.group_path:
-        projects = gl.list_group_projects(args.group_path)
+        projects = gl_discovery.list_group_projects(args.group_path)
     else:
-        projects = gl.list_projects_membership()
+        projects = gl_discovery.list_projects_membership()
 
-    all_rollups: List[ProjectRollup] = []
-    for p in projects:
-        ppath = p["path_with_namespace"]
-        print(f"[INFO] Project: {ppath}")
-        facts, rollup = collect_for_project(gl, p, since)
-        if not facts:
-            print("[INFO]   No merged MRs in window; skipping CSV.",
-                  file=sys.stderr)
-            continue
-        csv_path = write_project_csv(outdir, facts, ppath)
-        print(f"[INFO]   wrote {csv_path}")
-        all_rollups.append(rollup)
+    rollups: List[ProjectRollup] = []
+    futures = []
+    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as ex:
+        for p in projects:
+            futures.append(ex.submit(collect_for_project, base_url,
+                           token, p, since, args.per_project_workers))
 
-    if all_rollups:
-        sum_path = append_summary_csv(outdir, all_rollups)
+        for fut in as_completed(futures):
+            try:
+                facts, rollup = fut.result()
+                if facts:
+                    csv_path = write_project_csv(
+                        outdir, facts, rollup.project_path)
+                    print(f"[INFO] wrote {csv_path}")
+                    rollups.append(rollup)
+                else:
+                    print(
+                        f"[INFO] no merged MRs for project in window; skipped.", file=sys.stderr)
+            except Exception as e:
+                print(
+                    f"[WARN] project processing failed: {e}", file=sys.stderr)
+
+    if rollups:
+        sum_path = append_summary_csv(outdir, rollups)
         print(f"[INFO] Wrote portfolio summary: {sum_path}")
     else:
         print("[INFO] No data found for any project in the window.")
