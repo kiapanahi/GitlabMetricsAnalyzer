@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.0.0
+MinimumVisualStudioVersion = 17.8.0.0
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Toman.Management.KPIAnalysis.AppHost", "Toman.Management.KPIAnalysis.AppHost\Toman.Management.KPIAnalysis.AppHost.csproj", "{F5EFB284-0A2B-4AE1-89C0-D65ED988228D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Toman.Management.KPIAnalysis.ServiceDefaults", "Toman.Management.KPIAnalysis.ServiceDefaults\Toman.Management.KPIAnalysis.ServiceDefaults.csproj", "{9BCB8C08-7384-4D07-9690-E7C01E42D414}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F5EFB284-0A2B-4AE1-89C0-D65ED988228D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5EFB284-0A2B-4AE1-89C0-D65ED988228D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5EFB284-0A2B-4AE1-89C0-D65ED988228D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5EFB284-0A2B-4AE1-89C0-D65ED988228D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BCB8C08-7384-4D07-9690-E7C01E42D414}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BCB8C08-7384-4D07-9690-E7C01E42D414}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BCB8C08-7384-4D07-9690-E7C01E42D414}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BCB8C08-7384-4D07-9690-E7C01E42D414}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EC272AB3-7208-4308-916E-76FC273CD46A}
+	EndGlobalSection
+EndGlobal
