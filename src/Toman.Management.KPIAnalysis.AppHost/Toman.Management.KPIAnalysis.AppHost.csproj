@@ -1,23 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
-
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.4.2" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>333f5aa4-3ef8-47ac-b5bb-1bfd9f8551bb</UserSecretsId>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Toman.Management.KPIAnalysis.ApiService\Toman.Management.KPIAnalysis.ApiService.csproj" />
     <ProjectReference Include="..\Toman.Management.KPIAnalysis.Web\Toman.Management.KPIAnalysis.Web.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
   </ItemGroup>
-
 </Project>
