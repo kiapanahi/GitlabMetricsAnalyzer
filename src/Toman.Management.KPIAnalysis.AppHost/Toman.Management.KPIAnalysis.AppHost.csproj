@@ -2,9 +2,6 @@
   <Sdk Name="Aspire.AppHost.Sdk" Version="9.4.2" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>333f5aa4-3ef8-47ac-b5bb-1bfd9f8551bb</UserSecretsId>
   </PropertyGroup>
