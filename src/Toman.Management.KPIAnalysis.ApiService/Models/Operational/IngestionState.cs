@@ -1,8 +1,0 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Models.Operational;
-
-public sealed class IngestionState
-{
-    public required string Entity { get; init; }
-    public DateTimeOffset LastSeenUpdatedAt { get; init; }
-    public DateTimeOffset LastRunAt { get; init; }
-}
