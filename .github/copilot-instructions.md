@@ -1,61 +1,102 @@
-You are building a tool to measure engineering delivery speed metrics using GitLab data.
+# Copilot Instructions
 
-The tool will query the GitLab API and calculate metrics that the VP of Engineering can use to track delivery performance.
+## Core Commands
 
-## Context
-- Source of truth: GitLab repositories, merge requests, commits, and pipelines
-- Programming language: C#, Python
-- Stack: pandas for processing, and optional ClickHouse/Postgres for storage
+### Development Workflow
+- **Run full application with the aspire CLI** (recommended): `aspire run`
+- **Build functions only**: Available as VS Code task "build (functions)"
+- **Run functions standalone**: Available as VS Code task with func host
+- **Clean build**: Available as VS Code task "clean (functions)"
 
-## Required Features
-1. **Pipeline Metrics**
-   - Pipeline Success Rate (successful / total pipelines)
-   - Mean Time to Green (time from failed pipeline on default branch → next green)
-   - Average Pipeline Duration
-   - Broken Main Minutes (accumulated time main branch was red)
+## Architecture Overview
 
-2. **Delivery Flow Metrics**
-   - Deployment Frequency (count of successful deploy pipelines per service per week)
-   - Lead Time for Change (first commit timestamp in MR → successful deploy pipeline timestamp)
-   - Cycle Time (MR open → merge), with optional breakdown:
-     * Review Pickup Time (open → first comment/review)
-     * Review Active Time (first review → merge)
-   - Throughput (count of merged MRs per week)
-   - Batch Size (lines of code changed per MR)
+### Tech Stack
+- **.NET 9** with C# latest features, file-scoped namespaces
+- **.NET Aspire** for local orchestration and service discovery
+- Always use minimal APIs.
 
-3. **Stability Metrics**
-   - Rollback/Revert Rate (count of reverted MRs or rollback pipelines)
 
-## Architecture
-- Config file for:
-  * GitLab API token (in `.env` file)
-  * Group/project IDs to monitor
-  * Branch naming (main/master) and deploy stage patterns
-- Collector module to call GitLab REST API (projects, pipelines, merge requests, commits)
-- Transformer module to calculate metrics
-- Storage module (initially CSV/JSON, later pluggable DB)
-- Unit tests with mocked GitLab API responses
+### External Integrations
+- **GitLab API**: Issues, PRs, discussions data
 
-## Coding style
+## Project Structure
+- **Toman.Management.KPIAnalysis.ApiService** - The main project that contains business logic and APIs
+- **Toman.Management.KPIAnalysis.ServiceDefaults** - Aspire service defaults and telemetry
 
-### Python
+## Code Style
+- Prefer async/await over direct Task handling
+- When checking for nul in C# prefer to use `is null` or `is not null`
+- Use nullable reference types
+- Use var over explicit type declarations 
+- Always implement IDisposable when dealing with event handlers or subscriptions
+- Prefer using async/await for asynchronous operations
+- Use latest C# features (e.g., records, pattern matching)
+- Use consistent naming conventions (PascalCase for public members, camelCase for private members)
+- Use meaningful names for variables, methods, and classes
+- Use dependency injection for services and components
+- Use interfaces for service contracts and put them in a unique file
+- Use file scoped namespaces in C# and are PascalCased
+- Always add namespace declarations to Blazor components matching their folder structure
+- Organize using directives:
+  - Put System namespaces first
+  - Put Microsoft namespaces second
+  - Put application namespaces last
+  - Remove unused using directives
+  - Sort using directives alphabetically within each group
 
-- Always make sure theres a python virtual environment activated at `.venv`
-- For environement variable use the .env file
-- Assume your scripts are running on windows and powershell.
-- Inject environment variable powershell style
-- Always generate docstrings for methods, functions, modules and classes and everything.
+## Component Structure
+- Keep components small and focused
+- Extract reusable logic into services
+- Use cascading parameters sparingly
+- Prefer component parameters over cascading values
 
-### .NET and C#
+## Error Handling
+- Use try-catch blocks in event handlers
+- Implement proper error boundaries
+- Display user-friendly error messages
+- Log errors appropriately
+- **Usage Limit Errors**: Check for JSON error responses with "USAGE_LIMIT_EXCEEDED" ErrorCode and display UsageLimitDialog instead of raw error messages
 
-- Use the latest .NET and C# language features.
-- Follow the SOLID principles for object-oriented design.
-- Use asynchronous programming patterns where appropriate.
-- Add comprehensive logs and traces.
+## Performance
+- Implement proper component lifecycle methods
+- Use @key directive when rendering lists
+- Avoid unnecessary renders
+- Use virtualization for large lists
+
+## Testing
+- Write unit tests for complex component logic only if i ask for tests
+- Test error scenarios
+- Mock external dependencies
+- Use MSTest for component testing
+- Create tests in the feedbackflow.tests project
+
+## Documentation
+- Include usage examples in comments
+- Document any non-obvious behavior
+- Keep documentation up to date
+
+## Security
+- Always validate user input
+
+## Accessibility
+- Use semantic HTML
+- Include ARIA attributes where necessary
+- Ensure keyboard navigation works
+
+## File Organization
+- Keep related files together
+- Use meaningful file names
+- Follow consistent folder structure
+- Group components by feature when possible
+
+### Package Management
+- Uses **Central Package Management** via `Directory.Packages.props`
+- Key packages: Azure.AI.OpenAI, Azure.Data.Tables, Microsoft.Azure.Functions.Worker, Blazor.SpeechSynthesis
+- All projects target **.NET 9** with nullable reference types enabled
 
 ## Git
-
-- Always write clear and concise commit messages.
-- Always adhere to 50/72 rule for line length.
-- Use feature branches for new features or bug fixes.
-- Regularly pull changes from the main branch to keep your branch up to date.
+- Always write clear and concise commit messages
+- Always follow the 50/72 rule for commit messages
+- Use branches for new features and bug fixes
+- Always create pull requests for code reviews
+- Always review code before merging
