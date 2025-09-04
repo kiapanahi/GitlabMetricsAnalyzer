@@ -13,7 +13,7 @@ This project is intended to analyze, calculate and measure different KPIs for th
 ## Architecture Overview
 
 ### Tech Stack
-- Use vertical slice architecture with minimal APIs for every feature.
+- Use vertical slice architecture for every feature.
 - **.NET 9** with C# latest features, file-scoped namespaces
 - **.NET Aspire** for local orchestration and service discovery
 - Always use minimal APIs.
