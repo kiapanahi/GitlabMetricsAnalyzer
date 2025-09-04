@@ -6,12 +6,15 @@ using Quartz;
 
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Data;
-using Toman.Management.KPIAnalysis.ApiService.Endpoints;
+using Toman.Management.KPIAnalysis.ApiService.Features.Collection;
+using Toman.Management.KPIAnalysis.ApiService.Features.Exports;
+using Toman.Management.KPIAnalysis.ApiService.Features.Health;
+using Toman.Management.KPIAnalysis.ApiService.Features.Status;
 using Toman.Management.KPIAnalysis.ApiService.GitLab;
 using Toman.Management.KPIAnalysis.ApiService.Jobs;
 using Toman.Management.KPIAnalysis.ApiService.Services;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire components.
 builder.AddServiceDefaults();
@@ -70,7 +73,7 @@ builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-WebApplication app = builder.Build();
+var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
@@ -78,7 +81,7 @@ app.UseExceptionHandler();
 // Map endpoints
 app.MapDefaultEndpoints();
 app.MapHealthEndpoints();
-app.MapRunsEndpoints();
+app.MapCollectionEndpoints();
 app.MapExportsEndpoints();
 app.MapStatusEndpoints();
 

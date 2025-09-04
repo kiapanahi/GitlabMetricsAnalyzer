@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+
 using Toman.Management.KPIAnalysis.ApiService.Services;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Endpoints;
+namespace Toman.Management.KPIAnalysis.ApiService.Features.Collection;
 
-public static class RunsEndpoints
+public static class CollectionEndpoints
 {
-    public static void MapRunsEndpoints(this WebApplication app)
+    public static void MapCollectionEndpoints(this WebApplication app)
     {
         app.MapPost("/runs/backfill", async (
             [FromQuery] int days,
@@ -34,7 +35,7 @@ public static class RunsEndpoints
             }
         })
         .WithName("RunBackfill")
-        .WithTags("Runs");
+        .WithTags("Collection");
 
         app.MapPost("/runs/incremental", async (
             [FromServices] IGitLabCollectorService collectorService,
@@ -61,6 +62,6 @@ public static class RunsEndpoints
             }
         })
         .WithName("RunIncremental")
-        .WithTags("Runs");
+        .WithTags("Collection");
     }
 }

@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+
 using Toman.Management.KPIAnalysis.ApiService.Services;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Endpoints;
+namespace Toman.Management.KPIAnalysis.ApiService.Features.Exports;
 
 public static class ExportsEndpoints
 {

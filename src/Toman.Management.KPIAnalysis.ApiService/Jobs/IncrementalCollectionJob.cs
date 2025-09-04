@@ -1,4 +1,5 @@
 using Quartz;
+
 using Toman.Management.KPIAnalysis.ApiService.Services;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Jobs;

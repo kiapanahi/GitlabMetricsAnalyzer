@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Data;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Endpoints;
+namespace Toman.Management.KPIAnalysis.ApiService.Features.Status;
 
 public static class StatusEndpoints
 {

@@ -1,6 +1,8 @@
-using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text.Json;
+
+using Microsoft.Extensions.Options;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.GitLab.DTOs;
 

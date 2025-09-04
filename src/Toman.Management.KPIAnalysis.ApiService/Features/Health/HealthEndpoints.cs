@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+
 using Toman.Management.KPIAnalysis.ApiService.Data;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Endpoints;
+namespace Toman.Management.KPIAnalysis.ApiService.Features.Health;
 
 public static class HealthEndpoints
 {

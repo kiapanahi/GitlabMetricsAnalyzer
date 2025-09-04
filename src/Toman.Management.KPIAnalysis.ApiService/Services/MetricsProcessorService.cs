@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+
 using Toman.Management.KPIAnalysis.ApiService.Data;
 using Toman.Management.KPIAnalysis.ApiService.Data.Extensions;
 using Toman.Management.KPIAnalysis.ApiService.Models.Facts;
