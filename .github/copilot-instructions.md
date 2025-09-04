@@ -1,5 +1,7 @@
 # Copilot Instructions
 
+
+
 ## Core Commands
 
 ### Development Workflow

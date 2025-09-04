@@ -10,8 +10,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Toman.Management.KPIAnalysi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Toman.Management.KPIAnalysis.ServiceDefaults", "src\Toman.Management.KPIAnalysis.ServiceDefaults\Toman.Management.KPIAnalysis.ServiceDefaults.csproj", "{43DB97BC-40A6-4FDB-9CEE-367F45027857}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Toman.Management.KPIAnalysis.Web", "src\Toman.Management.KPIAnalysis.Web\Toman.Management.KPIAnalysis.Web.csproj", "{4BB4B2EE-310F-4544-B839-D736B122732F}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Misc", "Misc", "{C841F5C2-8F30-5BE9-ECA6-260644CF6F9F}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
@@ -26,6 +24,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{9C6578E7-E4FE-79BB-1635-F363CC1E80DD}"
 	ProjectSection(SolutionItems) = preProject
 		.github\copilot-instructions.md = .github\copilot-instructions.md
+		.github\prompts\gitlab-metrics.prompt.md = .github\prompts\gitlab-metrics.prompt.md
 	EndProjectSection
 EndProject
 Global
@@ -74,18 +73,6 @@ Global
 		{43DB97BC-40A6-4FDB-9CEE-367F45027857}.Release|x64.Build.0 = Release|Any CPU
 		{43DB97BC-40A6-4FDB-9CEE-367F45027857}.Release|x86.ActiveCfg = Release|Any CPU
 		{43DB97BC-40A6-4FDB-9CEE-367F45027857}.Release|x86.Build.0 = Release|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Debug|x64.Build.0 = Debug|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Debug|x86.Build.0 = Debug|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Release|x64.ActiveCfg = Release|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Release|x64.Build.0 = Release|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Release|x86.ActiveCfg = Release|Any CPU
-		{4BB4B2EE-310F-4544-B839-D736B122732F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -94,7 +81,6 @@ Global
 		{18719868-2CE5-486D-BA2A-09B3608B6A27} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F902F8DA-F942-4522-BD37-91390E984B02} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{43DB97BC-40A6-4FDB-9CEE-367F45027857} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{4BB4B2EE-310F-4544-B839-D736B122732F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7A258ABE-5E3D-422F-9944-6647971A74E0}
