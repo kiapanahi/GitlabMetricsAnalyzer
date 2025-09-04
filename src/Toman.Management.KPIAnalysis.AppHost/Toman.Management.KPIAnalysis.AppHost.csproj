@@ -8,9 +8,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Toman.Management.KPIAnalysis.ApiService\Toman.Management.KPIAnalysis.ApiService.csproj" />
-    <ProjectReference Include="..\Toman.Management.KPIAnalysis.Web\Toman.Management.KPIAnalysis.Web.csproj" />
+    <ProjectReference Include="..\Toman.Management.KPIAnalysis.ServiceDefaults\Toman.Management.KPIAnalysis.ServiceDefaults.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
   </ItemGroup>
 </Project>

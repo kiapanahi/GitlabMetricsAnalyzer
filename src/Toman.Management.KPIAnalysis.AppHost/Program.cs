@@ -1,9 +1,18 @@
-var builder = DistributedApplication.CreateBuilder(args);
+using static Toman.Management.KPIAnalysis.Constants;
 
-var apiService = builder.AddProject<Projects.Toman_Management_KPIAnalysis_ApiService>("apiservice");
+IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-builder.AddProject<Projects.Toman_Management_KPIAnalysis_Web>("webfrontend")
-    .WithExternalHttpEndpoints()
-    .WithReference(apiService);
+IResourceBuilder<ParameterResource> pgUsername = builder.AddParameter("username", "root", secret: true);
+IResourceBuilder<ParameterResource> pgPassword = builder.AddParameter("password", "root", secret: true);
+IResourceBuilder<PostgresServerResource> postgresServer = builder.AddPostgres(Keys.PostgresService, pgUsername, pgPassword)
+    .WithPgAdmin()
+    .WithLifetime(ContainerLifetime.Persistent);
+
+IResourceBuilder<PostgresDatabaseResource> postgresdb = postgresServer.AddDatabase(Keys.PostgresDatabase);
+
+IResourceBuilder<ProjectResource> apiService = builder.AddProject<Projects.Toman_Management_KPIAnalysis_ApiService>(Keys.GitlabMetricsCollector)
+    .WithReference(postgresdb)
+    .WaitFor(postgresdb);
+
 
 builder.Build().Run();
