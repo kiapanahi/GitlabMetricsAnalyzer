@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-
+This project is intended to analyze, calculate and measure different KPIs for the engineering team of my company. I work as the VP of engineering at Toman and we want to have a better understanding of our engineering processes and how we can improve them.
 
 ## Core Commands
 
@@ -13,6 +13,7 @@
 ## Architecture Overview
 
 ### Tech Stack
+- Use vertical slice architecture with minimal APIs for every feature.
 - **.NET 9** with C# latest features, file-scoped namespaces
 - **.NET Aspire** for local orchestration and service discovery
 - Always use minimal APIs.
@@ -69,8 +70,8 @@
 - Write unit tests for complex component logic only if i ask for tests
 - Test error scenarios
 - Mock external dependencies
-- Use MSTest for component testing
-- Create tests in the feedbackflow.tests project
+- Use XUnit for component testing
+- Create tests in the Toman.Management.KPIAnalysis.Tests project
 
 ## Documentation
 - Include usage examples in comments
@@ -80,11 +81,6 @@
 ## Security
 - Always validate user input
 
-## Accessibility
-- Use semantic HTML
-- Include ARIA attributes where necessary
-- Ensure keyboard navigation works
-
 ## File Organization
 - Keep related files together
 - Use meaningful file names
@@ -93,7 +89,6 @@
 
 ### Package Management
 - Uses **Central Package Management** via `Directory.Packages.props`
-- Key packages: Azure.AI.OpenAI, Azure.Data.Tables, Microsoft.Azure.Functions.Worker, Blazor.SpeechSynthesis
 - All projects target **.NET 9** with nullable reference types enabled
 
 ## Git
