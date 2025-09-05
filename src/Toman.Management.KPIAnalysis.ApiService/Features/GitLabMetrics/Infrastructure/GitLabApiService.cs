@@ -8,25 +8,13 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastruct
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
-public sealed class GitLabApiService : IGitLabApiService
+public sealed class GitLabApiService(HttpClient httpClient) : IGitLabApiService
 {
-    private readonly HttpClient _httpClient;
-    private readonly GitLabConfiguration _config;
-    private readonly JsonSerializerOptions _jsonOptions;
-
-    public GitLabApiService(HttpClient httpClient, IOptions<GitLabConfiguration> config)
+    private readonly HttpClient _httpClient = httpClient;
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        _httpClient = httpClient;
-        _config = config.Value;
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
-        _httpClient.BaseAddress = new Uri(_config.BaseUrl);
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.Token);
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Toman-GitLab-Metrics/1.0");
-    }
+        PropertyNameCaseInsensitive = true
+    };
 
     public async Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(string groupPath, CancellationToken cancellationToken = default)
     {
@@ -42,8 +30,7 @@ public sealed class GitLabApiService : IGitLabApiService
 
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var pageProjects = JsonSerializer.Deserialize<GitLabProject[]>(content, _jsonOptions);
+            var pageProjects = await ReadResponseContent<GitLabProject[]>(response, cancellationToken).ConfigureAwait(false);
 
             if (pageProjects is null || pageProjects.Length == 0)
                 break;
@@ -76,8 +63,7 @@ public sealed class GitLabApiService : IGitLabApiService
             var response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var pageMrs = JsonSerializer.Deserialize<GitLabMergeRequest[]>(content, _jsonOptions);
+            var pageMrs = await ReadResponseContent<GitLabMergeRequest[]>(response, cancellationToken).ConfigureAwait(false);
 
             if (pageMrs is null || pageMrs.Length == 0)
                 break;
@@ -108,8 +94,7 @@ public sealed class GitLabApiService : IGitLabApiService
             var response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var pageCommits = JsonSerializer.Deserialize<GitLabCommit[]>(content, _jsonOptions);
+            var pageCommits = await ReadResponseContent<GitLabCommit[]>(response, cancellationToken).ConfigureAwait(false);
 
             if (pageCommits is null || pageCommits.Length == 0)
                 break;
@@ -142,8 +127,7 @@ public sealed class GitLabApiService : IGitLabApiService
             var response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var pagePipelines = JsonSerializer.Deserialize<GitLabPipeline[]>(content, _jsonOptions);
+            var pagePipelines = await ReadResponseContent<GitLabPipeline[]>(response, cancellationToken).ConfigureAwait(false);
 
             if (pagePipelines is null || pagePipelines.Length == 0)
                 break;
@@ -157,5 +141,11 @@ public sealed class GitLabApiService : IGitLabApiService
         }
 
         return pipelines;
+    }
+
+    private static async ValueTask<T?> ReadResponseContent<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var result = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        return result;
     }
 }
