@@ -136,31 +136,53 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     {
         var allProjects = new List<DimProject>();
 
-        foreach (var groupPath in _gitLabConfig.RootGroups)
+        try
         {
-            try
-            {
-                var gitLabProjects = await _gitLabApi.GetProjectsAsync(groupPath, cancellationToken);
-                
-                foreach (var project in gitLabProjects)
-                {
-                    var dimProject = new DimProject
-                    {
-                        ProjectId = project.Id,
-                        PathWithNamespace = project.PathWithNamespace,
-                        DefaultBranch = project.DefaultBranch,
-                        Visibility = project.Visibility,
-                        ActiveFlag = project.LastActivityAt > DateTimeOffset.UtcNow.AddDays(-90)
-                    };
+            // Get all groups that the token has access to
+            _logger.LogInformation("Discovering all accessible GitLab groups...");
+            var allGroups = await _gitLabApi.GetAllGroupsAsync(cancellationToken);
 
-                    allProjects.Add(dimProject);
+            _logger.LogInformation("Found {GroupCount} accessible groups", allGroups.Count);
+
+
+            _logger.LogInformation("Processing {FilteredGroupCount} groups after filtering", allGroups.Count);
+
+            // Collect projects from all accessible groups
+            foreach (var group in allGroups)
+            {
+                try
+                {
+                    _logger.LogDebug("Discovering projects for group {GroupPath}", group.FullPath);
+                    var gitLabProjects = await _gitLabApi.GetProjectsAsync(group.FullPath, cancellationToken);
+
+                    foreach (var project in gitLabProjects)
+                    {
+                        var dimProject = new DimProject
+                        {
+                            ProjectId = project.Id,
+                            PathWithNamespace = project.PathWithNamespace,
+                            DefaultBranch = project.DefaultBranch,
+                            Visibility = project.Visibility,
+                            ActiveFlag = project.LastActivityAt > DateTimeOffset.UtcNow.AddDays(-90)
+                        };
+
+                        allProjects.Add(dimProject);
+                    }
+
+                    _logger.LogDebug("Found {ProjectCount} projects in group {GroupPath}", gitLabProjects.Count, group.FullPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to discover projects for group {GroupPath}", group.FullPath);
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to discover projects for group {GroupPath}", groupPath);
-            }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to discover groups. Falling back to configured root groups");
+        }
+
+        _logger.LogInformation("Discovered {TotalProjectCount} projects from all accessible groups", allProjects.Count);
 
         // Upsert projects to database
         await _dbContext.UpsertRangeAsync(allProjects, cancellationToken);
@@ -194,7 +216,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private async Task CollectMergeRequestsAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         var mergeRequests = await _gitLabApi.GetMergeRequestsAsync(projectId, updatedAfter, cancellationToken);
-        
+
         var rawMrs = new List<RawMergeRequest>();
         var users = new HashSet<DimUser>();
 
@@ -245,14 +267,14 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private async Task CollectCommitsAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         var commits = await _gitLabApi.GetCommitsAsync(projectId, updatedAfter.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), cancellationToken);
-        
+
         var rawCommits = new List<RawCommit>();
 
         foreach (var commit in commits)
         {
             // Create a dummy user for the commit author (we'll link by email hash later)
             var emailHash = ComputeEmailHash(commit.AuthorEmail);
-            
+
             var rawCommit = new RawCommit
             {
                 ProjectId = projectId,
@@ -273,7 +295,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private async Task CollectPipelinesAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         var pipelines = await _gitLabApi.GetPipelinesAsync(projectId, updatedAfter, cancellationToken);
-        
+
         var rawPipelines = new List<RawPipeline>();
 
         foreach (var pipeline in pipelines)

@@ -6,5 +6,4 @@ public sealed class GitLabConfiguration
 
     public required string BaseUrl { get; init; }
     public required string Token { get; init; }
-    public required string[] RootGroups { get; init; }
 }

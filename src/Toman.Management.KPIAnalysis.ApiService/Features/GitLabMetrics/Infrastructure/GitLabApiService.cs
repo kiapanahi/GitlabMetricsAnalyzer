@@ -16,6 +16,36 @@ public sealed class GitLabApiService(HttpClient httpClient) : IGitLabApiService
         PropertyNameCaseInsensitive = true
     };
 
+    public async Task<IReadOnlyList<GitLabGroup>> GetAllGroupsAsync(CancellationToken cancellationToken = default)
+    {
+        var groups = new List<GitLabGroup>();
+        var page = 1;
+        const int perPage = 100;
+
+        while (true)
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/v4/groups?page={page}&per_page={perPage}&all_available=true&owned=false&order_by=name&sort=asc",
+                cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+
+            var pageGroups = await ReadResponseContent<GitLabGroup[]>(response, cancellationToken).ConfigureAwait(false);
+
+            if (pageGroups is null || pageGroups.Length == 0)
+                break;
+
+            groups.AddRange(pageGroups);
+
+            if (pageGroups.Length < perPage)
+                break;
+
+            page++;
+        }
+
+        return groups;
+    }
+
     public async Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(string groupPath, CancellationToken cancellationToken = default)
     {
         var projects = new List<GitLabProject>();
