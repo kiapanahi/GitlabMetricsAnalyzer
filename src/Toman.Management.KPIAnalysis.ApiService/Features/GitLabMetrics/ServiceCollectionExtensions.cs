@@ -69,6 +69,8 @@ internal static class ServiceCollectionExtensions
                     .WithIdentity("NightlyProcessing-trigger")
                     .WithCronSchedule("0 0 2 * * ?")); // Daily at 02:00
             });
+
+            builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
         }
 
         return builder;

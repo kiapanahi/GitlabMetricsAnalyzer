@@ -17,8 +17,6 @@ builder.AddGitLabMetricsServices();
 builder.Services.Configure<ProcessingConfiguration>(builder.Configuration.GetSection(ProcessingConfiguration.SectionName));
 builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
 
-builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
