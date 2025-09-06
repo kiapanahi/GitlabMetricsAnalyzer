@@ -134,21 +134,80 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
     private async Task<IReadOnlyList<DimProject>> DiscoverProjectsAsync(CancellationToken cancellationToken)
     {
+        const int weeklyRefreshDays = 7;
+        var refreshThreshold = DateTimeOffset.UtcNow.AddDays(-weeklyRefreshDays);
+
+        // Check if we need to refresh groups and projects from GitLab API
+        var lastGroupsDiscovery = await _dbContext.IngestionStates
+            .Where(s => s.Entity == "groups_discovery")
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var shouldRefreshFromApi = lastGroupsDiscovery is null || 
+                                   lastGroupsDiscovery.LastRunAt < refreshThreshold;
+
+        if (shouldRefreshFromApi)
+        {
+            _logger.LogInformation("Refreshing groups and projects from GitLab API (last refresh: {LastRefresh})", 
+                lastGroupsDiscovery?.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss") ?? "never");
+            
+            await RefreshGroupsAndProjectsFromApiAsync(cancellationToken);
+            
+            // Update ingestion state
+            var state = new IngestionState
+            {
+                Entity = "groups_discovery",
+                LastSeenUpdatedAt = DateTimeOffset.UtcNow,
+                LastRunAt = DateTimeOffset.UtcNow
+            };
+            await _dbContext.UpsertAsync(state, cancellationToken);
+        }
+        else
+        {
+            _logger.LogInformation("Using cached groups and projects from database (last refresh: {LastRefresh})", 
+                lastGroupsDiscovery!.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss"));
+        }
+
+        // Return projects from database (either just refreshed or from cache)
+        var allProjects = await _dbContext.DimProjects.ToListAsync(cancellationToken);
+        
+        _logger.LogInformation("Retrieved {TotalProjectCount} projects from database", allProjects.Count);
+        
+        return allProjects;
+    }
+
+    private async Task RefreshGroupsAndProjectsFromApiAsync(CancellationToken cancellationToken)
+    {
         var allProjects = new List<DimProject>();
+        var allGroups = new List<DimGroup>();
 
         try
         {
             // Get all groups that the token has access to
-            _logger.LogInformation("Discovering all accessible GitLab groups...");
-            var allGroups = await _gitLabApi.GetAllGroupsAsync(cancellationToken);
+            _logger.LogInformation("Discovering all accessible GitLab groups from API...");
+            var gitLabGroups = await _gitLabApi.GetAllGroupsAsync(cancellationToken);
 
-            _logger.LogInformation("Found {GroupCount} accessible groups", allGroups.Count);
+            _logger.LogInformation("Found {GroupCount} accessible groups", gitLabGroups.Count);
 
-
-            _logger.LogInformation("Processing {FilteredGroupCount} groups after filtering", allGroups.Count);
+            // Convert GitLab groups to DimGroup entities
+            foreach (var group in gitLabGroups)
+            {
+                var dimGroup = new DimGroup
+                {
+                    GroupId = group.Id,
+                    Name = group.Name,
+                    Path = group.Path,
+                    FullName = group.FullName,
+                    FullPath = group.FullPath,
+                    ParentId = group.ParentId,
+                    Visibility = group.Visibility,
+                    CreatedAt = group.CreatedAt,
+                    LastDiscoveredAt = DateTimeOffset.UtcNow
+                };
+                allGroups.Add(dimGroup);
+            }
 
             // Collect projects from all accessible groups
-            foreach (var group in allGroups)
+            foreach (var group in gitLabGroups)
             {
                 try
                 {
@@ -179,15 +238,16 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to discover groups. Falling back to configured root groups");
+            _logger.LogError(ex, "Failed to discover groups and projects from GitLab API");
+            throw;
         }
 
-        _logger.LogInformation("Discovered {TotalProjectCount} projects from all accessible groups", allProjects.Count);
+        _logger.LogInformation("Discovered {GroupCount} groups and {ProjectCount} projects from GitLab API", 
+            allGroups.Count, allProjects.Count);
 
-        // Upsert projects to database
+        // Upsert groups and projects to database
+        await _dbContext.UpsertRangeAsync(allGroups, cancellationToken);
         await _dbContext.UpsertRangeAsync(allProjects, cancellationToken);
-
-        return allProjects;
     }
 
     private async Task ProcessProjectAsync(DimProject project, DateTimeOffset updatedAfter, CancellationToken cancellationToken)

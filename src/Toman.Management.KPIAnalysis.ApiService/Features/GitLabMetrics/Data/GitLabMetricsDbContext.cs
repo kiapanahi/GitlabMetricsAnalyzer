@@ -20,6 +20,7 @@ public sealed class GitLabMetricsDbContext : DbContext
     public DbSet<DimUser> DimUsers => Set<DimUser>();
     public DbSet<DimBranch> DimBranches => Set<DimBranch>();
     public DbSet<DimRelease> DimReleases => Set<DimRelease>();
+    public DbSet<DimGroup> DimGroups => Set<DimGroup>();
 
     // Raw Snapshots
     public DbSet<RawCommit> RawCommits => Set<RawCommit>();
@@ -89,6 +90,21 @@ public sealed class GitLabMetricsDbContext : DbContext
             entity.Property(e => e.TagName).HasColumnName("tag_name").HasMaxLength(255);
             entity.Property(e => e.ReleasedAt).HasColumnName("released_at");
             entity.Property(e => e.SemverValid).HasColumnName("semver_valid");
+        });
+
+        modelBuilder.Entity<DimGroup>(entity =>
+        {
+            entity.ToTable("dim_group");
+            entity.HasKey(e => e.GroupId);
+            entity.Property(e => e.GroupId).HasColumnName("group_id");
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(255);
+            entity.Property(e => e.Path).HasColumnName("path").HasMaxLength(255);
+            entity.Property(e => e.FullName).HasColumnName("full_name").HasMaxLength(500);
+            entity.Property(e => e.FullPath).HasColumnName("full_path").HasMaxLength(500);
+            entity.Property(e => e.ParentId).HasColumnName("parent_id");
+            entity.Property(e => e.Visibility).HasColumnName("visibility").HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.LastDiscoveredAt).HasColumnName("last_discovered_at");
         });
     }
 
