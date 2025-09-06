@@ -19,5 +19,14 @@
     <PackageVersion Include="Quartz" Version="3.15.0" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.15.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUi" Version="9.0.4" />
+
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="9.4.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.0" />
+    <PackageVersion Include="xunit.v3" Version="2.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Testing" Version="9.0.0" />
   </ItemGroup>
 </Project>

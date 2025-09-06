@@ -22,4 +22,7 @@
     <Project Path="src/Toman.Management.KPIAnalysis.AppHost/Toman.Management.KPIAnalysis.AppHost.csproj" />
     <Project Path="src/Toman.Management.KPIAnalysis.ServiceDefaults/Toman.Management.KPIAnalysis.ServiceDefaults.csproj" />
   </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Toman.Management.KPIAnalysis.Tests/Toman.Management.KPIAnalysis.Tests.csproj" />
+  </Folder>
 </Solution>

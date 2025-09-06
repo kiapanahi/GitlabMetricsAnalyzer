@@ -25,6 +25,7 @@ This project is intended to analyze, calculate and measure different KPIs for th
 ## Project Structure
 - **Toman.Management.KPIAnalysis.ApiService** - The main project that contains business logic and APIs
 - **Toman.Management.KPIAnalysis.ServiceDefaults** - Aspire service defaults and telemetry
+- **Toman.Management.KPIAnalysis.Tests** - Unit and integration tests
 
 ## Code Style
 - Prefer async/await over direct Task handling
