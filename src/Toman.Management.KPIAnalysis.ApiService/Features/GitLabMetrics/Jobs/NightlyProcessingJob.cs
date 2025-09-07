@@ -31,14 +31,14 @@ public sealed class NightlyProcessingJob : IJob
         {
             // Run full collection
             await _collectorService.RunIncrementalCollectionAsync(context.CancellationToken);
-            
+
             // Process facts
             await _processorService.ProcessFactsAsync(context.CancellationToken);
-            
+
             // Generate exports for yesterday (since we run at 02:00)
             var exportDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
             await _exportService.WriteExportsAsync(exportDate, context.CancellationToken);
-            
+
             _logger.LogInformation("Completed nightly processing job");
         }
         catch (Exception ex)

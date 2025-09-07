@@ -53,8 +53,8 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
             var cycleTimeHours = (decimal)(mr.MergedAt.Value - mr.CreatedAt).TotalHours;
 
             // Calculate review wait time (first review would need additional data)
-            var reviewWaitHours = mr.FirstReviewAt.HasValue 
-                ? (decimal)(mr.FirstReviewAt.Value - mr.CreatedAt).TotalHours 
+            var reviewWaitHours = mr.FirstReviewAt.HasValue
+                ? (decimal)(mr.FirstReviewAt.Value - mr.CreatedAt).TotalHours
                 : 0;
 
             // Rework count (would need force-push data)
@@ -199,7 +199,7 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
     private static int CalculateMtgSeconds(List<RawPipeline> pipelines, int currentIndex)
     {
         var current = pipelines[currentIndex];
-        
+
         // If current pipeline passed, MTG is 0
         if (current.Status == "success")
             return 0;
@@ -221,14 +221,14 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
     {
         // Inference rules from PRD:
         // - Pipeline on default branch AND/OR environment=production AND/OR associated with release tag
-        
-        var isDefaultBranch = pipeline.Ref.EndsWith("/main") || 
-                             pipeline.Ref.EndsWith("/master") || 
+
+        var isDefaultBranch = pipeline.Ref.EndsWith("/main") ||
+                             pipeline.Ref.EndsWith("/master") ||
                              pipeline.Ref.EndsWith("/production");
-        
+
         var isProdEnvironment = pipeline.Environment?.ToLowerInvariant().Contains("prod") == true;
-        
-        var isReleaseTag = pipeline.Ref.StartsWith("refs/tags/v") || 
+
+        var isReleaseTag = pipeline.Ref.StartsWith("refs/tags/v") ||
                           pipeline.Ref.StartsWith("refs/tags/release");
 
         return isDefaultBranch || isProdEnvironment || isReleaseTag;
@@ -244,7 +244,7 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
     private static bool IsFlakyCandidate(List<RawPipeline> pipelines, int currentIndex)
     {
         var current = pipelines[currentIndex];
-        
+
         if (current.Status != "failed")
             return false;
 
@@ -269,7 +269,7 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
         return daysSinceRelease switch
         {
             <= 7 => "weekly",
-            <= 14 => "bi-weekly", 
+            <= 14 => "bi-weekly",
             <= 30 => "monthly",
             <= 90 => "quarterly",
             _ => "annual+"

@@ -28,7 +28,7 @@ public sealed class IncrementalCollectionJob : IJob
         {
             await _collectorService.RunIncrementalCollectionAsync(context.CancellationToken);
             await _processorService.ProcessFactsAsync(context.CancellationToken);
-            
+
             _logger.LogInformation("Completed incremental collection job");
         }
         catch (Exception ex)

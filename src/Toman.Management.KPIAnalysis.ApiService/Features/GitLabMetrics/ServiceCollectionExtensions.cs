@@ -1,13 +1,16 @@
+using System.Net.Http.Headers;
+
+using Microsoft.Extensions.Options;
+
 using Polly;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Quartz;
+
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Jobs;
-using Microsoft.Extensions.Options;
-using System.Net.Http.Headers;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 

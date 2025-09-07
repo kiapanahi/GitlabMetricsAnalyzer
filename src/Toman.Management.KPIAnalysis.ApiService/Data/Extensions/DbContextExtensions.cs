@@ -8,7 +8,7 @@ public static class DbContextExtensions
         where T : class
     {
         var entry = context.Entry(entity);
-        
+
         if (entry.IsKeySet)
         {
             entry.State = EntityState.Modified;
@@ -28,7 +28,7 @@ public static class DbContextExtensions
         foreach (var entity in entities)
         {
             var entry = context.Entry(entity);
-            
+
             if (entry.IsKeySet)
             {
                 entry.State = EntityState.Modified;

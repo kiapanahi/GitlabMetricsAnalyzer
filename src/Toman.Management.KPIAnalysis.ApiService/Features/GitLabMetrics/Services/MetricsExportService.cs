@@ -47,7 +47,7 @@ public sealed class MetricsExportService : IMetricsExportService
         foreach (var project in projects)
         {
             var metrics = await CalculateMetricsForProjectAsync(project.ProjectId, date, cancellationToken);
-            
+
             // Extract team/org information from project path
             var (org, team) = ExtractOrgAndTeam(project.PathWithNamespace);
 
@@ -78,7 +78,7 @@ public sealed class MetricsExportService : IMetricsExportService
         var csvPath = await GetExportPathAsync(date, "csv");
         await WriteCsvExportAsync(csvPath, exports, cancellationToken);
 
-        _logger.LogInformation("Exported {Count} records to {JsonPath} and {CsvPath}", 
+        _logger.LogInformation("Exported {Count} records to {JsonPath} and {CsvPath}",
             exports.Length, jsonPath, csvPath);
     }
 
@@ -86,10 +86,10 @@ public sealed class MetricsExportService : IMetricsExportService
     {
         var fileName = $"{date:yyyy-MM-dd}.{format}";
         var path = Path.Combine(_exportsConfig.Directory, "daily", fileName);
-        
+
         // Ensure directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        
+
         return Task.FromResult(path);
     }
 
@@ -113,20 +113,20 @@ public sealed class MetricsExportService : IMetricsExportService
             .Where(f => f.ProjectId == projectId)
             .ToListAsync(cancellationToken);
 
-        var pipelineSuccessRate = pipelineFacts.Count > 0 
-            ? pipelineFacts.Count(f => f.DurationSec > 0) / (decimal)pipelineFacts.Count 
+        var pipelineSuccessRate = pipelineFacts.Count > 0
+            ? pipelineFacts.Count(f => f.DurationSec > 0) / (decimal)pipelineFacts.Count
             : 0;
 
-        var meanTimeToGreenSec = pipelineFacts.Count > 0 
-            ? pipelineFacts.Average(f => f.MtgSeconds) 
+        var meanTimeToGreenSec = pipelineFacts.Count > 0
+            ? pipelineFacts.Average(f => f.MtgSeconds)
             : 0;
 
-        var avgPipelineDurationSec = pipelineFacts.Count > 0 
-            ? pipelineFacts.Average(f => f.DurationSec) 
+        var avgPipelineDurationSec = pipelineFacts.Count > 0
+            ? pipelineFacts.Average(f => f.DurationSec)
             : 0;
 
-        var flakyJobRate = pipelineFacts.Count > 0 
-            ? pipelineFacts.Count(f => f.IsFlakyCandidate) / (decimal)pipelineFacts.Count 
+        var flakyJobRate = pipelineFacts.Count > 0
+            ? pipelineFacts.Count(f => f.IsFlakyCandidate) / (decimal)pipelineFacts.Count
             : 0;
 
         var deploymentFrequencyWk = pipelineFacts.Count(f => f.IsProd);
@@ -184,7 +184,7 @@ public sealed class MetricsExportService : IMetricsExportService
     private static (string org, string team) ExtractOrgAndTeam(string pathWithNamespace)
     {
         var parts = pathWithNamespace.Split('/');
-        
+
         if (parts.Length < 2)
             return ("Unknown", "Unknown");
 
@@ -195,7 +195,7 @@ public sealed class MetricsExportService : IMetricsExportService
         team = team.ToLowerInvariant() switch
         {
             "corporate-services" => "Corporate Services",
-            "exchange" => "Exchange", 
+            "exchange" => "Exchange",
             "c-side" => "C-Side",
             "core" or "platform" => "Platform",
             _ => team
@@ -219,7 +219,7 @@ public sealed class MetricsExportService : IMetricsExportService
     private static async Task WriteCsvExportAsync(string filePath, MetricsExport[] exports, CancellationToken cancellationToken)
     {
         await using var writer = new StreamWriter(filePath);
-        
+
         // Write CSV header
         await writer.WriteLineAsync(string.Join(",", [
             "Date", "Org", "Team", "Repo",

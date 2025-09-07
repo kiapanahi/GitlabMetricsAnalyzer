@@ -142,16 +142,16 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             .Where(s => s.Entity == "groups_discovery")
             .FirstOrDefaultAsync(cancellationToken);
 
-        var shouldRefreshFromApi = lastGroupsDiscovery is null || 
+        var shouldRefreshFromApi = lastGroupsDiscovery is null ||
                                    lastGroupsDiscovery.LastRunAt < refreshThreshold;
 
         if (shouldRefreshFromApi)
         {
-            _logger.LogInformation("Refreshing groups and projects from GitLab API (last refresh: {LastRefresh})", 
+            _logger.LogInformation("Refreshing groups and projects from GitLab API (last refresh: {LastRefresh})",
                 lastGroupsDiscovery?.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss") ?? "never");
-            
+
             await RefreshGroupsAndProjectsFromApiAsync(cancellationToken);
-            
+
             // Update ingestion state
             var state = new IngestionState
             {
@@ -163,15 +163,15 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
         else
         {
-            _logger.LogInformation("Using cached groups and projects from database (last refresh: {LastRefresh})", 
+            _logger.LogInformation("Using cached groups and projects from database (last refresh: {LastRefresh})",
                 lastGroupsDiscovery!.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 
         // Return projects from database (either just refreshed or from cache)
         var allProjects = await _dbContext.DimProjects.ToListAsync(cancellationToken);
-        
+
         _logger.LogInformation("Retrieved {TotalProjectCount} projects from database", allProjects.Count);
-        
+
         return allProjects;
     }
 
@@ -242,7 +242,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             throw;
         }
 
-        _logger.LogInformation("Discovered {GroupCount} groups and {ProjectCount} projects from GitLab API", 
+        _logger.LogInformation("Discovered {GroupCount} groups and {ProjectCount} projects from GitLab API",
             allGroups.Count, allProjects.Count);
 
         // Upsert groups and projects to database
