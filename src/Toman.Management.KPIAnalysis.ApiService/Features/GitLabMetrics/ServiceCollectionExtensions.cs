@@ -28,8 +28,6 @@ internal static class ServiceCollectionExtensions
 
         // Add services
         builder.Services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();
-        builder.Services.AddScoped<IMetricsProcessorService, MetricsProcessorService>();
-        builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
 
 
         builder.Services.AddSingleton<IGitLabClient>(sp =>

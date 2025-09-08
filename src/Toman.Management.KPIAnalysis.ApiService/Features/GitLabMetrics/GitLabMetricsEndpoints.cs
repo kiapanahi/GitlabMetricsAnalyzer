@@ -13,9 +13,7 @@ public static class GitLabMetricsEndpoints
     {
         app.MapGitLabMetricsEndpoints()
            .MapHealthEndpoints()
-           .MapStatusEndpoints()
-           .MapExportsEndpoints()
-           .MapCollectionEndpoints();
+           .MapStatusEndpoints();
 
         return app;
     }
@@ -105,11 +103,11 @@ public static class GitLabMetricsEndpoints
                     .FirstOrDefaultAsync(cancellationToken);
 
                 // Calculate coverage
-                var totalProjects = await dbContext.DimProjects.CountAsync(cancellationToken);
-                var activeProjects = await dbContext.DimProjects
-                    .CountAsync(p => !p.archived, cancellationToken);
+                //var totalProjects = await dbContext.DimProjects.CountAsync(cancellationToken);
+                //var activeProjects = await dbContext.DimProjects
+                //    .CountAsync(p => !p.archived, cancellationToken);
 
-                var coveragePercent = totalProjects > 0 ? activeProjects / (decimal)totalProjects * 100 : 0;
+                //var coveragePercent = totalProjects > 0 ? activeProjects / (decimal)totalProjects * 100 : 0;
 
                 // Calculate lag
                 var lastUpdateTime = lastIncrementalRun?.LastRunAt ?? DateTimeOffset.MinValue;
@@ -130,12 +128,12 @@ public static class GitLabMetricsEndpoints
                         incremental = lastIncrementalRun?.LastRunAt,
                         backfill = lastBackfillRun?.LastRunAt
                     },
-                    coverage = new
-                    {
-                        totalProjects,
-                        activeProjects,
-                        coveragePercent = Math.Round(coveragePercent, 2)
-                    },
+                    //coverage = new
+                    //{
+                    //    totalProjects,
+                    //    activeProjects,
+                    //    coveragePercent = Math.Round(coveragePercent, 2)
+                    //},
                     lag = new
                     {
                         lagMinutes = Math.Round(lagMinutes, 2),
@@ -167,137 +165,4 @@ public static class GitLabMetricsEndpoints
 
         return app;
     }
-
-    private static WebApplication MapExportsEndpoints(this WebApplication app)
-    {
-        app.MapGet("/exports/daily/{date}.json", async (
-            [FromRoute] string date,
-            [FromServices] IMetricsExportService exportService,
-            CancellationToken cancellationToken) =>
-        {
-            if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", out var exportDate))
-            {
-                return Results.BadRequest(new { error = "Invalid date format. Expected: yyyy-MM-dd" });
-            }
-
-            try
-            {
-                var exports = await exportService.GenerateExportsAsync(exportDate, cancellationToken);
-                return Results.Ok(exports);
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(
-                    statusCode: 500,
-                    title: "Failed to generate exports",
-                    detail: ex.Message
-                );
-            }
-        })
-        .WithName("GetDailyExportsJson")
-        .WithTags("Exports")
-        .Produces<MetricsExport[]>();
-
-        app.MapGet("/exports/daily/{date}.csv", async (
-            [FromRoute] string date,
-            [FromServices] IMetricsExportService exportService,
-            CancellationToken cancellationToken) =>
-        {
-            if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", out var exportDate))
-            {
-                return Results.BadRequest(new { error = "Invalid date format. Expected: yyyy-MM-dd" });
-            }
-
-            try
-            {
-                var filePath = await exportService.GetExportPathAsync(exportDate, "csv");
-
-                if (!File.Exists(filePath))
-                {
-                    // Generate the CSV if it doesn't exist
-                    await exportService.WriteExportsAsync(exportDate, cancellationToken);
-                }
-
-                var fileBytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
-                return Results.File(fileBytes, "text/csv", $"{date}.csv");
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(
-                    statusCode: 500,
-                    title: "Failed to get CSV export",
-                    detail: ex.Message
-                );
-            }
-        })
-        .WithName("GetDailyExportsCsv")
-        .WithTags("Exports")
-        .Produces<FileResult>();
-
-        return app;
-    }
-
-    private static WebApplication MapCollectionEndpoints(this WebApplication app)
-    {
-        app.MapPost("/runs/backfill", async (
-            [FromQuery] int days,
-            [FromServices] IGitLabCollectorService collectorService,
-            [FromServices] IMetricsProcessorService processorService,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                await collectorService.RunBackfillCollectionAsync(days, cancellationToken);
-                await processorService.ProcessFactsAsync(cancellationToken);
-
-                return Results.Ok(new
-                {
-                    message = "Backfill completed successfully",
-                    days,
-                    timestamp = DateTimeOffset.UtcNow
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(
-                    statusCode: 500,
-                    title: "Backfill failed",
-                    detail: ex.Message
-                );
-            }
-        })
-        .WithName("RunBackfill")
-        .WithTags("Collection");
-
-        app.MapPost("/runs/incremental", async (
-            [FromServices] IGitLabCollectorService collectorService,
-            [FromServices] IMetricsProcessorService processorService,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                await collectorService.RunIncrementalCollectionAsync(cancellationToken);
-                await processorService.ProcessFactsAsync(cancellationToken);
-
-                return Results.Ok(new
-                {
-                    message = "Incremental run completed successfully",
-                    timestamp = DateTimeOffset.UtcNow
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(
-                    statusCode: 500,
-                    title: "Incremental run failed",
-                    detail: ex.Message
-                );
-            }
-        })
-        .WithName("RunIncremental")
-        .WithTags("Collection");
-
-        return app;
-    }
-
 }

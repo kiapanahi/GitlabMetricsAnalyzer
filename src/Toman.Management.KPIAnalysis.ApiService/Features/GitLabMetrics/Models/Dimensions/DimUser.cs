@@ -7,5 +7,5 @@ public sealed class DimUser
     public required string Name { get; init; }
     public required string State { get; init; }
     public bool IsBot { get; init; }
-    public required string EmailHash { get; init; }
+    public required string Email { get; init; }
 }

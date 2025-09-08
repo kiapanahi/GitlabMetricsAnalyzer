@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using NGitLab;
+using NGitLab.Models;
 
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Data.Extensions;
@@ -98,11 +99,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private async Task CollectDataAsync(DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         // Discover and collect projects
-        var projects = await DiscoverProjectsAsync(cancellationToken);
+        var projects = DiscoverProjects();
         _logger.LogInformation("Discovered {ProjectCount} projects", projects.Count);
 
         // Create channel for project processing
-        var channel = Channel.CreateUnbounded<DimProject>();
+        var channel = Channel.CreateUnbounded<Project>();
         var writer = channel.Writer;
         var reader = channel.Reader;
 
@@ -133,117 +134,35 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         await processingTask;
     }
 
-    private async Task<IReadOnlyList<DimProject>> DiscoverProjectsAsync(CancellationToken cancellationToken)
+    private IReadOnlyList<Project> DiscoverProjects()
     {
-        const int weeklyRefreshDays = 7;
-        var refreshThreshold = DateTimeOffset.UtcNow.AddDays(-weeklyRefreshDays);
-
-        // Check if we need to refresh projects from GitLab API
-        var lastProjectsDiscovery = await _dbContext.IngestionStates
-            .Where(s => s.Entity == "projects_discovery")
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var shouldRefreshFromApi = lastProjectsDiscovery is null ||
-                                   lastProjectsDiscovery.LastRunAt < refreshThreshold;
-
-        if (shouldRefreshFromApi)
-        {
-            _logger.LogInformation("Refreshing projects from GitLab API (last refresh: {LastRefresh})",
-                lastProjectsDiscovery?.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss") ?? "never");
-
-            await RefreshProjectsFromApiAsync(cancellationToken);
-
-            // Update ingestion state
-            var state = new IngestionState
-            {
-                Entity = "projects_discovery",
-                LastSeenUpdatedAt = DateTimeOffset.UtcNow,
-                LastRunAt = DateTimeOffset.UtcNow
-            };
-            await _dbContext.UpsertAsync(state, cancellationToken);
-        }
-        else
-        {
-            _logger.LogInformation("Using cached projects from database (last refresh: {LastRefresh})",
-                lastProjectsDiscovery!.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss"));
-        }
-
-        // Return projects from database (either just refreshed or from cache)
-        var allProjects = await _dbContext.DimProjects.ToListAsync(cancellationToken);
+        var allProjects = _gitLabClient.Projects.Get(new ProjectQuery { }).ToList().AsReadOnly();
 
         _logger.LogInformation("Retrieved {TotalProjectCount} projects from database", allProjects.Count);
 
         return allProjects;
     }
 
-    private async Task RefreshProjectsFromApiAsync(CancellationToken cancellationToken)
-    {
-        var allProjects = new List<DimProject>();
-
-        try
-        {
-            // Get all projects that the token has access to
-            _logger.LogInformation("Discovering all accessible GitLab projects from API...");
-            var gitLabProjects = _gitLabClient.Projects.Get(new NGitLab.Models.ProjectQuery { }).ToList();
-
-
-            _logger.LogInformation("Found {ProjectCount} accessible projects", gitLabProjects.Count);
-
-            // Convert GitLab projects to DimProject entities
-            foreach (var project in gitLabProjects)
-            {
-                var dimProject = new DimProject
-                {
-                    id = (int)project.Id,
-                    name = project.PathWithNamespace.Split('/').Last(),
-                    name_with_namespace = project.PathWithNamespace.Replace('/', ' '),
-                    path = project.PathWithNamespace.Split('/').Last(),
-                    path_with_namespace = project.PathWithNamespace,
-                    default_branch = project.DefaultBranch ?? "main",
-                    ssh_url_to_repo = project.SshUrl,
-                    http_url_to_repo = project.HttpUrl,
-                    web_url = project.WebUrl,
-                    visibility = project.VisibilityLevel.ToString(),
-                    created_at = DateTime.UtcNow,
-                    last_activity_at = project.LastActivityAt,
-                    archived = project.LastActivityAt < DateTimeOffset.UtcNow.AddDays(-90)
-                };
-
-                allProjects.Add(dimProject);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to discover projects from GitLab API");
-            throw;
-        }
-
-        _logger.LogInformation("Discovered {ProjectCount} projects from GitLab API", allProjects.Count);
-
-        // Upsert projects to database
-        await _dbContext.UpsertRangeAsync(allProjects, cancellationToken);
-    }
-
-    private async Task ProcessProjectAsync(DimProject project, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private async Task ProcessProjectAsync(Project project, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         try
         {
-            _logger.LogDebug("Processing project {ProjectPath}", project.path_with_namespace);
+            _logger.LogDebug("Processing project {ProjectPath}", project.PathWithNamespace);
 
             // Collect merge requests
-            await CollectMergeRequestsAsync(project.id, updatedAfter, cancellationToken);
+            await CollectMergeRequestsAsync(project.Id, updatedAfter, cancellationToken);
 
             // Collect commits
-            await CollectCommitsAsync(project.id, updatedAfter, cancellationToken);
+            //await CollectCommitsAsync(project.Id, updatedAfter, cancellationToken);
 
             // Collect pipelines
-            await CollectPipelinesAsync(project.id, updatedAfter, cancellationToken);
+            //await CollectPipelinesAsync(project.Id, updatedAfter, cancellationToken);
 
-            _logger.LogDebug("Completed processing project {ProjectPath}", project.path_with_namespace);
+            _logger.LogDebug("Completed processing project {ProjectPath}", project.PathWithNamespace);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process project {ProjectPath}", project.path_with_namespace);
+            _logger.LogError(ex, "Failed to process project {ProjectPath}", project.PathWithNamespace);
         }
     }
 
@@ -264,7 +183,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                 Name = mr.Author.Name,
                 State = mr.Author.State,
                 IsBot = mr.Author.Bot,
-                EmailHash = ComputeEmailHash(mr.Author.Email ?? "")
+                Email = mr.Author.Email ?? ""
             };
             users.Add(user);
 

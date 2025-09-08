@@ -45,9 +45,6 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<GitLabMetricsDbContext>();
     await context.Database.EnsureCreatedAsync();
-
-    // Seed projects if database is empty
-    await SeedData.SeedProjectsAsync(context, app.Logger);
 }
 
 app.Run();
