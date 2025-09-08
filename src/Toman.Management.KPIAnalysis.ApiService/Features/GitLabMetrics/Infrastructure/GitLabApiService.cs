@@ -1,13 +1,10 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 
-using Microsoft.Extensions.Options;
-
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
+[Obsolete("use the `IGitLabClient` from NGitLab package instead", true)]
 public sealed class GitLabApiService(HttpClient httpClient) : IGitLabApiService
 {
     private readonly HttpClient _httpClient = httpClient;
@@ -16,46 +13,16 @@ public sealed class GitLabApiService(HttpClient httpClient) : IGitLabApiService
         PropertyNameCaseInsensitive = true
     };
 
-    public async Task<IReadOnlyList<GitLabGroup>> GetAllGroupsAsync(CancellationToken cancellationToken = default)
-    {
-        var groups = new List<GitLabGroup>();
-        var page = 1;
-        const int perPage = 100;
-
-        while (true)
-        {
-            var response = await _httpClient.GetAsync(
-                $"/api/v4/groups?page={page}&per_page={perPage}&all_available=true&owned=false&order_by=name&sort=asc",
-                cancellationToken);
-
-            response.EnsureSuccessStatusCode();
-
-            var pageGroups = await ReadResponseContent<GitLabGroup[]>(response, cancellationToken).ConfigureAwait(false);
-
-            if (pageGroups is null || pageGroups.Length == 0)
-                break;
-
-            groups.AddRange(pageGroups);
-
-            if (pageGroups.Length < perPage)
-                break;
-
-            page++;
-        }
-
-        return groups;
-    }
-
-    public async Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(string groupPath, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabProject>> GetAllProjectsAsync(CancellationToken cancellationToken = default)
     {
         var projects = new List<GitLabProject>();
         var page = 1;
-        const int perPage = 100;
+        const int perPage = 1000;
 
         while (true)
         {
             var response = await _httpClient.GetAsync(
-                $"/api/v4/groups/{Uri.EscapeDataString(groupPath)}/projects?page={page}&per_page={perPage}&include_subgroups=true&archived=false&simple=false",
+                $"/api/v4/projects?page={page}&per_page={perPage}&simple=true",
                 cancellationToken);
 
             response.EnsureSuccessStatusCode();

@@ -5,12 +5,12 @@ using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+using NGitLab;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Data.Extensions;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
@@ -25,21 +25,22 @@ public interface IGitLabCollectorService
 
 public sealed class GitLabCollectorService : IGitLabCollectorService
 {
-    private readonly IGitLabApiService _gitLabApi;
+    private readonly IGitLabClient _gitLabClient;
+
     private readonly GitLabMetricsDbContext _dbContext;
-    private readonly Features.GitLabMetrics.Configuration.GitLabConfiguration _gitLabConfig;
+    private readonly GitLabConfiguration _gitLabConfig;
     private readonly ProcessingConfiguration _processingConfig;
     private readonly ILogger<GitLabCollectorService> _logger;
     private readonly SemaphoreSlim _semaphore;
 
     public GitLabCollectorService(
-        IGitLabApiService gitLabApi,
+        IGitLabClient gitLabClient,
         GitLabMetricsDbContext dbContext,
-        IOptions<Features.GitLabMetrics.Configuration.GitLabConfiguration> gitLabConfig,
+        IOptions<GitLabConfiguration> gitLabConfig,
         IOptions<ProcessingConfiguration> processingConfig,
         ILogger<GitLabCollectorService> logger)
     {
-        _gitLabApi = gitLabApi;
+        _gitLabClient = gitLabClient;
         _dbContext = dbContext;
         _gitLabConfig = gitLabConfig.Value;
         _processingConfig = processingConfig.Value;
@@ -137,25 +138,25 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         const int weeklyRefreshDays = 7;
         var refreshThreshold = DateTimeOffset.UtcNow.AddDays(-weeklyRefreshDays);
 
-        // Check if we need to refresh groups and projects from GitLab API
-        var lastGroupsDiscovery = await _dbContext.IngestionStates
-            .Where(s => s.Entity == "groups_discovery")
+        // Check if we need to refresh projects from GitLab API
+        var lastProjectsDiscovery = await _dbContext.IngestionStates
+            .Where(s => s.Entity == "projects_discovery")
             .FirstOrDefaultAsync(cancellationToken);
 
-        var shouldRefreshFromApi = lastGroupsDiscovery is null ||
-                                   lastGroupsDiscovery.LastRunAt < refreshThreshold;
+        var shouldRefreshFromApi = lastProjectsDiscovery is null ||
+                                   lastProjectsDiscovery.LastRunAt < refreshThreshold;
 
         if (shouldRefreshFromApi)
         {
-            _logger.LogInformation("Refreshing groups and projects from GitLab API (last refresh: {LastRefresh})",
-                lastGroupsDiscovery?.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss") ?? "never");
+            _logger.LogInformation("Refreshing projects from GitLab API (last refresh: {LastRefresh})",
+                lastProjectsDiscovery?.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss") ?? "never");
 
-            await RefreshGroupsAndProjectsFromApiAsync(cancellationToken);
+            await RefreshProjectsFromApiAsync(cancellationToken);
 
             // Update ingestion state
             var state = new IngestionState
             {
-                Entity = "groups_discovery",
+                Entity = "projects_discovery",
                 LastSeenUpdatedAt = DateTimeOffset.UtcNow,
                 LastRunAt = DateTimeOffset.UtcNow
             };
@@ -163,8 +164,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
         else
         {
-            _logger.LogInformation("Using cached groups and projects from database (last refresh: {LastRefresh})",
-                lastGroupsDiscovery!.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss"));
+            _logger.LogInformation("Using cached projects from database (last refresh: {LastRefresh})",
+                lastProjectsDiscovery!.LastRunAt.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 
         // Return projects from database (either just refreshed or from cache)
@@ -175,78 +176,51 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return allProjects;
     }
 
-    private async Task RefreshGroupsAndProjectsFromApiAsync(CancellationToken cancellationToken)
+    private async Task RefreshProjectsFromApiAsync(CancellationToken cancellationToken)
     {
         var allProjects = new List<DimProject>();
-        var allGroups = new List<DimGroup>();
 
         try
         {
-            // Get all groups that the token has access to
-            _logger.LogInformation("Discovering all accessible GitLab groups from API...");
-            var gitLabGroups = await _gitLabApi.GetAllGroupsAsync(cancellationToken);
+            // Get all projects that the token has access to
+            _logger.LogInformation("Discovering all accessible GitLab projects from API...");
+            var gitLabProjects = _gitLabClient.Projects.Get(new NGitLab.Models.ProjectQuery { }).ToList();
 
-            _logger.LogInformation("Found {GroupCount} accessible groups", gitLabGroups.Count);
 
-            // Convert GitLab groups to DimGroup entities
-            foreach (var group in gitLabGroups)
+            _logger.LogInformation("Found {ProjectCount} accessible projects", gitLabProjects.Count);
+
+            // Convert GitLab projects to DimProject entities
+            foreach (var project in gitLabProjects)
             {
-                var dimGroup = new DimGroup
+                var dimProject = new DimProject
                 {
-                    GroupId = group.Id,
-                    Name = group.Name,
-                    Path = group.Path,
-                    FullName = group.FullName,
-                    FullPath = group.FullPath,
-                    ParentId = group.ParentId,
-                    Visibility = group.Visibility,
-                    CreatedAt = group.CreatedAt,
-                    LastDiscoveredAt = DateTimeOffset.UtcNow
+                    id = (int)project.Id,
+                    name = project.PathWithNamespace.Split('/').Last(),
+                    name_with_namespace = project.PathWithNamespace.Replace('/', ' '),
+                    path = project.PathWithNamespace.Split('/').Last(),
+                    path_with_namespace = project.PathWithNamespace,
+                    default_branch = project.DefaultBranch ?? "main",
+                    ssh_url_to_repo = project.SshUrl,
+                    http_url_to_repo = project.HttpUrl,
+                    web_url = project.WebUrl,
+                    visibility = project.VisibilityLevel.ToString(),
+                    created_at = DateTime.UtcNow,
+                    last_activity_at = project.LastActivityAt,
+                    archived = project.LastActivityAt < DateTimeOffset.UtcNow.AddDays(-90)
                 };
-                allGroups.Add(dimGroup);
-            }
 
-            // Collect projects from all accessible groups
-            foreach (var group in gitLabGroups)
-            {
-                try
-                {
-                    _logger.LogDebug("Discovering projects for group {GroupPath}", group.FullPath);
-                    var gitLabProjects = await _gitLabApi.GetProjectsAsync(group.FullPath, cancellationToken);
-
-                    foreach (var project in gitLabProjects)
-                    {
-                        var dimProject = new DimProject
-                        {
-                            ProjectId = project.Id,
-                            PathWithNamespace = project.PathWithNamespace,
-                            DefaultBranch = project.DefaultBranch,
-                            Visibility = project.Visibility,
-                            ActiveFlag = project.LastActivityAt > DateTimeOffset.UtcNow.AddDays(-90)
-                        };
-
-                        allProjects.Add(dimProject);
-                    }
-
-                    _logger.LogDebug("Found {ProjectCount} projects in group {GroupPath}", gitLabProjects.Count, group.FullPath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to discover projects for group {GroupPath}", group.FullPath);
-                }
+                allProjects.Add(dimProject);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to discover groups and projects from GitLab API");
+            _logger.LogError(ex, "Failed to discover projects from GitLab API");
             throw;
         }
 
-        _logger.LogInformation("Discovered {GroupCount} groups and {ProjectCount} projects from GitLab API",
-            allGroups.Count, allProjects.Count);
+        _logger.LogInformation("Discovered {ProjectCount} projects from GitLab API", allProjects.Count);
 
-        // Upsert groups and projects to database
-        await _dbContext.UpsertRangeAsync(allGroups, cancellationToken);
+        // Upsert projects to database
         await _dbContext.UpsertRangeAsync(allProjects, cancellationToken);
     }
 
@@ -254,28 +228,28 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     {
         try
         {
-            _logger.LogDebug("Processing project {ProjectPath}", project.PathWithNamespace);
+            _logger.LogDebug("Processing project {ProjectPath}", project.path_with_namespace);
 
             // Collect merge requests
-            await CollectMergeRequestsAsync(project.ProjectId, updatedAfter, cancellationToken);
+            await CollectMergeRequestsAsync(project.id, updatedAfter, cancellationToken);
 
             // Collect commits
-            await CollectCommitsAsync(project.ProjectId, updatedAfter, cancellationToken);
+            await CollectCommitsAsync(project.id, updatedAfter, cancellationToken);
 
             // Collect pipelines
-            await CollectPipelinesAsync(project.ProjectId, updatedAfter, cancellationToken);
+            await CollectPipelinesAsync(project.id, updatedAfter, cancellationToken);
 
-            _logger.LogDebug("Completed processing project {ProjectPath}", project.PathWithNamespace);
+            _logger.LogDebug("Completed processing project {ProjectPath}", project.path_with_namespace);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process project {ProjectPath}", project.PathWithNamespace);
+            _logger.LogError(ex, "Failed to process project {ProjectPath}", project.path_with_namespace);
         }
     }
 
-    private async Task CollectMergeRequestsAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectMergeRequestsAsync(long projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
-        var mergeRequests = await _gitLabApi.GetMergeRequestsAsync(projectId, updatedAfter, cancellationToken);
+        var mergeRequests = _gitLabClient.GetMergeRequest(projectId).All.ToList();
 
         var rawMrs = new List<RawMergeRequest>();
         var users = new HashSet<DimUser>();
@@ -324,59 +298,61 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         await _dbContext.UpsertRangeAsync(rawMrs, cancellationToken);
     }
 
-    private async Task CollectCommitsAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectCommitsAsync(long projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
-        var commits = await _gitLabApi.GetCommitsAsync(projectId, updatedAfter.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), cancellationToken);
+        throw new NotImplementedException("Commit collection is not implemented yet.");
+        //var commits = await _gitLabApi.GetCommitsAsync(projectId, updatedAfter.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), cancellationToken);
 
-        var rawCommits = new List<RawCommit>();
+        //var rawCommits = new List<RawCommit>();
 
-        foreach (var commit in commits)
-        {
-            // Create a dummy user for the commit author (we'll link by email hash later)
-            var emailHash = ComputeEmailHash(commit.AuthorEmail);
+        //foreach (var commit in commits)
+        //{
+        //    // Create a dummy user for the commit author (we'll link by email hash later)
+        //    var emailHash = ComputeEmailHash(commit.AuthorEmail);
 
-            var rawCommit = new RawCommit
-            {
-                ProjectId = projectId,
-                CommitId = commit.Id,
-                AuthorUserId = 0, // Will be linked later by email hash
-                CommittedAt = commit.CommittedDate,
-                Additions = commit.Stats?.Additions ?? 0,
-                Deletions = commit.Stats?.Deletions ?? 0,
-                IsSigned = false // Would need additional logic to detect
-            };
+        //    var rawCommit = new RawCommit
+        //    {
+        //        ProjectId = projectId,
+        //        CommitId = commit.Id,
+        //        AuthorUserId = 0, // Will be linked later by email hash
+        //        CommittedAt = commit.CommittedDate,
+        //        Additions = commit.Stats?.Additions ?? 0,
+        //        Deletions = commit.Stats?.Deletions ?? 0,
+        //        IsSigned = false // Would need additional logic to detect
+        //    };
 
-            rawCommits.Add(rawCommit);
-        }
+        //    rawCommits.Add(rawCommit);
+        //}
 
-        await _dbContext.UpsertRangeAsync(rawCommits, cancellationToken);
+        //await _dbContext.UpsertRangeAsync(rawCommits, cancellationToken);
     }
 
     private async Task CollectPipelinesAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
-        var pipelines = await _gitLabApi.GetPipelinesAsync(projectId, updatedAfter, cancellationToken);
+        throw new NotImplementedException("Pipeline collection is not implemented yet.");
+        //var pipelines = await _gitLabApi.GetPipelinesAsync(projectId, updatedAfter, cancellationToken);
 
-        var rawPipelines = new List<RawPipeline>();
+        //var rawPipelines = new List<RawPipeline>();
 
-        foreach (var pipeline in pipelines)
-        {
-            var rawPipeline = new RawPipeline
-            {
-                ProjectId = projectId,
-                PipelineId = pipeline.Id,
-                Sha = pipeline.Sha,
-                Ref = pipeline.Ref,
-                Status = pipeline.Status,
-                CreatedAt = pipeline.CreatedAt,
-                UpdatedAt = pipeline.UpdatedAt,
-                DurationSec = pipeline.Duration ?? 0,
-                Environment = null // Would need additional API call
-            };
+        //foreach (var pipeline in pipelines)
+        //{
+        //    var rawPipeline = new RawPipeline
+        //    {
+        //        ProjectId = projectId,
+        //        PipelineId = pipeline.Id,
+        //        Sha = pipeline.Sha,
+        //        Ref = pipeline.Ref,
+        //        Status = pipeline.Status,
+        //        CreatedAt = pipeline.CreatedAt,
+        //        UpdatedAt = pipeline.UpdatedAt,
+        //        DurationSec = pipeline.Duration ?? 0,
+        //        Environment = null // Would need additional API call
+        //    };
 
-            rawPipelines.Add(rawPipeline);
-        }
+        //    rawPipelines.Add(rawPipeline);
+        //}
 
-        await _dbContext.UpsertRangeAsync(rawPipelines, cancellationToken);
+        //await _dbContext.UpsertRangeAsync(rawPipelines, cancellationToken);
     }
 
     private static string ComputeEmailHash(string email)

@@ -2,8 +2,8 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.
 
 public sealed class FactMergeRequest
 {
-    public required int MrId { get; init; }
-    public required int ProjectId { get; init; }
+    public required long MrId { get; init; }
+    public required long ProjectId { get; init; }
     public decimal CycleTimeHours { get; init; }
     public decimal ReviewWaitHours { get; init; }
     public int ReworkCount { get; init; }

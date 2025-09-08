@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Options;
 
+using NGitLab;
+
 using Polly;
 
 using Quartz;
@@ -30,22 +32,31 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
 
 
-        // Add HTTP client with resilience for GitLab API
-        builder.Services.AddHttpClient<IGitLabApiService, GitLabApiService>((sp, client) =>
+        builder.Services.AddSingleton<IGitLabClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
             var configuration = options.Value;
-            client.BaseAddress = new Uri(configuration.BaseUrl);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
+            var gitLabClient = new GitLabClient(configuration.BaseUrl, configuration.Token);
+            return gitLabClient;
+        });
 
-        })
-        .AddResilienceHandler("gitlab-retry", static resilienceBuilder => resilienceBuilder
-        .AddRetry(new()
-        {
-            MaxRetryAttempts = 3,
-            BackoffType = DelayBackoffType.Exponential,
-            UseJitter = true
-        }));
+        // Add HTTP client with resilience for GitLab API
+        // builder.Services.AddHttpClient<IGitLabApiService, GitLabApiService>((sp, client) =>
+        // {
+        //     var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
+        //     var configuration = options.Value;
+        //     client.BaseAddress = new Uri(configuration.BaseUrl);
+        //     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
+
+        // })
+        // .AddResilienceHandler("gitlab-retry", static resilienceBuilder => resilienceBuilder
+        // .AddTimeout(TimeSpan.FromSeconds(60)) // Add explicit timeout for GitLab API
+        // .AddRetry(new()
+        // {
+        //     MaxRetryAttempts = 3,
+        //     BackoffType = DelayBackoffType.Exponential,
+        //     UseJitter = true
+        // }));
 
 
         if (!builder.Environment.IsDevelopment())

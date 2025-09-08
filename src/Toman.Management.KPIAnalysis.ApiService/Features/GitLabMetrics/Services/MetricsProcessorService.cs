@@ -140,7 +140,7 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
         foreach (var project in projects)
         {
             var commits = await _dbContext.RawCommits
-                .Where(c => c.ProjectId == project.ProjectId)
+                .Where(c => c.ProjectId == project.id)
                 .ToListAsync(cancellationToken);
 
             var commitsByDay = commits
@@ -155,7 +155,7 @@ public sealed class MetricsProcessorService : IMetricsProcessorService
 
                 var fact = new FactGitHygiene
                 {
-                    ProjectId = project.ProjectId,
+                    ProjectId = project.id,
                     Day = dayCommits.Key,
                     DirectPushesDefault = directPushes,
                     ForcePushesProtected = 0, // Would need audit log data

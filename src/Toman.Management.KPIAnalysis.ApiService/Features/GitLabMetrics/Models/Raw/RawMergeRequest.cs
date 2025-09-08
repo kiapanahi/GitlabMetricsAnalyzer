@@ -2,9 +2,9 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.
 
 public sealed class RawMergeRequest
 {
-    public required int ProjectId { get; init; }
-    public required int MrId { get; init; }
-    public required int AuthorUserId { get; init; }
+    public required long ProjectId { get; init; }
+    public required long MrId { get; init; }
+    public required long AuthorUserId { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset? MergedAt { get; init; }
     public DateTimeOffset? ClosedAt { get; init; }

@@ -41,21 +41,21 @@ public sealed class MetricsExportService : IMetricsExportService
 
         // Get all active projects
         var projects = await _dbContext.DimProjects
-            .Where(p => p.ActiveFlag)
+            .Where(p => !p.archived)
             .ToListAsync(cancellationToken);
 
         foreach (var project in projects)
         {
-            var metrics = await CalculateMetricsForProjectAsync(project.ProjectId, date, cancellationToken);
+            var metrics = await CalculateMetricsForProjectAsync(project.id, date, cancellationToken);
 
             // Extract team/org information from project path
-            var (org, team) = ExtractOrgAndTeam(project.PathWithNamespace);
+            var (org, team) = ExtractOrgAndTeam(project.path_with_namespace);
 
             var export = new MetricsExport(
                 date.ToString("yyyy-MM-dd"),
                 org,
                 team,
-                project.PathWithNamespace,
+                project.path_with_namespace,
                 metrics
             );
 

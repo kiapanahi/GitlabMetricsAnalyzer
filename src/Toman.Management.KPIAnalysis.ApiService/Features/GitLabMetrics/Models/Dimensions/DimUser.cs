@@ -2,7 +2,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.
 
 public sealed class DimUser
 {
-    public required int UserId { get; init; }
+    public required long UserId { get; init; }
     public required string Username { get; init; }
     public required string Name { get; init; }
     public required string State { get; init; }

@@ -107,7 +107,7 @@ public static class GitLabMetricsEndpoints
                 // Calculate coverage
                 var totalProjects = await dbContext.DimProjects.CountAsync(cancellationToken);
                 var activeProjects = await dbContext.DimProjects
-                    .CountAsync(p => p.ActiveFlag, cancellationToken);
+                    .CountAsync(p => !p.archived, cancellationToken);
 
                 var coveragePercent = totalProjects > 0 ? activeProjects / (decimal)totalProjects * 100 : 0;
 
