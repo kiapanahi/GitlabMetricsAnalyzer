@@ -39,7 +39,7 @@ public static class GitLabMetricsEndpoints
             [FromQuery] int days,
             CancellationToken cancellationToken) =>
         {
-            await collectorService.RunBackfillCollectionAsync(days, cancellationToken);
+            await collectorService.RunBackfillCollectionAsync(cancellationToken);
             return Results.Ok(new { Message = $"Backfill collection for {days} days completed" });
         })
         .WithName("RunBackfillCollection")

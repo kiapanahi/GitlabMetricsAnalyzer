@@ -1,16 +1,11 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Channels;
+using System.Collections.ObjectModel;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 using NGitLab;
 using NGitLab.Models;
 
-using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Data.Extensions;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
@@ -18,35 +13,20 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
-public interface IGitLabCollectorService
-{
-    Task RunIncrementalCollectionAsync(CancellationToken cancellationToken = default);
-    Task RunBackfillCollectionAsync(int days = 180, CancellationToken cancellationToken = default);
-}
-
 public sealed class GitLabCollectorService : IGitLabCollectorService
 {
     private readonly IGitLabClient _gitLabClient;
-
     private readonly GitLabMetricsDbContext _dbContext;
-    private readonly GitLabConfiguration _gitLabConfig;
-    private readonly ProcessingConfiguration _processingConfig;
     private readonly ILogger<GitLabCollectorService> _logger;
-    private readonly SemaphoreSlim _semaphore;
 
     public GitLabCollectorService(
         IGitLabClient gitLabClient,
         GitLabMetricsDbContext dbContext,
-        IOptions<GitLabConfiguration> gitLabConfig,
-        IOptions<ProcessingConfiguration> processingConfig,
         ILogger<GitLabCollectorService> logger)
     {
         _gitLabClient = gitLabClient;
         _dbContext = dbContext;
-        _gitLabConfig = gitLabConfig.Value;
-        _processingConfig = processingConfig.Value;
         _logger = logger;
-        _semaphore = new SemaphoreSlim(_processingConfig.MaxDegreeOfParallelism);
     }
 
     public async Task RunIncrementalCollectionAsync(CancellationToken cancellationToken = default)
@@ -60,7 +40,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
         var updatedAfter = lastRun?.LastSeenUpdatedAt ?? DateTimeOffset.UtcNow.AddHours(-1);
 
-        await CollectDataAsync(updatedAfter, cancellationToken);
+        await CollectDataAsync(cancellationToken);
 
         // Update ingestion state
         var state = new IngestionState
@@ -75,13 +55,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         _logger.LogInformation("Completed incremental GitLab collection");
     }
 
-    public async Task RunBackfillCollectionAsync(int days = 180, CancellationToken cancellationToken = default)
+    public async Task RunBackfillCollectionAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Starting backfill GitLab collection for {Days} days", days);
+        _logger.LogInformation("Starting backfill GitLab collection");
 
-        var updatedAfter = DateTimeOffset.UtcNow.AddDays(-days);
-
-        await CollectDataAsync(updatedAfter, cancellationToken);
+        await CollectDataAsync(cancellationToken);
 
         // Update ingestion state
         var state = new IngestionState
@@ -96,61 +74,36 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         _logger.LogInformation("Completed backfill GitLab collection");
     }
 
-    private async Task CollectDataAsync(DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectDataAsync(CancellationToken cancellationToken)
     {
         // Discover and collect projects
         var projects = DiscoverProjects();
         _logger.LogInformation("Discovered {ProjectCount} projects", projects.Count);
 
-        // Create channel for project processing
-        var channel = Channel.CreateUnbounded<Project>();
-        var writer = channel.Writer;
-        var reader = channel.Reader;
-
-        // Start processing projects concurrently
-        var processingTask = Task.Run(async () =>
-        {
-            await foreach (var project in reader.ReadAllAsync(cancellationToken))
-            {
-                await _semaphore.WaitAsync(cancellationToken);
-                try
-                {
-                    await ProcessProjectAsync(project, updatedAfter, cancellationToken);
-                }
-                finally
-                {
-                    _semaphore.Release();
-                }
-            }
-        }, cancellationToken);
-
-        // Queue projects for processing
         foreach (var project in projects)
         {
-            await writer.WriteAsync(project, cancellationToken);
+            _logger.LogDebug("Project: {ProjectPath} (ID: {ProjectId})", project.PathWithNamespace, project.Id);
+            await ProcessProjectAsync(project, cancellationToken);
         }
-        writer.Complete();
-
-        await processingTask;
     }
 
-    private IReadOnlyList<Project> DiscoverProjects()
+    private ReadOnlyCollection<Project> DiscoverProjects()
     {
         var allProjects = _gitLabClient.Projects.Get(new ProjectQuery { }).ToList().AsReadOnly();
 
-        _logger.LogInformation("Retrieved {TotalProjectCount} projects from database", allProjects.Count);
+        _logger.LogInformation("Retrieved {TotalProjectCount} projects from Gitlab", allProjects.Count);
 
         return allProjects;
     }
 
-    private async Task ProcessProjectAsync(Project project, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private async Task ProcessProjectAsync(Project project, CancellationToken cancellationToken)
     {
         try
         {
             _logger.LogDebug("Processing project {ProjectPath}", project.PathWithNamespace);
 
             // Collect merge requests
-            await CollectMergeRequestsAsync(project.Id, updatedAfter, cancellationToken);
+            await CollectMergeRequestsAsync(project.Id, cancellationToken);
 
             // Collect commits
             //await CollectCommitsAsync(project.Id, updatedAfter, cancellationToken);
@@ -166,7 +119,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
     }
 
-    private async Task CollectMergeRequestsAsync(long projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectMergeRequestsAsync(long projectId, CancellationToken cancellationToken)
     {
         var mergeRequests = _gitLabClient.GetMergeRequest(projectId).All.ToList();
 
@@ -175,17 +128,17 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
         foreach (var mr in mergeRequests)
         {
-            // Collect user data
-            var user = new DimUser
-            {
-                UserId = mr.Author.Id,
-                Username = mr.Author.Username,
-                Name = mr.Author.Name,
-                State = mr.Author.State,
-                IsBot = mr.Author.Bot,
-                Email = mr.Author.Email ?? ""
-            };
-            users.Add(user);
+            // // Collect user data
+            // var user = new DimUser
+            // {
+            //     UserId = mr.Author.Id,
+            //     Username = mr.Author.Username,
+            //     Name = mr.Author.Name,
+            //     State = mr.Author.State,
+            //     IsBot = mr.Author.Bot,
+            //     Email = mr.Author.Email ?? ""
+            // };
+            // users.Add(user);
 
             // Parse changes count
             var changesCount = 0;
@@ -213,11 +166,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
 
         // Upsert to database
-        await _dbContext.UpsertRangeAsync(users, cancellationToken);
+        // await _dbContext.UpsertRangeAsync(users, cancellationToken);
         await _dbContext.UpsertRangeAsync(rawMrs, cancellationToken);
     }
 
-    private async Task CollectCommitsAsync(long projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private Task CollectCommitsAsync(long projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         throw new NotImplementedException("Commit collection is not implemented yet.");
         //var commits = await _gitLabApi.GetCommitsAsync(projectId, updatedAfter.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), cancellationToken);
@@ -246,7 +199,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         //await _dbContext.UpsertRangeAsync(rawCommits, cancellationToken);
     }
 
-    private async Task CollectPipelinesAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
+    private Task CollectPipelinesAsync(int projectId, DateTimeOffset updatedAfter, CancellationToken cancellationToken)
     {
         throw new NotImplementedException("Pipeline collection is not implemented yet.");
         //var pipelines = await _gitLabApi.GetPipelinesAsync(projectId, updatedAfter, cancellationToken);
@@ -274,12 +227,4 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         //await _dbContext.UpsertRangeAsync(rawPipelines, cancellationToken);
     }
 
-    private static string ComputeEmailHash(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return string.Empty;
-
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(email.ToLowerInvariant()));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
 }

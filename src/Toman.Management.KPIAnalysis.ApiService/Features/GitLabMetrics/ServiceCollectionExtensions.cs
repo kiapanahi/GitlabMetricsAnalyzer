@@ -1,16 +1,11 @@
-using System.Net.Http.Headers;
-
 using Microsoft.Extensions.Options;
 
 using NGitLab;
-
-using Polly;
 
 using Quartz;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Jobs;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -24,7 +19,11 @@ internal static class ServiceCollectionExtensions
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
 
         // Add database
-        builder.AddNpgsqlDbContext<GitLabMetricsDbContext>(Constants.Keys.PostgresDatabase);
+        builder.AddNpgsqlDbContext<GitLabMetricsDbContext>(Constants.Keys.PostgresDatabase, configureDbContextOptions: options =>
+        {
+            options.EnableSensitiveDataLogging();
+            options.EnableDetailedErrors();
+        });
 
         // Add services
         builder.Services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();
@@ -37,24 +36,6 @@ internal static class ServiceCollectionExtensions
             var gitLabClient = new GitLabClient(configuration.BaseUrl, configuration.Token);
             return gitLabClient;
         });
-
-        // Add HTTP client with resilience for GitLab API
-        // builder.Services.AddHttpClient<IGitLabApiService, GitLabApiService>((sp, client) =>
-        // {
-        //     var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
-        //     var configuration = options.Value;
-        //     client.BaseAddress = new Uri(configuration.BaseUrl);
-        //     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
-
-        // })
-        // .AddResilienceHandler("gitlab-retry", static resilienceBuilder => resilienceBuilder
-        // .AddTimeout(TimeSpan.FromSeconds(60)) // Add explicit timeout for GitLab API
-        // .AddRetry(new()
-        // {
-        //     MaxRetryAttempts = 3,
-        //     BackoffType = DelayBackoffType.Exponential,
-        //     UseJitter = true
-        // }));
 
 
         if (!builder.Environment.IsDevelopment())

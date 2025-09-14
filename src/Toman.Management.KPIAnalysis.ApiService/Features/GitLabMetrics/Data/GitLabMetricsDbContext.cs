@@ -55,7 +55,7 @@ public sealed class GitLabMetricsDbContext : DbContext
             entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(255);
             entity.Property(e => e.State).HasColumnName("state").HasMaxLength(50);
             entity.Property(e => e.IsBot).HasColumnName("is_bot");
-            entity.Property(e => e.Email).HasColumnName("email_hash").HasMaxLength(64);
+            entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(64);
         });
 
         modelBuilder.Entity<DimBranch>(entity =>
