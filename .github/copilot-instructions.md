@@ -2,6 +2,10 @@
 
 This project is intended to analyze, calculate and measure different KPIs for the engineering team of my company. I work as the VP of engineering at Toman and we want to have a better understanding of our engineering processes and how we can improve them.
 
+## Objective
+
+Build a C# application that collects developer productivity metrics from an on-premise GitLab instance via API and stores them in PostgreSQL for analysis.
+
 ## Core Commands
 
 ### Development Workflow
@@ -13,9 +17,14 @@ This project is intended to analyze, calculate and measure different KPIs for th
 ## Architecture Overview
 
 ### Tech Stack
+### Technology Stack
 - Use vertical slice architecture for every feature.
 - **.NET 9** with C# latest features, file-scoped namespaces
 - **.NET Aspire** for local orchestration and service discovery
+- **Database**: PostgreSQL with EF Core
+- **Serilog** for logging
+- Use **https://www.nuget.org/packages/NGitLab/** for GitLab API integration
+- **Hangfire** for job scheduling
 - Always use minimal APIs.
 
 
