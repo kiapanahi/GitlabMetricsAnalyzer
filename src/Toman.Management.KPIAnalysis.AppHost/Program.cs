@@ -5,7 +5,7 @@ IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(ar
 IResourceBuilder<ParameterResource> pgUsername = builder.AddParameter("username", "root", secret: true);
 IResourceBuilder<ParameterResource> pgPassword = builder.AddParameter("password", "root", secret: true);
 IResourceBuilder<PostgresServerResource> postgresServer = builder.AddPostgres(Keys.PostgresService, pgUsername, pgPassword)
-    .WithPgAdmin()
+    .WithPgAdmin(config => config.WithLifetime(ContainerLifetime.Persistent))
     .WithDataVolume("pgdata")
     .WithLifetime(ContainerLifetime.Persistent);
 

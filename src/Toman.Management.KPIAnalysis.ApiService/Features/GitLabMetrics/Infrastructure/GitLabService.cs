@@ -48,7 +48,7 @@ public sealed class GitLabService : IGitLabService
         try
         {
             // Get all accessible projects with basic query
-            var allProjects = _gitLabClient.Projects.Get(new ProjectQuery()).Take(20).ToList(); // Limit to first 50 for testing
+            var allProjects = _gitLabClient.Projects.Get(new ProjectQuery()).ToList();
             projects.AddRange(allProjects);
 
             _logger.LogInformation("Retrieved {ProjectCount} projects", projects.Count);

@@ -36,11 +36,10 @@ public static class GitLabMetricsEndpoints
 
         group.MapPost("/collect/backfill", async (
             [FromServices] IGitLabCollectorService collectorService,
-            [FromQuery] int days,
             CancellationToken cancellationToken) =>
         {
             await collectorService.RunBackfillCollectionAsync(cancellationToken);
-            return Results.Ok(new { Message = $"Backfill collection for {days} days completed" });
+            return Results.Ok(new { Message = "Backfill collection completed" });
         })
         .WithName("RunBackfillCollection")
         .WithSummary("Run backfill GitLab metrics collection")
