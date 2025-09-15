@@ -6,6 +6,7 @@ IResourceBuilder<ParameterResource> pgUsername = builder.AddParameter("username"
 IResourceBuilder<ParameterResource> pgPassword = builder.AddParameter("password", "root", secret: true);
 IResourceBuilder<PostgresServerResource> postgresServer = builder.AddPostgres(Keys.PostgresService, pgUsername, pgPassword)
     .WithPgAdmin()
+    .WithDataVolume("pgdata")
     .WithLifetime(ContainerLifetime.Persistent);
 
 IResourceBuilder<PostgresDatabaseResource> postgresdb = postgresServer.AddDatabase(Keys.PostgresDatabase);
