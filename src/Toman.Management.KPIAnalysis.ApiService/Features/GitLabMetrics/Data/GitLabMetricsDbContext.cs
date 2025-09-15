@@ -7,11 +7,8 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 
-public sealed class GitLabMetricsDbContext : DbContext
+public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbContext> options) : DbContext(options)
 {
-    public GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbContext> options) : base(options)
-    {
-    }
 
     // Dimensions
     public DbSet<DimUser> DimUsers => Set<DimUser>();
@@ -83,23 +80,39 @@ public sealed class GitLabMetricsDbContext : DbContext
         modelBuilder.Entity<RawCommit>(entity =>
         {
             entity.ToTable("raw_commit");
-            entity.HasKey(e => e.CommitId);
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
             entity.Property(e => e.CommitId).HasColumnName("commit_id").HasMaxLength(40);
             entity.Property(e => e.AuthorUserId).HasColumnName("author_user_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.AuthorEmail).HasColumnName("author_email").HasMaxLength(255);
             entity.Property(e => e.CommittedAt).HasColumnName("committed_at");
+            entity.Property(e => e.Message).HasColumnName("message").HasColumnType("text");
             entity.Property(e => e.Additions).HasColumnName("additions");
             entity.Property(e => e.Deletions).HasColumnName("deletions");
             entity.Property(e => e.IsSigned).HasColumnName("is_signed");
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+
+            // Indexes for performance
+            entity.HasIndex(e => e.CommittedAt).HasDatabaseName("idx_raw_commit_committed_at");
+            entity.HasIndex(e => e.AuthorUserId).HasDatabaseName("idx_raw_commit_author");
+            entity.HasIndex(e => e.IngestedAt).HasDatabaseName("idx_raw_commit_ingested_at");
+            entity.HasIndex(e => new { e.ProjectId, e.CommitId }).HasDatabaseName("idx_raw_commit_project_commit").IsUnique();
         });
 
         modelBuilder.Entity<RawMergeRequest>(entity =>
         {
             entity.ToTable("raw_mr");
-            entity.HasKey(e => e.MrId);
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
             entity.Property(e => e.MrId).HasColumnName("mr_id");
             entity.Property(e => e.AuthorUserId).HasColumnName("author_user_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.MergedAt).HasColumnName("merged_at");
             entity.Property(e => e.ClosedAt).HasColumnName("closed_at");
@@ -110,27 +123,54 @@ public sealed class GitLabMetricsDbContext : DbContext
             entity.Property(e => e.ApprovalsRequired).HasColumnName("approvals_required");
             entity.Property(e => e.ApprovalsGiven).HasColumnName("approvals_given");
             entity.Property(e => e.FirstReviewAt).HasColumnName("first_review_at");
+            entity.Property(e => e.ReviewerIds).HasColumnName("reviewer_ids").HasColumnType("text");
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+
+            // Indexes for performance
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_mr_created_at");
+            entity.HasIndex(e => e.MergedAt).HasDatabaseName("idx_raw_mr_merged_at");
+            entity.HasIndex(e => e.AuthorUserId).HasDatabaseName("idx_raw_mr_author");
+            entity.HasIndex(e => e.State).HasDatabaseName("idx_raw_mr_state");
+            entity.HasIndex(e => e.IngestedAt).HasDatabaseName("idx_raw_mr_ingested_at");
+            entity.HasIndex(e => new { e.ProjectId, e.MrId }).HasDatabaseName("idx_raw_mr_project_mr").IsUnique();
         });
 
         modelBuilder.Entity<RawPipeline>(entity =>
         {
             entity.ToTable("raw_pipeline");
-            entity.HasKey(e => e.PipelineId);
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
             entity.Property(e => e.PipelineId).HasColumnName("pipeline_id");
             entity.Property(e => e.Sha).HasColumnName("sha").HasMaxLength(40);
             entity.Property(e => e.Ref).HasColumnName("ref").HasMaxLength(255);
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
+            entity.Property(e => e.AuthorUserId).HasColumnName("author_user_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.TriggerSource).HasColumnName("trigger_source").HasMaxLength(50);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.StartedAt).HasColumnName("started_at");
+            entity.Property(e => e.FinishedAt).HasColumnName("finished_at");
             entity.Property(e => e.DurationSec).HasColumnName("duration_sec");
             entity.Property(e => e.Environment).HasColumnName("environment").HasMaxLength(100);
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+
+            // Indexes for performance
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_pipeline_created_at");
+            entity.HasIndex(e => e.Status).HasDatabaseName("idx_raw_pipeline_status");
+            entity.HasIndex(e => e.AuthorUserId).HasDatabaseName("idx_raw_pipeline_author");
+            entity.HasIndex(e => e.Ref).HasDatabaseName("idx_raw_pipeline_ref");
+            entity.HasIndex(e => e.IngestedAt).HasDatabaseName("idx_raw_pipeline_ingested_at");
+            entity.HasIndex(e => new { e.ProjectId, e.PipelineId }).HasDatabaseName("idx_raw_pipeline_project_pipeline").IsUnique();
         });
 
         modelBuilder.Entity<RawJob>(entity =>
         {
             entity.ToTable("raw_job");
-            entity.HasKey(e => e.JobId);
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
             entity.Property(e => e.JobId).HasColumnName("job_id");
             entity.Property(e => e.PipelineId).HasColumnName("pipeline_id");
@@ -140,12 +180,16 @@ public sealed class GitLabMetricsDbContext : DbContext
             entity.Property(e => e.StartedAt).HasColumnName("started_at");
             entity.Property(e => e.FinishedAt).HasColumnName("finished_at");
             entity.Property(e => e.RetriedFlag).HasColumnName("retried_flag");
+
+            // Unique constraint on project + job id
+            entity.HasIndex(e => new { e.ProjectId, e.JobId }).HasDatabaseName("idx_raw_job_project_job").IsUnique();
         });
 
         modelBuilder.Entity<RawIssue>(entity =>
         {
             entity.ToTable("raw_issue");
-            entity.HasKey(e => e.IssueId);
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
             entity.Property(e => e.IssueId).HasColumnName("issue_id");
             entity.Property(e => e.AuthorUserId).HasColumnName("author_user_id");
@@ -156,6 +200,9 @@ public sealed class GitLabMetricsDbContext : DbContext
             entity.Property(e => e.Labels)
                 .HasColumnName("labels")
                 .HasColumnType("jsonb");
+
+            // Unique constraint on project + issue id
+            entity.HasIndex(e => new { e.ProjectId, e.IssueId }).HasDatabaseName("idx_raw_issue_project_issue").IsUnique();
         });
     }
 
@@ -214,7 +261,7 @@ public sealed class GitLabMetricsDbContext : DbContext
         modelBuilder.Entity<IngestionState>(entity =>
         {
             entity.ToTable("ingestion_state");
-            entity.HasKey(e => e.Entity);
+            entity.HasKey(e => e.Id);
             entity.Property(e => e.Entity).HasColumnName("entity").HasMaxLength(100);
             entity.Property(e => e.LastSeenUpdatedAt).HasColumnName("last_seen_updated_at");
             entity.Property(e => e.LastRunAt).HasColumnName("last_run_at");

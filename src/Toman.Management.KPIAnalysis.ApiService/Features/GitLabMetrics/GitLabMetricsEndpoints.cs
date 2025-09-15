@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Export;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -12,7 +13,6 @@ public static class GitLabMetricsEndpoints
     public static WebApplication MapGitlabCollectorEndpoints(this WebApplication app)
     {
         app.MapGitLabMetricsEndpoints()
-           .MapHealthEndpoints()
            .MapStatusEndpoints();
 
         return app;
@@ -47,42 +47,70 @@ public static class GitLabMetricsEndpoints
         .Produces(200)
         .Produces(500);
 
-        return endpoints;
-    }
-
-    private static WebApplication MapHealthEndpoints(this WebApplication app)
-    {
-        app.MapGet("/healthz", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }))
-            .WithName("Health")
-            .WithTags("Health");
-
-        app.MapGet("/readyz", async ([FromServices] GitLabMetricsDbContext dbContext) =>
+        group.MapGet("/metrics/developer/{userId}", async (
+            [FromServices] IMetricsCalculationService metricsService,
+            [FromRoute] int userId,
+            [FromQuery] string? fromDate = null,
+            [FromQuery] string? toDate = null,
+            CancellationToken cancellationToken = default) =>
         {
-            try
-            {
-                // Check database connectivity
-                await dbContext.Database.CanConnectAsync();
+            var from = string.IsNullOrEmpty(fromDate)
+                ? DateTimeOffset.UtcNow.AddDays(-30)
+                : DateTimeOffset.Parse(fromDate);
+            var to = string.IsNullOrEmpty(toDate)
+                ? DateTimeOffset.UtcNow
+                : DateTimeOffset.Parse(toDate);
 
-                return Results.Ok(new
-                {
-                    status = "ready",
-                    timestamp = DateTimeOffset.UtcNow,
-                    database = "connected"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(
-                    statusCode: 503,
-                    title: "Service Unavailable",
-                    detail: ex.Message
-                );
-            }
+            var metrics = await metricsService.CalculateDeveloperMetricsAsync(userId, from, to, cancellationToken);
+            return Results.Ok(metrics);
         })
-        .WithName("Readiness")
-        .WithTags("Health");
+        .WithName("GetDeveloperMetrics")
+        .WithSummary("Get developer productivity metrics")
+        .Produces(200);
 
-        return app;
+        group.MapGet("/metrics/project/{projectId}", async (
+            [FromServices] IMetricsCalculationService metricsService,
+            [FromRoute] int projectId,
+            [FromQuery] string? fromDate = null,
+            [FromQuery] string? toDate = null,
+            CancellationToken cancellationToken = default) =>
+        {
+            var from = string.IsNullOrEmpty(fromDate)
+                ? DateTimeOffset.UtcNow.AddDays(-30)
+                : DateTimeOffset.Parse(fromDate);
+            var to = string.IsNullOrEmpty(toDate)
+                ? DateTimeOffset.UtcNow
+                : DateTimeOffset.Parse(toDate);
+
+            var metrics = await metricsService.CalculateProjectMetricsAsync(projectId, from, to, cancellationToken);
+            return Results.Ok(metrics);
+        })
+        .WithName("GetProjectMetrics")
+        .WithSummary("Get project metrics")
+        .Produces(200);
+
+        group.MapPost("/metrics/process-daily", async (
+            [FromServices] IMetricsCalculationService metricsService,
+            [FromQuery] string? targetDate = null,
+            CancellationToken cancellationToken = default) =>
+        {
+            var date = string.IsNullOrEmpty(targetDate)
+                ? DateTimeOffset.UtcNow.AddDays(-1)
+                : DateTimeOffset.Parse(targetDate);
+
+            await metricsService.ProcessDailyMetricsAsync(date, cancellationToken);
+            return Results.Ok(new
+            {
+                message = "Daily metrics processing completed",
+                targetDate = date.Date,
+                timestamp = DateTimeOffset.UtcNow
+            });
+        })
+        .WithName("ProcessDailyMetrics")
+        .WithSummary("Process daily metrics for a specific date")
+        .Produces(200);
+
+        return endpoints;
     }
 
     private static WebApplication MapStatusEndpoints(this WebApplication app)

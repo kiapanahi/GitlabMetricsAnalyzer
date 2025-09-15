@@ -1,9 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +14,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddProblemDetails();
 
 builder.AddGitLabMetricsServices();
+
+// Add GitLab health check
+builder.Services.AddHealthChecks()
+    .AddGitLabHealthCheck();
 
 builder.Services.Configure<ProcessingConfiguration>(builder.Configuration.GetSection(ProcessingConfiguration.SectionName));
 builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
@@ -38,13 +38,5 @@ if (app.Environment.IsDevelopment())
 app.MapDefaultEndpoints();
 
 app.MapGitlabCollectorEndpoints();
-
-// Ensure database is created and seeded (in development)
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<GitLabMetricsDbContext>();
-    await context.Database.EnsureCreatedAsync();
-}
 
 app.Run();

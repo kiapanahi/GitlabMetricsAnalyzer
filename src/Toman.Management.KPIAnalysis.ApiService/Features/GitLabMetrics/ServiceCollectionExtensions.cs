@@ -6,6 +6,8 @@ using Quartz;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Jobs;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -15,6 +17,9 @@ internal static class ServiceCollectionExtensions
 {
     internal static IHostApplicationBuilder AddGitLabMetricsServices(this IHostApplicationBuilder builder)
     {
+        builder.Services.AddOpenTelemetry()
+        .WithTracing(tracing => tracing.AddSource(Diagnostics.ActivitySource.Name));
+
         // Add configurations
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
 
@@ -25,9 +30,12 @@ internal static class ServiceCollectionExtensions
             options.EnableDetailedErrors();
         });
 
+        builder.Services.AddHostedService<MigratorBackgroundService>();
+
         // Add services
         builder.Services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();
-
+        builder.Services.AddScoped<IGitLabService, GitLabService>();
+        builder.Services.AddScoped<IMetricsCalculationService, MetricsCalculationService>();
 
         builder.Services.AddSingleton<IGitLabClient>(sp =>
         {
@@ -67,5 +75,10 @@ internal static class ServiceCollectionExtensions
         }
 
         return builder;
+    }
+
+    internal static IHealthChecksBuilder AddGitLabHealthCheck(this IHealthChecksBuilder builder)
+    {
+        return builder.AddCheck<GitLabHealthCheck>("gitlab", tags: ["ready"]);
     }
 }

@@ -1,193 +1,189 @@
-# Toman Engineering Metrics (TEM) - GitLab Analytics
+# GitLab Metrics Analyzer
 
-This project implements the GitLab-only baseline for Toman Engineering Metrics as specified in the PRD. It provides collection, storage, analysis, and export of engineering metrics from GitLab.
+A .NET 9 application that collects developer productivity metrics from GitLab and stores them in PostgreSQL for analysis. Built with .NET Aspire for cloud-native development.
 
-## Overview
+## Features
 
-The system implements a comprehensive GitLab metrics collection and analysis platform that covers:
-
-- **Flow & Throughput Metrics**: MR cycle time, throughput, WIP tracking
-- **CI/CD Health Metrics**: Pipeline success rates, mean time to green, deployment frequency
-- **Git/GitOps Hygiene**: Direct pushes, approval bypasses, commit signing
-- **Issue/Quality Signals**: SLA breaches, defect tracking
+- **Data Collection**: Automatically collects commits, merge requests, and pipeline data from GitLab API
+- **Incremental Sync**: Only fetches new data since last collection to optimize performance
+- **Resilient Design**: Built-in retry logic and error handling for API failures
+- **Analytics**: Calculates developer productivity metrics like commit frequency, merge request cycle time, and pipeline success rates
+- **Real-time Monitoring**: Comprehensive logging and telemetry with Serilog
 
 ## Architecture
 
-### Components
+- **Tech Stack**: .NET 9, Entity Framework Core, PostgreSQL, .NET Aspire
+- **Design Pattern**: Vertical slice architecture for each feature
+- **API Integration**: NGitLab client for GitLab API interaction
+- **Job Scheduling**: Quartz.NET for background data collection
+- **Resilience**: Retry policies and circuit breakers
 
-1. **GitLab API Service** (`IGitLabApiService`)
-   - Handles API communication with GitLab
-   - Implements rate limiting and retry logic
-   - Discovers projects, collects MRs, commits, pipelines, and issues
+## Getting Started
 
-2. **Collector Service** (`IGitLabCollectorService`)
-   - Orchestrates data collection from GitLab
-   - Supports incremental and backfill modes
-   - Uses channels for concurrent processing
+### Prerequisites
 
-3. **Metrics Processor** (`IMetricsProcessorService`)
-   - Transforms raw data into computed facts
-   - Implements metric calculations per PRD specifications
-   - Handles production deployment inference
+- .NET 9 SDK
+- PostgreSQL database
+- GitLab instance with API access
+- Visual Studio 2022 or VS Code with C# extensions
 
-4. **Export Service** (`IMetricsExportService`)
-   - Generates JSON and CSV exports
-   - Provides API endpoints for data access
-   - Organizes data by business lines and teams
+### Configuration
 
-5. **Scheduler** (Quartz Jobs)
-   - **Nightly Processing**: Full collection at 02:00 Europe/Amsterdam
-   - **Incremental Collection**: Hourly updates at :15
+1. **GitLab API Setup**:
+   - Create a GitLab Personal Access Token with `api` scope
+   - Note your GitLab instance URL
 
-### Data Model
+2. **Database Setup**:
+   - Ensure PostgreSQL is running
+   - Create a database for the application
 
-The system uses PostgreSQL with the following key tables:
+3. **Application Configuration**:
+   Update `appsettings.Development.json`:
+   ```json
+   {
+     "GitLab": {
+       "BaseUrl": "https://your-gitlab-instance.com",
+       "PersonalAccessToken": "your-token-here",
+       "RetryCount": 3,
+       "RetryDelaySeconds": 5,
+       "TimeoutSeconds": 30
+     },
+     "ConnectionStrings": {
+       "DefaultConnection": "Host=localhost;Database=GitLabMetrics;Username=your-user;Password=your-password"
+     }
+   }
+   ```
 
-**Dimensions**
-- `dim_project`: Project metadata
-- `dim_user`: User information (with email hashing for PII protection)
-- `dim_branch`: Branch metadata
-- `dim_release`: Release information
+### Running the Application
 
-**Raw Data**
-- `raw_commit`: Commit details with statistics
-- `raw_mr`: Merge request information
-- `raw_pipeline`: Pipeline execution data
-- `raw_job`: Individual job details
-- `raw_issue`: Issue tracking data
+#### Option 1: .NET Aspire (Recommended)
+```bash
+aspire run
+```
 
-**Computed Facts**
-- `fact_mr`: Processed merge request metrics
-- `fact_pipeline`: Pipeline analysis results
-- `fact_git_hygiene`: Git hygiene metrics by day
-- `fact_release`: Release cadence analysis
+#### Option 2: Direct Run
+```bash
+cd src/Toman.Management.KPIAnalysis.ApiService
+dotnet run
+```
 
-**Operational**
-- `ingestion_state`: Tracking last run timestamps
+### Database Migration
+
+The application will automatically apply migrations on startup. To manually run migrations:
+
+```bash
+cd src/Toman.Management.KPIAnalysis.ApiService
+dotnet ef database update
+```
 
 ## API Endpoints
 
-### Health & Status
-- `GET /healthz` - Service health check
-- `GET /readyz` - Readiness check (includes DB connectivity)
-- `GET /status` - Comprehensive status including coverage and lag metrics
+### Health Check
+- `GET /health` - Application health status
 
-### Run Controls
-- `POST /runs/backfill?days={days}` - Trigger backfill collection
-- `POST /runs/incremental` - Trigger incremental collection
+### GitLab Integration
+- `GET /api/gitlab/test-connection` - Test GitLab API connectivity
+- `GET /api/gitlab/projects` - List accessible GitLab projects
 
-### Data Export
-- `GET /exports/daily/{yyyy-MM-dd}.json` - Daily metrics in JSON format
-- `GET /exports/daily/{yyyy-MM-dd}.csv` - Daily metrics in CSV format
+### Metrics
+- `GET /api/metrics/developers` - Developer productivity metrics
+- `GET /api/metrics/projects` - Project-level metrics
+- `GET /api/metrics/team` - Team-wide analytics
 
-## Configuration
+## Data Models
 
-### Environment Variables
-- `GITLAB_API_URL`: GitLab instance base URL
-- `GITLAB_API_TOKEN`: GitLab API token with read permissions
-- `ConnectionStrings__metricsdb`: PostgreSQL connection string
+### Raw Data
+- **RawCommit**: Individual commit data with stats
+- **RawMergeRequest**: Merge request lifecycle data
+- **RawPipeline**: CI/CD pipeline execution data
 
-### appsettings.json
-```json
-{
-  "GitLab": {
-    "BaseUrl": "https://gitlab.example.com",
-    "Token": "your-gitlab-token-here",
-    "RootGroups": [
-      "toman/core",
-      "toman/corporate-services",
-      "toman/exchange", 
-      "toman/c-side"
-    ]
-  },
-  "Processing": {
-    "MaxDegreeOfParallelism": 8,
-    "BackfillDays": 180
-  },
-  "Exports": {
-    "Directory": "/data/exports"
-  }
-}
+### Calculated Metrics
+- **Developer Metrics**: Commit frequency, review participation, pipeline success
+- **Project Metrics**: Activity levels, cycle times, quality indicators
+- **Team Metrics**: Collaboration patterns, delivery velocity
+
+## Development
+
+### Project Structure
+```
+src/
+├── Toman.Management.KPIAnalysis.ApiService/     # Main application
+│   ├── Features/GitLabMetrics/                  # GitLab integration feature
+│   │   ├── Data/                               # EF Core models and context
+│   │   ├── Infrastructure/                     # External service clients
+│   │   └── Services/                          # Business logic services
+│   └── Configuration/                          # App configuration
+├── Toman.Management.KPIAnalysis.AppHost/       # Aspire orchestration
+└── Toman.Management.KPIAnalysis.ServiceDefaults/ # Shared service configuration
 ```
 
-## Business Line Mapping
+### Key Services
+- **IGitLabService**: GitLab API client with health checks
+- **IMetricsCalculationService**: Calculates productivity metrics from raw data
+- **GitLabMetricsDbContext**: EF Core database context with automatic migrations
 
-The system maps GitLab group structures to Toman's business lines:
-
-- **Corporate Services**: `toman/corporate-services/*`
-- **Exchange**: `toman/exchange/*`
-- **C-Side**: `toman/c-side/*`
-- **Platform/Core**: `toman/core/*`, `toman/platform/*`
-
-## Key Metrics Implementation
-
-### Flow & Throughput
-- **MR Cycle Time**: `created_at` → `merged_at`
-- **Time to First Review**: `created_at` → first reviewer comment
-- **Throughput**: Count of merged MRs per period
-
-### CI/CD Health
-- **Pipeline Success Rate**: Successful vs total pipelines
-- **Mean Time to Green**: Failed pipeline → next success on same ref
-- **Deployment Frequency**: Production pipelines per week
-
-### Production Deployment Inference
-A pipeline is considered production if:
-- Pipeline on default branch, OR
-- Environment contains "production", OR  
-- Associated with a release tag
-
-### Git/GitOps Hygiene
-- **Direct Pushes**: Non-merge commits on default branch
-- **Approval Bypass**: Merged with fewer approvals than required
-- **Signed Commit Ratio**: GPG/SSH signed commits percentage
-
-## Security & Privacy
-
-- **Email Protection**: User emails are SHA-256 hashed
-- **API Security**: GitLab PAT stored securely
-- **PII Minimization**: Only necessary data is stored
-
-## Performance Targets
-
-- **Coverage**: ≥95% of active projects (MR in last 90 days)
-- **Freshness**: Daily aggregates by 03:00 Europe/Amsterdam
-- **Accuracy**: ≥98% parity vs GitLab UI counts
-- **Performance**: ≤60 min nightly run for ≤300 projects
-
-## Running the Application
-
-### Development
+### Building
 ```bash
-# Start with Aspire
-aspire run
-
-# Or run API service directly
-dotnet run --project src/Toman.Management.KPIAnalysis.ApiService
+dotnet build
 ```
 
-### Production
-The application is designed to run in Kubernetes with:
-- PostgreSQL database
-- Persistent volume for exports
-- Secrets for GitLab tokens
-- ConfigMaps for configuration
+### Testing
+```bash
+dotnet test
+```
 
-## Monitoring & Observability
+## Monitoring
 
-The application includes:
-- **OpenTelemetry**: Distributed tracing for API calls
-- **Structured Logging**: JSON logs with correlation IDs
-- **Health Checks**: Kubernetes readiness/liveness probes
-- **Metrics**: Self-reporting on collection stats and performance
+The application includes comprehensive telemetry:
+- **Logs**: Structured logging with Serilog
+- **Metrics**: Custom metrics for data collection and processing
+- **Health Checks**: Database and GitLab API connectivity
 
-## Future Phases
+## Deployment
 
-This V1 implementation provides the foundation for:
-- **V2**: SonarQube integration for code quality metrics
-- **V3**: Prometheus/Grafana integration for observability metrics
-- **V4**: Advanced analytics and ML-based insights
+The application is designed for containerized deployment with .NET Aspire. It includes:
+- Service discovery and configuration
+- Distributed tracing
+- Health checks
+- Graceful shutdown handling
 
-## Support
+## Troubleshooting
 
-For issues, feature requests, or questions about metrics definitions, refer to the full PRD documentation or contact the VP of Engineering team.
+### Common Issues
+
+1. **GitLab API Connection Failures**:
+   - Verify token permissions (`api` scope required)
+   - Check network connectivity to GitLab instance
+   - Review rate limiting settings
+
+2. **Database Connection Issues**:
+   - Ensure PostgreSQL is running
+   - Verify connection string format
+   - Check database permissions
+
+3. **Missing Data**:
+   - Verify project access permissions in GitLab
+   - Check incremental sync date ranges
+   - Review application logs for API errors
+
+### Logging
+
+Logs are structured and include:
+- Request/response details for GitLab API calls
+- Database operation timing
+- Error details with correlation IDs
+- Performance metrics
+
+View logs in the application output or configure external log aggregation.
+
+## Contributing
+
+1. Follow vertical slice architecture patterns
+2. Use async/await for all I/O operations
+3. Include appropriate error handling and logging
+4. Write tests for complex business logic
+5. Follow C# coding conventions and nullable reference types
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
