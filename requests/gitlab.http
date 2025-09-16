@@ -1,0 +1,12 @@
+@gitlab_token = glpat-zqfrtLdSyWLjL69dojX2
+@no-reject-unauthorized = true
+
+### Get all groups
+# Documentation: https://docs.gitlab.com/api/projects/#list-groups
+GET https://gitlab.qcluster.org/api/v4/groups
+Authorization: Bearer {{gitlab_token}}
+
+### Get all projects
+# Documentation: https://docs.gitlab.com/api/projects/#list-projects
+GET https://gitlab.qcluster.org/api/v4/projects?simple=false&page=3&per_page=10000
+Authorization: Bearer {{gitlab_token}}
