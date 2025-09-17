@@ -1,0 +1,16 @@
+### Debug Email-Based Commit Filtering
+# Test the new email-based filtering approach vs the old user ID approach
+# Replace {userId} with an actual user ID from your DimUsers table
+
+GET https://localhost:7120/api/users/debug/1/commits?fromDate=2024-01-01&toDate=2024-12-31
+Accept: application/json
+
+### Get User Sync Status
+# First sync users to populate DimUsers table
+POST https://localhost:7120/api/users/sync
+Accept: application/json
+
+### Get User Metrics (using new email-based approach)
+# Test the main functionality with email-based filtering
+GET https://localhost:7120/api/users/1/metrics?fromDate=2024-01-01&toDate=2024-12-31
+Accept: application/json

@@ -268,10 +268,20 @@ public sealed class UserMetricsService : IUserMetricsService
         List<Models.Raw.RawMergeRequest> reviewedMRs
     )> FetchUserDataAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken)
     {
+        // Get user information to access email
+        var user = await GetUserInfoAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            _logger.LogWarning("User {UserId} not found for data fetching", userId);
+            return (new(), new(), new(), new(), new());
+        }
+
+        // Use email-based filtering for commits (more accurate than user ID)
         var commitsTask = _dbContext.RawCommits
-            .Where(c => c.AuthorUserId == userId && c.CommittedAt >= fromDate && c.CommittedAt < toDate)
+            .Where(c => c.AuthorEmail == user.Email && c.CommittedAt >= fromDate && c.CommittedAt < toDate)
             .ToListAsync(cancellationToken);
 
+        // For other entities, we can still use user ID as they're more reliable
         var mergeRequestsTask = _dbContext.RawMergeRequests
             .Where(mr => mr.AuthorUserId == userId && mr.CreatedAt >= fromDate && mr.CreatedAt < toDate)
             .ToListAsync(cancellationToken);

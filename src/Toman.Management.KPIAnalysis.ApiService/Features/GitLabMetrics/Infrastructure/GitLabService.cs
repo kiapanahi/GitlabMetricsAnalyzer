@@ -81,14 +81,20 @@ public sealed class GitLabService : IGitLabService
             {
                 try
                 {
+                    // For commits, we often only have email and name
+                    // We'll use a placeholder user ID and resolve it later during user sync
+                    // Use a hash of the email to create a consistent temporary ID
+                    var authorEmail = commit.AuthorEmail ?? "unknown@example.com";
+                    var tempAuthorUserId = Math.Abs(authorEmail.GetHashCode()); // Temporary ID based on email
+                    
                     var rawCommit = new RawCommit
                     {
                         ProjectId = projectId,
                         ProjectName = project.Name,
                         CommitId = commit.Id.ToString(),
-                        AuthorUserId = commit.AuthorName?.GetHashCode() ?? 0, // Fallback for missing user ID
+                        AuthorUserId = tempAuthorUserId, // Temporary ID - will be resolved later
                         AuthorName = commit.AuthorName ?? "Unknown",
-                        AuthorEmail = commit.AuthorEmail ?? "unknown@example.com",
+                        AuthorEmail = authorEmail,
                         CommittedAt = new DateTimeOffset(commit.CommittedDate),
                         Message = commit.Message ?? "",
                         Additions = commit.Stats?.Additions ?? 0,
@@ -228,6 +234,125 @@ public sealed class GitLabService : IGitLabService
         {
             _logger.LogError(ex, "Failed to get pipelines for project {ProjectId}", projectId);
             return new List<RawPipeline>().AsReadOnly();
+        }
+    }
+
+    public Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching all users from GitLab");
+            
+            // Get all users
+            var users = _gitLabClient.Users.Get(new UserQuery 
+            { 
+                PerPage = 100 // Adjust based on your GitLab instance
+            }).ToList();
+            
+            _logger.LogInformation("Retrieved {UserCount} users from GitLab", users.Count);
+            return Task.FromResult(users.AsReadOnly() as IReadOnlyList<User>);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get users from GitLab");
+            return Task.FromResult(new List<User>().AsReadOnly() as IReadOnlyList<User>);
+        }
+    }
+
+    public Task<User?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching user {UserId} from GitLab", userId);
+            
+            var user = _gitLabClient.Users[userId];
+            
+            _logger.LogDebug("Retrieved user {UserId}: {Username}", userId, user?.Username);
+            return Task.FromResult(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get user {UserId} from GitLab", userId);
+            return Task.FromResult<User?>(null);
+        }
+    }
+
+    public Task<IReadOnlyList<Project>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching projects for user {UserId} - returning all accessible projects", userId);
+            
+            // For now, return all accessible projects
+            // In a production environment, you would implement proper project membership checking
+            // This could involve calling GitLab's project members API for each project
+            var allProjects = _gitLabClient.Projects.Get(new ProjectQuery()).ToList();
+            
+            _logger.LogInformation("Retrieved {ProjectCount} accessible projects for user analysis", allProjects.Count);
+            return Task.FromResult(allProjects.AsReadOnly() as IReadOnlyList<Project>);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get projects for user {UserId}", userId);
+            return Task.FromResult(new List<Project>().AsReadOnly() as IReadOnlyList<Project>);
+        }
+    }
+
+    public Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching commits for project {ProjectId} filtered by user email {UserEmail}", projectId, userEmail);
+            
+            var project = _gitLabClient.Projects.GetById(projectId, new SingleProjectQuery());
+            var commits = _gitLabClient.GetRepository(projectId).Commits.ToList();
+
+            var rawCommits = new List<RawCommit>();
+
+            foreach (var commit in commits.Where(c => 
+                c.AuthorEmail?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true))
+            {
+                try
+                {
+                    // Create a consistent user ID based on email
+                    var authorUserId = Math.Abs(userEmail.GetHashCode());
+                    
+                    var rawCommit = new RawCommit
+                    {
+                        ProjectId = projectId,
+                        ProjectName = project.Name,
+                        CommitId = commit.Id.ToString(),
+                        AuthorUserId = authorUserId, // Consistent email-based ID
+                        AuthorName = commit.AuthorName ?? "Unknown",
+                        AuthorEmail = userEmail,
+                        CommittedAt = new DateTimeOffset(commit.CommittedDate),
+                        Message = commit.Message ?? "",
+                        Additions = commit.Stats?.Additions ?? 0,
+                        Deletions = commit.Stats?.Deletions ?? 0,
+                        IsSigned = false,
+                        IngestedAt = DateTimeOffset.UtcNow
+                    };
+
+                    // Filter by date if specified
+                    if (since.HasValue && rawCommit.CommittedAt < since.Value)
+                        continue;
+
+                    rawCommits.Add(rawCommit);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to process commit {CommitId} for project {ProjectId}", commit.Id, projectId);
+                }
+            }
+
+            _logger.LogDebug("Retrieved {CommitCount} commits for user email {UserEmail} in project {ProjectId}", 
+                rawCommits.Count, userEmail, projectId);
+            return Task.FromResult(rawCommits.AsReadOnly() as IReadOnlyList<RawCommit>);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get commits by user email {UserEmail} for project {ProjectId}", userEmail, projectId);
+            return Task.FromResult(new List<RawCommit>().AsReadOnly() as IReadOnlyList<RawCommit>);
         }
     }
 }

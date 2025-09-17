@@ -24,4 +24,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../src/Toman.Management.KPIAnalysis.AppHost/Toman.Management.KPIAnalysis.AppHost.csproj" />
+    <ProjectReference Include="../../src/Toman.Management.KPIAnalysis.ApiService/Toman.Management.KPIAnalysis.ApiService.csproj" />
+  </ItemGroup>
+
 </Project>
