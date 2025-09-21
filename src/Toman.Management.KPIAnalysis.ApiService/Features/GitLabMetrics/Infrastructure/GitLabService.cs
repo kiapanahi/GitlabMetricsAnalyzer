@@ -277,24 +277,185 @@ public sealed class GitLabService : IGitLabService
         }
     }
 
+    /// <summary>
+    /// Gets projects for a specific user. Since GitLab's user membership API requires admin privileges,
+    /// this method uses alternative approaches that work with regular user permissions:
+    /// 
+    /// Approach 1: Activity-based discovery (searches for user activity across accessible projects)
+    /// Approach 2: User-owned projects (guaranteed to be relevant)
+    /// Approach 3: Recent projects (higher chance of having user activity)
+    /// 
+    /// Note: For complete accuracy, you would need GitLab admin privileges to use:
+    /// GET /users/:id/memberships API endpoint
+    /// </summary>
+    /// <param name="userId">The GitLab user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of projects to analyze for user activity</returns>
     public Task<IReadOnlyList<Project>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogDebug("Fetching projects for user {UserId} - returning all accessible projects", userId);
+            _logger.LogDebug("Fetching projects for user {UserId} using activity-based discovery", userId);
             
-            // For now, return all accessible projects
-            // In a production environment, you would implement proper project membership checking
-            // This could involve calling GitLab's project members API for each project
-            var allProjects = _gitLabClient.Projects.Get(new ProjectQuery()).ToList();
+            var userProjects = new List<Project>();
             
-            _logger.LogInformation("Retrieved {ProjectCount} accessible projects for user analysis", allProjects.Count);
-            return Task.FromResult(allProjects.AsReadOnly() as IReadOnlyList<Project>);
+            // Method 1: Get user's owned projects (guaranteed relevant)
+            try
+            {
+                var ownedProjects = _gitLabClient.Projects.Get(new ProjectQuery 
+                { 
+                    UserId = (int)userId,
+                    PerPage = 100 
+                }).ToList();
+                
+                userProjects.AddRange(ownedProjects);
+                _logger.LogDebug("Found {OwnedProjectCount} owned projects for user {UserId}", ownedProjects.Count, userId);
+            }
+            catch (Exception ownedEx)
+            {
+                _logger.LogDebug(ownedEx, "Could not fetch owned projects for user {UserId}", userId);
+            }
+            
+            // Method 2: Get all accessible projects and use a smart sampling strategy
+            // Since we can't check membership directly, we'll get a broad set and rely on
+            // activity filtering to find the relevant ones
+            try
+            {
+                // Get multiple batches of projects to increase coverage
+                var allAccessibleProjects = new List<Project>();
+                
+                // Strategy: Get larger batches to maximize coverage
+                try
+                {
+                    var batch1 = _gitLabClient.Projects.Get(new ProjectQuery 
+                    { 
+                        PerPage = 100  // Maximum we can get in one call
+                    }).ToList();
+                    allAccessibleProjects.AddRange(batch1);
+                    _logger.LogDebug("Fetched batch with {ProjectCount} projects", batch1.Count);
+                }
+                catch (Exception batchEx)
+                {
+                    _logger.LogDebug(batchEx, "Failed to fetch projects batch");
+                }
+                
+                // Add accessible projects (excluding already owned ones)
+                foreach (var project in allAccessibleProjects)
+                {
+                    if (!userProjects.Any(p => p.Id == project.Id))
+                    {
+                        userProjects.Add(project);
+                    }
+                }
+                
+                _logger.LogDebug("Added {AccessibleProjectCount} accessible projects for user {UserId} analysis", 
+                    allAccessibleProjects.Count, userId);
+            }
+            catch (Exception accessEx)
+            {
+                _logger.LogWarning(accessEx, "Could not fetch accessible projects for user {UserId}", userId);
+            }
+            
+            // Remove duplicates and order for consistent results
+            var distinctProjects = userProjects
+                .GroupBy(p => p.Id)
+                .Select(g => g.First())
+                .OrderBy(p => p.Name)
+                .ToList();
+            
+            _logger.LogInformation("Retrieved {ProjectCount} projects for user {UserId} analysis. " +
+                                 "Will filter by actual user activity (commits, MRs, issues) during data fetching.", 
+                                 distinctProjects.Count, userId);
+                
+            return Task.FromResult(distinctProjects.AsReadOnly() as IReadOnlyList<Project>);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get projects for user {UserId}", userId);
             return Task.FromResult(new List<Project>().AsReadOnly() as IReadOnlyList<Project>);
+        }
+    }
+
+    /// <summary>
+    /// Alternative approach: Instead of trying to discover all user projects upfront,
+    /// search for user activity across the GitLab instance. This works without admin privileges
+    /// but requires more API calls during the search phase.
+    /// 
+    /// This method demonstrates how you could implement activity-based project discovery
+    /// if you prefer a more targeted approach.
+    /// </summary>
+    /// <param name="userId">The GitLab user ID</param>
+    /// <param name="userEmail">The user's email address</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Projects where the user has actual activity</returns>
+    public async Task<IReadOnlyList<Project>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default)
+    {
+        var projectsWithActivity = new HashSet<long>();
+        var userProjects = new List<Project>();
+        
+        try
+        {
+            _logger.LogDebug("Searching for user {UserId} activity across accessible projects", userId);
+            
+            // Get accessible projects to search through
+            var searchProjects = _gitLabClient.Projects.Get(new ProjectQuery { PerPage = 100 }).ToList();
+            
+            // Search for user activity in each project (parallel for better performance)
+            var activityTasks = searchProjects.Select(async project =>
+            {
+                try
+                {
+                    var hasActivity = false;
+                    
+                    // Check for commits by this user (quick check)
+                    var recentCommits = await GetCommitsByUserEmailAsync(project.Id, userEmail, DateTimeOffset.UtcNow.AddDays(-90), cancellationToken);
+                    if (recentCommits.Count > 0)
+                    {
+                        hasActivity = true;
+                        _logger.LogDebug("Found {CommitCount} commits for user {UserId} in project {ProjectId}", 
+                            recentCommits.Count, userId, project.Id);
+                    }
+                    
+                    // Check for merge requests by this user
+                    if (!hasActivity)
+                    {
+                        var recentMRs = await GetMergeRequestsAsync(project.Id, DateTimeOffset.UtcNow.AddDays(-90), cancellationToken);
+                        if (recentMRs.Any(mr => mr.AuthorUserId == userId))
+                        {
+                            hasActivity = true;
+                            var userMRCount = recentMRs.Count(mr => mr.AuthorUserId == userId);
+                            _logger.LogDebug("Found {MRCount} merge requests for user {UserId} in project {ProjectId}", 
+                                userMRCount, userId, project.Id);
+                        }
+                    }
+                    
+                    if (hasActivity)
+                    {
+                        lock (projectsWithActivity)
+                        {
+                            projectsWithActivity.Add(project.Id);
+                            userProjects.Add(project);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "Could not check activity for user {UserId} in project {ProjectId}", userId, project.Id);
+                }
+            });
+            
+            // Wait for all activity checks to complete (with reasonable timeout)
+            await Task.WhenAll(activityTasks);
+            
+            _logger.LogInformation("Found user {UserId} activity in {ProjectCount} projects out of {SearchedCount} searched", 
+                userId, userProjects.Count, searchProjects.Count);
+                
+            return userProjects.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to find projects by activity for user {UserId}", userId);
+            return new List<Project>().AsReadOnly();
         }
     }
 

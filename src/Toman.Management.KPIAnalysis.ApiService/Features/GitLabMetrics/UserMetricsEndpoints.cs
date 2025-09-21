@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
@@ -15,8 +18,8 @@ public static class UserMetricsEndpoints
 
         group.MapGet("/{userId}/metrics", GetUserMetrics)
             .WithName("GetUserMetrics")
-            .WithSummary("Get comprehensive metrics for a specific user")
-            .WithDescription("Returns detailed productivity, collaboration, and quality metrics for the specified user within the given date range.")
+            .WithSummary("Get comprehensive metrics for a specific GitLab user")
+            .WithDescription("Fetches user data directly from GitLab API and returns detailed productivity, collaboration, and quality metrics for the specified GitLab user ID within the given date range.")
             .Produces<UserMetricsResponse>(200)
             .Produces(400)
             .Produces(404)
@@ -24,8 +27,8 @@ public static class UserMetricsEndpoints
 
         group.MapGet("/{userId}/metrics/summary", GetUserMetricsSummary)
             .WithName("GetUserMetricsSummary")
-            .WithSummary("Get a summary of key metrics for a user")
-            .WithDescription("Returns a high-level overview of the most important productivity indicators for the specified user.")
+            .WithSummary("Get a summary of key metrics for a GitLab user")
+            .WithDescription("Fetches data directly from GitLab API and returns a high-level overview of the most important productivity indicators for the specified GitLab user ID.")
             .Produces<UserMetricsSummaryResponse>(200)
             .Produces(400)
             .Produces(404)
@@ -58,8 +61,8 @@ public static class UserMetricsEndpoints
 
         group.MapGet("/debug/{userId}/commits", GetUserCommitsByEmail)
             .WithName("GetUserCommitsByEmail")
-            .WithSummary("Debug endpoint to test email-based commit filtering")
-            .WithDescription("Returns commits for a user using email-based filtering to verify the new approach works.")
+            .WithSummary("Debug endpoint to test on-demand commit fetching")
+            .WithDescription("Fetches user info and commits directly from GitLab API using the user's GitLab ID, bypassing the need for pre-synced data.")
             .Produces<UserCommitsDebugResponse>(200)
             .Produces(404)
             .Produces(500);
@@ -68,7 +71,7 @@ public static class UserMetricsEndpoints
     }
 
     private static async Task<IResult> GetUserCommitsByEmail(
-        [FromServices] GitLabMetricsDbContext dbContext,
+        [FromServices] IGitLabService gitLabService,
         [FromRoute] long userId,
         [FromQuery] string? fromDate = null,
         [FromQuery] string? toDate = null,
@@ -79,58 +82,75 @@ public static class UserMetricsEndpoints
             var fromDateParsed = ParseDateOrDefault(fromDate, DateTimeOffset.UtcNow.AddDays(-30));
             var toDateParsed = ParseDateOrDefault(toDate, DateTimeOffset.UtcNow);
 
-            // Get user info
-            var user = await dbContext.DimUsers
-                .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+            // Get user info directly from GitLab API
+            var user = await gitLabService.GetUserByIdAsync(userId, cancellationToken);
 
             if (user is null)
             {
-                return Results.NotFound($"User with ID {userId} not found");
+                return Results.NotFound($"User with ID {userId} not found in GitLab");
             }
 
-            // Get commits using email-based filtering
-            var commitsByEmail = await dbContext.RawCommits
-                .Where(c => c.AuthorEmail == user.Email && 
-                           c.CommittedAt >= fromDateParsed && 
-                           c.CommittedAt < toDateParsed)
-                .OrderByDescending(c => c.CommittedAt)
-                .Take(50)
-                .ToListAsync(cancellationToken);
+            var allCommitsByEmail = new List<RawCommit>();
+            var projectCount = 0;
 
-            // Get commits using user ID filtering (old approach)
-            var commitsByUserId = await dbContext.RawCommits
-                .Where(c => c.AuthorUserId == userId && 
-                           c.CommittedAt >= fromDateParsed && 
-                           c.CommittedAt < toDateParsed)
-                .OrderByDescending(c => c.CommittedAt)
-                .Take(50)
-                .ToListAsync(cancellationToken);
+            try
+            {
+                // Get projects the user is involved with
+                var userProjects = await gitLabService.GetUserProjectsAsync(userId, cancellationToken);
+                projectCount = userProjects.Count;
+
+                // Get commits from all projects using email-based filtering
+                var commitTasks = userProjects.Select(async project =>
+                {
+                    try
+                    {
+                        return await gitLabService.GetCommitsByUserEmailAsync(project.Id, user.Email!, fromDateParsed, cancellationToken);
+                    }
+                    catch
+                    {
+                        return new List<RawCommit>(); // Return empty list if project fails
+                    }
+                });
+
+                var projectCommits = await Task.WhenAll(commitTasks);
+
+                // Aggregate all commits from all projects
+                foreach (var commits in projectCommits)
+                {
+                    allCommitsByEmail.AddRange(commits.Where(c =>
+                        c.CommittedAt >= fromDateParsed &&
+                        c.CommittedAt < toDateParsed));
+                }
+            }
+            catch (Exception ex)
+            {
+                // If project fetching fails, just return user info with no commits
+                Console.WriteLine($"Failed to fetch projects/commits: {ex.Message}");
+            }
 
             var response = new UserCommitsDebugResponse
             {
                 UserId = userId,
-                UserEmail = user.Email,
-                UserName = user.Name,
+                UserEmail = user.Email ?? "Unknown",
+                UserName = user.Name ?? user.Username ?? "Unknown",
                 FromDate = fromDateParsed,
                 ToDate = toDateParsed,
-                CommitsByEmail = commitsByEmail.Count,
-                CommitsByUserId = commitsByUserId.Count,
-                EmailBasedCommits = commitsByEmail.Select(c => new CommitInfo
-                {
-                    CommitId = c.CommitId,
-                    AuthorEmail = c.AuthorEmail,
-                    AuthorName = c.AuthorName,
-                    CommittedAt = c.CommittedAt,
-                    Message = c.Message.Length > 100 ? c.Message[..100] + "..." : c.Message
-                }).ToList(),
-                UserIdBasedCommits = commitsByUserId.Select(c => new CommitInfo
-                {
-                    CommitId = c.CommitId,
-                    AuthorEmail = c.AuthorEmail,
-                    AuthorName = c.AuthorName,
-                    CommittedAt = c.CommittedAt,
-                    Message = c.Message.Length > 100 ? c.Message[..100] + "..." : c.Message
-                }).ToList()
+                CommitsByEmail = allCommitsByEmail.Count,
+                CommitsByUserId = 0, // Not applicable in on-demand mode
+                ProjectsChecked = projectCount,
+                EmailBasedCommits = allCommitsByEmail
+                    .OrderByDescending(c => c.CommittedAt)
+                    .Take(50)
+                    .Select(c => new CommitInfo
+                    {
+                        CommitId = c.CommitId,
+                        AuthorEmail = c.AuthorEmail,
+                        AuthorName = c.AuthorName,
+                        CommittedAt = c.CommittedAt,
+                        ProjectName = c.ProjectName,
+                        Message = c.Message.Length > 100 ? c.Message[..100] + "..." : c.Message
+                    }).ToList(),
+                UserIdBasedCommits = new List<CommitInfo>() // Not applicable in on-demand mode
             };
 
             return Results.Ok(response);
@@ -154,6 +174,7 @@ public static class UserMetricsEndpoints
         public required DateTimeOffset ToDate { get; init; }
         public required int CommitsByEmail { get; init; }
         public required int CommitsByUserId { get; init; }
+        public required int ProjectsChecked { get; init; }
         public required List<CommitInfo> EmailBasedCommits { get; init; }
         public required List<CommitInfo> UserIdBasedCommits { get; init; }
     }
@@ -164,6 +185,7 @@ public static class UserMetricsEndpoints
         public required string AuthorEmail { get; init; }
         public required string AuthorName { get; init; }
         public required DateTimeOffset CommittedAt { get; init; }
+        public required string ProjectName { get; init; }
         public required string Message { get; init; }
     }
 
@@ -175,9 +197,9 @@ public static class UserMetricsEndpoints
         try
         {
             logger.LogInformation("Manual user synchronization requested");
-            
+
             var syncedUsers = await userSyncService.SyncMissingUsersFromRawDataAsync(cancellationToken);
-            
+
             var response = new SyncUsersResponse
             {
                 SyncedUsers = syncedUsers,
@@ -275,7 +297,7 @@ public static class UserMetricsEndpoints
         {
             var from = ParseDateOrDefault(fromDate, DateTimeOffset.UtcNow.AddDays(-90));
             var to = ParseDateOrDefault(toDate, DateTimeOffset.UtcNow);
-            
+
             if (!Enum.TryParse<TrendPeriod>(period, true, out var trendPeriod))
             {
                 return Results.BadRequest(new { Error = "Invalid period. Valid values are: Daily, Weekly, Monthly" });
@@ -315,12 +337,12 @@ public static class UserMetricsEndpoints
             var comparisonUserIds = ParseUserIds(compareWith);
 
             var comparison = await userMetricsService.GetUserMetricsComparisonAsync(
-                userId, 
-                comparisonUserIds, 
-                from, 
-                to, 
+                userId,
+                comparisonUserIds,
+                from,
+                to,
                 cancellationToken);
-            
+
             return Results.Ok(comparison);
         }
         catch (ArgumentException ex)

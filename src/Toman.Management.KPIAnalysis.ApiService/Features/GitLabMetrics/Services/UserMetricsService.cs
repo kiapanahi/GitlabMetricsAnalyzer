@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -10,13 +11,16 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Service
 public sealed class UserMetricsService : IUserMetricsService
 {
     private readonly GitLabMetricsDbContext _dbContext;
+    private readonly IGitLabService _gitLabService;
     private readonly ILogger<UserMetricsService> _logger;
 
     public UserMetricsService(
         GitLabMetricsDbContext dbContext,
+        IGitLabService gitLabService,
         ILogger<UserMetricsService> logger)
     {
         _dbContext = dbContext;
+        _gitLabService = gitLabService;
         _logger = logger;
     }
 
@@ -254,10 +258,35 @@ public sealed class UserMetricsService : IUserMetricsService
         }
     }
 
-    private async Task<Models.Dimensions.DimUser?> GetUserInfoAsync(long userId, CancellationToken cancellationToken)
+    private async Task<NGitLab.Models.User?> GetUserInfoAsync(long userId, CancellationToken cancellationToken)
     {
-        return await _dbContext.DimUsers
+        // First try to get user info from GitLab API directly
+        var gitLabUser = await _gitLabService.GetUserByIdAsync(userId, cancellationToken);
+        if (gitLabUser is not null)
+        {
+            _logger.LogDebug("Retrieved user {UserId} directly from GitLab: {Username}", userId, gitLabUser.Username);
+            return gitLabUser;
+        }
+
+        // If not found in GitLab API, try to find in local database as fallback
+        var dbUser = await _dbContext.DimUsers
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+        
+        if (dbUser is not null)
+        {
+            _logger.LogDebug("Retrieved user {UserId} from local database: {Username}", userId, dbUser.Name);
+            // Convert DimUser to NGitLab User for consistency
+            return new NGitLab.Models.User
+            {
+                Id = dbUser.UserId,
+                Username = dbUser.Username,
+                Email = dbUser.Email,
+                Name = dbUser.Name
+            };
+        }
+
+        _logger.LogWarning("User {UserId} not found in GitLab API or local database", userId);
+        return null;
     }
 
     private async Task<(
@@ -268,7 +297,7 @@ public sealed class UserMetricsService : IUserMetricsService
         List<Models.Raw.RawMergeRequest> reviewedMRs
     )> FetchUserDataAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken)
     {
-        // Get user information to access email
+        // Get user information first
         var user = await GetUserInfoAsync(userId, cancellationToken);
         if (user is null)
         {
@@ -276,39 +305,78 @@ public sealed class UserMetricsService : IUserMetricsService
             return (new(), new(), new(), new(), new());
         }
 
-        // Use email-based filtering for commits (more accurate than user ID)
-        var commitsTask = _dbContext.RawCommits
-            .Where(c => c.AuthorEmail == user.Email && c.CommittedAt >= fromDate && c.CommittedAt < toDate)
-            .ToListAsync(cancellationToken);
+        _logger.LogInformation("Fetching on-demand data for user {UserId} ({UserEmail}) from {FromDate} to {ToDate}", 
+            userId, user.Email, fromDate, toDate);
 
-        // For other entities, we can still use user ID as they're more reliable
-        var mergeRequestsTask = _dbContext.RawMergeRequests
-            .Where(mr => mr.AuthorUserId == userId && mr.CreatedAt >= fromDate && mr.CreatedAt < toDate)
-            .ToListAsync(cancellationToken);
+        var allCommits = new List<Models.Raw.RawCommit>();
+        var allMergeRequests = new List<Models.Raw.RawMergeRequest>();
+        var allPipelines = new List<Models.Raw.RawPipeline>();
+        var allIssues = new List<Models.Raw.RawIssue>();
 
-        var pipelinesTask = _dbContext.RawPipelines
-            .Where(p => p.AuthorUserId == userId && p.CreatedAt >= fromDate && p.CreatedAt < toDate)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            // Get projects the user is involved with
+            var userProjects = await _gitLabService.GetUserProjectsAsync(userId, cancellationToken);
+            _logger.LogDebug("Found {ProjectCount} projects for user {UserId}", userProjects.Count, userId);
 
-        var issuesTask = _dbContext.RawIssues
-            .Where(i => i.AuthorUserId == userId && i.CreatedAt >= fromDate && i.CreatedAt < toDate)
-            .ToListAsync(cancellationToken);
+            // Fetch data from each project in parallel
+            var projectTasks = userProjects.Select(async project =>
+            {
+                try
+                {
+                    // Get commits filtered by user email
+                    var commits = await _gitLabService.GetCommitsByUserEmailAsync(project.Id, user.Email!, fromDate, cancellationToken);
+                    
+                    // Get merge requests for this project
+                    var mergeRequests = await _gitLabService.GetMergeRequestsAsync(project.Id, fromDate, cancellationToken);
+                    var userMRs = mergeRequests.Where(mr => mr.AuthorUserId == userId).ToList();
+                    
+                    // Get pipelines for this project
+                    var pipelines = await _gitLabService.GetPipelinesAsync(project.Id, fromDate, cancellationToken);
+                    var userPipelines = pipelines.Where(p => p.AuthorUserId == userId).ToList();
 
-        // Find MRs where the user was a reviewer
-        var reviewedMRsTask = _dbContext.RawMergeRequests
-            .Where(mr => mr.ReviewerIds != null && mr.ReviewerIds.Contains(userId.ToString()) && 
-                        mr.CreatedAt >= fromDate && mr.CreatedAt < toDate)
-            .ToListAsync(cancellationToken);
+                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines", 
+                        project.Id, commits.Count, userMRs.Count, userPipelines.Count);
 
-        await Task.WhenAll(commitsTask, mergeRequestsTask, pipelinesTask, issuesTask, reviewedMRsTask);
+                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to fetch data from project {ProjectId} for user {UserId}", project.Id, userId);
+                    return (commits: new List<Models.Raw.RawCommit>(), 
+                           mergeRequests: new List<Models.Raw.RawMergeRequest>(), 
+                           pipelines: new List<Models.Raw.RawPipeline>());
+                }
+            });
 
-        return (
-            await commitsTask,
-            await mergeRequestsTask,
-            await pipelinesTask,
-            await issuesTask,
-            await reviewedMRsTask
-        );
+            var projectResults = await Task.WhenAll(projectTasks);
+
+            // Aggregate results from all projects
+            foreach (var (commits, mergeRequests, pipelines) in projectResults)
+            {
+                allCommits.AddRange(commits.Where(c => c.CommittedAt >= fromDate && c.CommittedAt < toDate));
+                allMergeRequests.AddRange(mergeRequests.Where(mr => mr.CreatedAt >= fromDate && mr.CreatedAt < toDate));
+                allPipelines.AddRange(pipelines.Where(p => p.CreatedAt >= fromDate && p.CreatedAt < toDate));
+            }
+
+            // Note: Issues are typically project-scoped and would need additional API calls
+            // For now, returning empty list - this could be enhanced later
+            _logger.LogDebug("Issue fetching not implemented in on-demand mode yet");
+
+            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines", 
+                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch on-demand data for user {UserId}", userId);
+        }
+
+        // Find MRs where the user was a reviewer (from the fetched MRs)
+        var reviewedMRs = allMergeRequests
+            .Where(mr => mr.ReviewerIds != null && mr.ReviewerIds.Contains(userId.ToString()))
+            .ToList();
+
+        return (allCommits, allMergeRequests, allPipelines, allIssues, reviewedMRs);
     }
 
     private static UserCodeContributionMetrics CalculateCodeContributionMetrics(
@@ -372,8 +440,11 @@ public sealed class UserMetricsService : IUserMetricsService
                 .Average(mr => (mr.MergedAt!.Value - mr.FirstReviewAt!.Value).Ticks))
             : (TimeSpan?)null;
 
+        // Calculate total possible reviews (excluding own MRs)
+        var firstMR = mergeRequests.FirstOrDefault();
+        var currentUserAuthId = firstMR?.AuthorUserId ?? 0;
         var totalPossibleReviews = await _dbContext.RawMergeRequests
-            .CountAsync(mr => mergeRequests.FirstOrDefault() == null || mr.AuthorUserId != mergeRequests.FirstOrDefault().AuthorUserId, cancellationToken);
+            .CountAsync(mr => mr.AuthorUserId != currentUserAuthId, cancellationToken);
         
         var reviewParticipationRate = totalPossibleReviews > 0 ? (double)mergeRequestsReviewed / totalPossibleReviews : 0;
         
@@ -420,7 +491,7 @@ public sealed class UserMetricsService : IUserMetricsService
         );
     }
 
-    private async Task<UserCollaborationMetrics> CalculateCollaborationMetricsAsync(
+    private Task<UserCollaborationMetrics> CalculateCollaborationMetricsAsync(
         List<Models.Raw.RawMergeRequest> mergeRequests,
         List<Models.Raw.RawMergeRequest> reviewedMRs,
         CancellationToken cancellationToken)
@@ -447,13 +518,13 @@ public sealed class UserMetricsService : IUserMetricsService
         // Mentorship activities would need more detailed analysis
         var mentorshipActivities = 0; // Placeholder
 
-        return new UserCollaborationMetrics(
+        return Task.FromResult(new UserCollaborationMetrics(
             uniqueReviewers,
             uniqueReviewees,
             crossTeamCollaborations,
             knowledgeSharingScore,
             mentorshipActivities
-        );
+        ));
     }
 
     private static UserQualityMetrics CalculateQualityMetrics(

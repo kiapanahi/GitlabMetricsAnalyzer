@@ -18,5 +18,6 @@ public interface IGitLabService
     
     // User-project relationship methods
     Task<IReadOnlyList<Project>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Project>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default);
 }
