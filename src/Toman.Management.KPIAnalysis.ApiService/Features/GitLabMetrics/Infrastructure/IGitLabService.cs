@@ -1,4 +1,5 @@
 using NGitLab.Models;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
@@ -17,6 +18,8 @@ public interface IGitLabService
     Task<User?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default);
     
     // User-project relationship methods
+    Task<IReadOnlyList<Project>> GetUserContributedProjectsAsync(long userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserProjectContribution>> GetUserProjectContributionsAsync(long userId, string? userEmail = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Project>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Project>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default);

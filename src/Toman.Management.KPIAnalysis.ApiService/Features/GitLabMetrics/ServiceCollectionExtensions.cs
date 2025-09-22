@@ -1,6 +1,11 @@
+using System.Net.Http.Headers;
+
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 using NGitLab;
+
+using Polly.CircuitBreaker;
 
 using Quartz;
 
@@ -46,6 +51,17 @@ internal static class ServiceCollectionExtensions
             var gitLabClient = new GitLabClient(configuration.BaseUrl, configuration.Token);
             return gitLabClient;
         });
+
+        // Add HTTP client for direct GitLab API calls
+        builder.Services
+        .AddHttpClient<IGitLabHttpClient, GitLabHttpClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
+            var configuration = options.Value;
+            client.BaseAddress = new Uri(configuration.BaseUrl.TrimEnd('/') + "/api/v4/");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
+        })
+        .AddStandardResilienceHandler();
 
 
         if (!builder.Environment.IsDevelopment())
