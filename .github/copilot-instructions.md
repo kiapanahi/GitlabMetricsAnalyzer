@@ -16,7 +16,6 @@ Build a C# application that collects developer productivity metrics from an on-p
 
 ## Architecture Overview
 
-### Tech Stack
 ### Technology Stack
 - Use vertical slice architecture for every feature.
 - **.NET 9** with C# latest features, file-scoped namespaces
@@ -62,6 +61,7 @@ Build a C# application that collects developer productivity metrics from an on-p
 - Extract reusable logic into services
 - Use cascading parameters sparingly
 - Prefer component parameters over cascading values
+- When interacting with GitLab API, refer to the official documentation at https://docs.gitlab.com/api/api_resources/
 
 ## Error Handling
 - Use try-catch blocks in event handlers
@@ -69,12 +69,6 @@ Build a C# application that collects developer productivity metrics from an on-p
 - Display user-friendly error messages
 - Log errors appropriately
 - **Usage Limit Errors**: Check for JSON error responses with "USAGE_LIMIT_EXCEEDED" ErrorCode and display UsageLimitDialog instead of raw error messages
-
-## Performance
-- Implement proper component lifecycle methods
-- Use @key directive when rendering lists
-- Avoid unnecessary renders
-- Use virtualization for large lists
 
 ## Testing
 - Write unit tests for complex component logic only if i ask for tests
