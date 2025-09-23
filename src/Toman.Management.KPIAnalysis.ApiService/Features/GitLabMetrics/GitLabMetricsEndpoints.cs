@@ -14,7 +14,8 @@ public static class GitLabMetricsEndpoints
     {
         app.MapGitLabMetricsEndpoints()
            .MapStatusEndpoints()
-           .MapUserMetricsEndpoints();
+           .MapUserMetricsEndpoints()
+           .MapUserMetricsCollectionEndpoints();
 
         return app;
     }

@@ -3,6 +3,7 @@ using System;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
@@ -12,9 +13,11 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 namespace Toman.Management.KPIAnalysis.ApiService.Migrations
 {
     [DbContext(typeof(GitLabMetricsDbContext))]
-    partial class GitLabMetricsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250923072442_AddFactUserMetrics")]
+    partial class AddFactUserMetrics
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

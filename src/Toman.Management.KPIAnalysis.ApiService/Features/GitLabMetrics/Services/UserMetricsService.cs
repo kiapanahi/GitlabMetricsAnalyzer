@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+
 using System.Text.Json;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
@@ -94,12 +96,12 @@ public sealed class UserMetricsService : IUserMetricsService
         var totalCommits = commits.Count;
         var totalMergeRequests = mergeRequests.Count;
         var averageCommitsPerDay = totalCommits / daysDiff;
-        
+
         var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
         var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0.0;
-        
+
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
-        var averageMRCycleTime = mergedMRs.Count > 0 
+        var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
 
@@ -271,7 +273,7 @@ public sealed class UserMetricsService : IUserMetricsService
         // If not found in GitLab API, try to find in local database as fallback
         var dbUser = await _dbContext.DimUsers
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
-        
+
         if (dbUser is not null)
         {
             _logger.LogDebug("Retrieved user {UserId} from local database: {Username}", userId, dbUser.Name);
@@ -305,7 +307,7 @@ public sealed class UserMetricsService : IUserMetricsService
             return (new(), new(), new(), new(), new());
         }
 
-        _logger.LogInformation("Fetching on-demand data for user {UserId} ({UserEmail}) from {FromDate} to {ToDate}", 
+        _logger.LogInformation("Fetching on-demand data for user {UserId} ({UserEmail}) from {FromDate} to {ToDate}",
             userId, user.Email, fromDate, toDate);
 
         var allCommits = new List<Models.Raw.RawCommit>();
@@ -326,16 +328,16 @@ public sealed class UserMetricsService : IUserMetricsService
                 {
                     // Get commits filtered by user email
                     var commits = await _gitLabService.GetCommitsByUserEmailAsync(project.Id, user.Email!, fromDate, cancellationToken);
-                    
+
                     // Get merge requests for this project
                     var mergeRequests = await _gitLabService.GetMergeRequestsAsync(project.Id, fromDate, cancellationToken);
                     var userMRs = mergeRequests.Where(mr => mr.AuthorUserId == userId).ToList();
-                    
+
                     // Get pipelines for this project
                     var pipelines = await _gitLabService.GetPipelinesAsync(project.Id, fromDate, cancellationToken);
                     var userPipelines = pipelines.Where(p => p.AuthorUserId == userId).ToList();
 
-                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines", 
+                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
                         project.Id, commits.Count, userMRs.Count, userPipelines.Count);
 
                     return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines);
@@ -343,8 +345,8 @@ public sealed class UserMetricsService : IUserMetricsService
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to fetch data from project {ProjectId} for user {UserId}", project.Id, userId);
-                    return (commits: new List<Models.Raw.RawCommit>(), 
-                           mergeRequests: new List<Models.Raw.RawMergeRequest>(), 
+                    return (commits: new List<Models.Raw.RawCommit>(),
+                           mergeRequests: new List<Models.Raw.RawMergeRequest>(),
                            pipelines: new List<Models.Raw.RawPipeline>());
                 }
             });
@@ -363,7 +365,7 @@ public sealed class UserMetricsService : IUserMetricsService
             // For now, returning empty list - this could be enhanced later
             _logger.LogDebug("Issue fetching not implemented in on-demand mode yet");
 
-            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines", 
+            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
                 userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count);
         }
         catch (Exception ex)
@@ -380,27 +382,27 @@ public sealed class UserMetricsService : IUserMetricsService
     }
 
     private static UserCodeContributionMetrics CalculateCodeContributionMetrics(
-        List<Models.Raw.RawCommit> commits, 
-        DateTimeOffset fromDate, 
+        List<Models.Raw.RawCommit> commits,
+        DateTimeOffset fromDate,
         DateTimeOffset toDate)
     {
         var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
         var totalCommits = commits.Count;
         var commitsPerDay = totalCommits / daysDiff;
-        
+
         var totalLinesAdded = commits.Sum(c => c.Additions);
         var totalLinesDeleted = commits.Sum(c => c.Deletions);
         var totalLinesChanged = totalLinesAdded + totalLinesDeleted;
-        
+
         var averageCommitSize = commits.Count > 0 ? (double)totalLinesChanged / commits.Count : 0;
-        
+
         // Simple file count estimation (would need more data for accurate count)
         var filesModified = commits.Count; // Placeholder
-        
+
         // Weekend and evening commits (assuming work hours 9-17, weekdays)
-        var weekendCommits = commits.Count(c => c.CommittedAt.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday);
+        var weekendCommits = commits.Count(c => c.CommittedAt.DayOfWeek is DayOfWeek.Thursday or DayOfWeek.Friday);
         var eveningCommits = commits.Count(c => c.CommittedAt.Hour < 9 || c.CommittedAt.Hour > 17);
-        
+
         return new UserCodeContributionMetrics(
             totalCommits,
             commitsPerDay,
@@ -422,11 +424,11 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         var mergeRequestsCreated = mergeRequests.Count;
         var mergeRequestsReviewed = reviewedMRs.Count;
-        
+
         var averageMRSize = mergeRequests.Count > 0 ? mergeRequests.Average(mr => mr.ChangesCount) : 0;
-        
+
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
-        var averageMRCycleTime = mergedMRs.Count > 0 
+        var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
 
@@ -445,12 +447,12 @@ public sealed class UserMetricsService : IUserMetricsService
         var currentUserAuthId = firstMR?.AuthorUserId ?? 0;
         var totalPossibleReviews = await _dbContext.RawMergeRequests
             .CountAsync(mr => mr.AuthorUserId != currentUserAuthId, cancellationToken);
-        
+
         var reviewParticipationRate = totalPossibleReviews > 0 ? (double)mergeRequestsReviewed / totalPossibleReviews : 0;
-        
+
         var approvalsGiven = reviewedMRs.Sum(mr => mr.ApprovalsGiven); // This would need more detailed tracking
         var approvalsReceived = mergeRequests.Sum(mr => mr.ApprovalsGiven);
-        
+
         // Self-merge rate (MRs merged without external review)
         var selfMergedMRs = mergeRequests.Count(mr => mr.MergedAt.HasValue && !mr.FirstReviewAt.HasValue);
         var selfMergeRate = mergeRequests.Count > 0 ? (double)selfMergedMRs / mergeRequests.Count : 0;
@@ -473,7 +475,7 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         var issuesCreated = issues.Count;
         var issuesResolved = issues.Count(i => i.ClosedAt.HasValue);
-        
+
         var resolvedIssues = issues.Where(i => i.ClosedAt.HasValue).ToList();
         var averageIssueResolutionTime = resolvedIssues.Count > 0
             ? TimeSpan.FromTicks((long)resolvedIssues.Average(i => (i.ClosedAt!.Value - i.CreatedAt).Ticks))
@@ -566,19 +568,19 @@ public sealed class UserMetricsService : IUserMetricsService
         DateTimeOffset toDate)
     {
         var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
-        
+
         // Velocity score based on commits and MRs
         var velocityScore = CalculateVelocityScore(commits.Count, mergeRequests.Count, daysDiff);
-        
+
         // Efficiency score based on pipeline success rate and MR cycle time
         var efficiencyScore = CalculateEfficiencyScore(pipelines, mergeRequests);
-        
+
         // Impact score based on lines changed and MR complexity
         var impactScore = CalculateImpactScore(commits, mergeRequests);
-        
+
         // Productivity trend would need historical comparison
         var productivityTrend = "Stable"; // Placeholder
-        
+
         // Focus time estimation based on commit patterns
         var focusTimeHours = EstimateFocusTime(commits, daysDiff);
 
@@ -592,9 +594,9 @@ public sealed class UserMetricsService : IUserMetricsService
     }
 
     private async Task<UserMetricsComparisonData?> CalculateComparisonMetricsForUserAsync(
-        long userId, 
-        DateTimeOffset fromDate, 
-        DateTimeOffset toDate, 
+        long userId,
+        DateTimeOffset fromDate,
+        DateTimeOffset toDate,
         CancellationToken cancellationToken)
     {
         var user = await GetUserInfoAsync(userId, cancellationToken);
@@ -604,9 +606,9 @@ public sealed class UserMetricsService : IUserMetricsService
 
         var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
         var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
-        
+
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
-        var averageMRCycleTime = mergedMRs.Count > 0 
+        var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
 
@@ -662,7 +664,7 @@ public sealed class UserMetricsService : IUserMetricsService
     private static string CalculateProductivityScore(int commits, int mergeRequests, double pipelineSuccessRate, double days)
     {
         var score = CalculateNumericProductivityScore(commits, mergeRequests, pipelineSuccessRate, days);
-        
+
         return score switch
         {
             >= 7.5 => "High",
@@ -675,10 +677,10 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         var commitsPerDay = commits / Math.Max(1, days);
         var mrsPerWeek = mergeRequests / Math.Max(1, days / 7);
-        
+
         // Weighted scoring algorithm
         var score = (commitsPerDay * 2) + (mrsPerWeek * 3) + (pipelineSuccessRate * 5);
-        
+
         return Math.Min(10, Math.Max(0, score));
     }
 
@@ -690,10 +692,10 @@ public sealed class UserMetricsService : IUserMetricsService
             var trimmed = reviewerIds.Trim('[', ']', ' ');
             if (string.IsNullOrEmpty(trimmed))
                 return new List<long>();
-                
+
             var parts = trimmed.Split(',', StringSplitOptions.RemoveEmptyEntries);
             var ids = new List<long>();
-            
+
             foreach (var part in parts)
             {
                 if (long.TryParse(part.Trim(), out var id))
@@ -701,7 +703,7 @@ public sealed class UserMetricsService : IUserMetricsService
                     ids.Add(id);
                 }
             }
-            
+
             return ids;
         }
         catch
@@ -715,7 +717,7 @@ public sealed class UserMetricsService : IUserMetricsService
         // Score based on diversity of collaboration and review activity
         var diversityScore = (uniqueReviewers + uniqueReviewees) / 2.0;
         var activityScore = Math.Min(10, totalReviews / 5.0);
-        
+
         return Math.Min(10, (diversityScore + activityScore) / 2);
     }
 
@@ -723,17 +725,17 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         var commitsPerDay = commits / Math.Max(1, days);
         var mrsPerWeek = mergeRequests / Math.Max(1, days / 7);
-        
+
         return Math.Min(10, (commitsPerDay * 2) + (mrsPerWeek * 3));
     }
 
     private static double CalculateEfficiencyScore(List<Models.Raw.RawPipeline> pipelines, List<Models.Raw.RawMergeRequest> mergeRequests)
     {
         var pipelineSuccessRate = pipelines.Count > 0 ? pipelines.Count(p => p.IsSuccessful) / (double)pipelines.Count : 0;
-        
+
         var quickMRs = mergeRequests.Count(mr => mr.CycleTime?.TotalDays <= 2);
         var quickMRRate = mergeRequests.Count > 0 ? quickMRs / (double)mergeRequests.Count : 0;
-        
+
         return Math.Min(10, (pipelineSuccessRate * 5) + (quickMRRate * 5));
     }
 
@@ -742,11 +744,11 @@ public sealed class UserMetricsService : IUserMetricsService
         var totalLinesChanged = commits.Sum(c => c.Additions + c.Deletions);
         var averageCommitSize = commits.Count > 0 ? totalLinesChanged / (double)commits.Count : 0;
         var averageMRSize = mergeRequests.Count > 0 ? mergeRequests.Average(mr => mr.ChangesCount) : 0;
-        
+
         // Score based on reasonable change sizes (not too small, not too large)
         var commitSizeScore = CalculateOptimalSizeScore(averageCommitSize, 50, 200);
         var mrSizeScore = CalculateOptimalSizeScore(averageMRSize, 100, 500);
-        
+
         return Math.Min(10, (commitSizeScore + mrSizeScore) / 2);
     }
 
@@ -754,10 +756,10 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         if (size >= optimalMin && size <= optimalMax)
             return 10;
-        
+
         if (size < optimalMin)
             return Math.Max(0, 10 * (size / optimalMin));
-            
+
         return Math.Max(0, 10 * (optimalMax / size));
     }
 
@@ -767,10 +769,10 @@ public sealed class UserMetricsService : IUserMetricsService
         // Commits close together in time suggest focused work sessions
         var commitDays = commits.GroupBy(c => c.CommittedAt.Date).Count();
         var avgCommitsPerActiveDay = commitDays > 0 ? commits.Count / (double)commitDays : 0;
-        
+
         // Estimate 2-4 hours of focus time per day with commits
         var estimatedHoursPerDay = Math.Min(8, Math.Max(1, avgCommitsPerActiveDay * 0.5));
-        
+
         return (int)(commitDays * estimatedHoursPerDay);
     }
 
