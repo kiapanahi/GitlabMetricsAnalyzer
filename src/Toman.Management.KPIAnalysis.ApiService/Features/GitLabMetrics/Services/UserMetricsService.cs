@@ -396,8 +396,8 @@ public sealed class UserMetricsService : IUserMetricsService
 
         var averageCommitSize = commits.Count > 0 ? (double)totalLinesChanged / commits.Count : 0;
 
-        // Simple file count estimation (would need more data for accurate count)
-        var filesModified = commits.Count; // Placeholder
+        // Calculate distinct projects from commits (active projects the user contributed to)
+        var filesModified = commits.Select(c => c.ProjectId).Distinct().Count();
 
         // Weekend and evening commits (assuming work hours 9-17, weekdays)
         var weekendCommits = commits.Count(c => c.CommittedAt.DayOfWeek is DayOfWeek.Thursday or DayOfWeek.Friday);
