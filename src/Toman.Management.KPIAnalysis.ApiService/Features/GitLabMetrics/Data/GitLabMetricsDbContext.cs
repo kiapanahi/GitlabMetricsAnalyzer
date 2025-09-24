@@ -27,6 +27,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     public DbSet<FactPipeline> FactPipelines => Set<FactPipeline>();
     public DbSet<FactGitHygiene> FactGitHygiene => Set<FactGitHygiene>();
     public DbSet<FactRelease> FactReleases => Set<FactRelease>();
+    public DbSet<FactUserMetrics> FactUserMetrics => Set<FactUserMetrics>();
 
     // Operational
     public DbSet<IngestionState> IngestionStates => Set<IngestionState>();
@@ -253,6 +254,70 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
             entity.Property(e => e.IsSemver).HasColumnName("is_semver");
             entity.Property(e => e.CadenceBucket).HasColumnName("cadence_bucket").HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<FactUserMetrics>(entity =>
+        {
+            entity.ToTable("fact_user_metrics");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.Username).HasColumnName("username").HasMaxLength(255);
+            entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(255);
+            entity.Property(e => e.CollectedAt).HasColumnName("collected_at");
+            entity.Property(e => e.FromDate).HasColumnName("from_date");
+            entity.Property(e => e.ToDate).HasColumnName("to_date");
+            entity.Property(e => e.PeriodDays).HasColumnName("period_days");
+            
+            // Code Contribution Metrics
+            entity.Property(e => e.TotalCommits).HasColumnName("total_commits");
+            entity.Property(e => e.TotalLinesAdded).HasColumnName("total_lines_added");
+            entity.Property(e => e.TotalLinesDeleted).HasColumnName("total_lines_deleted");
+            entity.Property(e => e.TotalLinesChanged).HasColumnName("total_lines_changed");
+            entity.Property(e => e.AverageCommitsPerDay).HasColumnName("average_commits_per_day").HasPrecision(10, 2);
+            entity.Property(e => e.AverageLinesChangedPerCommit).HasColumnName("average_lines_changed_per_commit").HasPrecision(10, 2);
+            entity.Property(e => e.ActiveProjects).HasColumnName("active_projects");
+            
+            // Code Review Metrics
+            entity.Property(e => e.TotalMergeRequestsCreated).HasColumnName("total_merge_requests_created");
+            entity.Property(e => e.TotalMergeRequestsMerged).HasColumnName("total_merge_requests_merged");
+            entity.Property(e => e.TotalMergeRequestsReviewed).HasColumnName("total_merge_requests_reviewed");
+            entity.Property(e => e.AverageMergeRequestCycleTimeHours).HasColumnName("average_merge_request_cycle_time_hours").HasPrecision(10, 2);
+            entity.Property(e => e.MergeRequestMergeRate).HasColumnName("merge_request_merge_rate").HasPrecision(5, 4);
+            
+            // Quality Metrics
+            entity.Property(e => e.TotalPipelinesTriggered).HasColumnName("total_pipelines_triggered");
+            entity.Property(e => e.SuccessfulPipelines).HasColumnName("successful_pipelines");
+            entity.Property(e => e.FailedPipelines).HasColumnName("failed_pipelines");
+            entity.Property(e => e.PipelineSuccessRate).HasColumnName("pipeline_success_rate").HasPrecision(5, 4);
+            entity.Property(e => e.AveragePipelineDurationMinutes).HasColumnName("average_pipeline_duration_minutes").HasPrecision(10, 2);
+            
+            // Issue Management Metrics
+            entity.Property(e => e.TotalIssuesCreated).HasColumnName("total_issues_created");
+            entity.Property(e => e.TotalIssuesAssigned).HasColumnName("total_issues_assigned");
+            entity.Property(e => e.TotalIssuesClosed).HasColumnName("total_issues_closed");
+            entity.Property(e => e.AverageIssueResolutionTimeHours).HasColumnName("average_issue_resolution_time_hours").HasPrecision(10, 2);
+            
+            // Collaboration Metrics
+            entity.Property(e => e.TotalCommentsOnMergeRequests).HasColumnName("total_comments_on_merge_requests");
+            entity.Property(e => e.TotalCommentsOnIssues).HasColumnName("total_comments_on_issues");
+            entity.Property(e => e.CollaborationScore).HasColumnName("collaboration_score").HasPrecision(5, 2);
+            
+            // Productivity Metrics
+            entity.Property(e => e.ProductivityScore).HasColumnName("productivity_score").HasPrecision(5, 2);
+            entity.Property(e => e.ProductivityLevel).HasColumnName("productivity_level").HasMaxLength(50);
+            entity.Property(e => e.CodeChurnRate).HasColumnName("code_churn_rate").HasPrecision(5, 4);
+            entity.Property(e => e.ReviewThroughput).HasColumnName("review_throughput").HasPrecision(10, 2);
+            
+            // Metadata
+            entity.Property(e => e.TotalDataPoints).HasColumnName("total_data_points");
+            entity.Property(e => e.DataQuality).HasColumnName("data_quality").HasMaxLength(50);
+            
+            // Indexes for performance
+            entity.HasIndex(e => e.UserId).HasDatabaseName("idx_fact_user_metrics_user_id");
+            entity.HasIndex(e => e.CollectedAt).HasDatabaseName("idx_fact_user_metrics_collected_at");
+            entity.HasIndex(e => new { e.UserId, e.CollectedAt }).HasDatabaseName("idx_fact_user_metrics_user_collected");
+            entity.HasIndex(e => new { e.UserId, e.FromDate, e.ToDate }).HasDatabaseName("idx_fact_user_metrics_user_period");
         });
     }
 

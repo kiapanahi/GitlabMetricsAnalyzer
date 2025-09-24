@@ -11,15 +11,18 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 {
     private readonly IGitLabService _gitLabService;
     private readonly GitLabMetricsDbContext _dbContext;
+    private readonly IUserSyncService _userSyncService;
     private readonly ILogger<GitLabCollectorService> _logger;
 
     public GitLabCollectorService(
         IGitLabService gitLabService,
         GitLabMetricsDbContext dbContext,
+        IUserSyncService userSyncService,
         ILogger<GitLabCollectorService> logger)
     {
         _gitLabService = gitLabService;
         _dbContext = dbContext;
+        _userSyncService = userSyncService;
         _logger = logger;
     }
 
@@ -85,6 +88,18 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         {
             _logger.LogDebug("Processing project: {ProjectPath} (ID: {ProjectId})", project.PathWithNamespace, project.Id);
             await ProcessProjectAsync((int)project.Id, updatedAfter, cancellationToken);
+        }
+
+        // Synchronize users after collecting data
+        _logger.LogInformation("Starting user synchronization after data collection");
+        try
+        {
+            var syncedUsers = await _userSyncService.SyncMissingUsersFromRawDataAsync(cancellationToken);
+            _logger.LogInformation("Synchronized {SyncedUsers} users from raw data", syncedUsers);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to synchronize users from raw data");
         }
     }
 
