@@ -1,6 +1,3 @@
-using System.Text.Json;
-
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using NGitLab;
@@ -460,9 +457,10 @@ public sealed class GitLabService : IGitLabService
             _logger.LogError(ex, "Failed to analyze user {UserId} project contributions", userId);
             return new List<UserProjectContribution>().AsReadOnly();
         }
-    }    /// <summary>
-         /// Analyzes a user's contributions to a specific project
-         /// </summary>
+    }
+    /// <summary>
+    /// Analyzes a user's contributions to a specific project
+    /// </summary>
     private async Task<UserProjectContribution> AnalyzeUserContributionsInProjectAsync(Project project, long userId, string userEmail, CancellationToken cancellationToken)
     {
         var commitsCount = 0;
