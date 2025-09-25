@@ -9,10 +9,74 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 /// <summary>
-/// HTTP client service for making direct GitLab API calls that aren't supported by NGitLab library.
+/// HTTP client service for making direct GitLab API calls that replace NGitLab library functionality.
 /// </summary>
 public interface IGitLabHttpClient
 {
+    /// <summary>
+    /// Tests the connection to GitLab API.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if connection is successful</returns>
+    Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all accessible projects.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of projects</returns>
+    Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets projects for a specific group.
+    /// </summary>
+    /// <param name="groupId">The group ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of projects in the group</returns>
+    Task<IReadOnlyList<GitLabProject>> GetGroupProjectsAsync(long groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets commits for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="since">Optional date filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of commits</returns>
+    Task<IReadOnlyList<GitLabCommit>> GetCommitsAsync(long projectId, DateTimeOffset? since = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets merge requests for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="updatedAfter">Optional date filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of merge requests</returns>
+    Task<IReadOnlyList<GitLabMergeRequest>> GetMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets pipelines for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="updatedAfter">Optional date filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of pipelines</returns>
+    Task<IReadOnlyList<GitLabPipeline>> GetPipelinesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all users.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of users</returns>
+    Task<IReadOnlyList<GitLabUser>> GetUsersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a user by ID.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The user or null if not found</returns>
+    Task<GitLabUser?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets projects that a user has contributed to using GitLab's /users/:user_id/contributed_projects API.
     /// </summary>
@@ -20,6 +84,42 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of projects the user has contributed to</returns>
     Task<IReadOnlyList<GitLabContributedProject>> GetUserContributedProjectsAsync(long userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets user project contributions.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="userEmail">Optional user email</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of user project contributions</returns>
+    Task<IReadOnlyList<GitLabUserProjectContribution>> GetUserProjectContributionsAsync(long userId, string? userEmail = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets projects owned by a user.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of user projects</returns>
+    Task<IReadOnlyList<GitLabProject>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets projects a user has contributed to based on activity.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="userEmail">The user email</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of projects by activity</returns>
+    Task<IReadOnlyList<GitLabProject>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets commits by user email for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="userEmail">The user email</param>
+    /// <param name="since">Optional date filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of commits by the user</returns>
+    Task<IReadOnlyList<GitLabCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -103,4 +203,41 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             throw;
         }
     }
+
+    // Stub implementations for interface compliance - to be implemented later
+    public Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabProject>> GetGroupProjectsAsync(long groupId, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabCommit>> GetCommitsAsync(long projectId, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabMergeRequest>> GetMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabPipeline>> GetPipelinesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabUser>> GetUsersAsync(CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<GitLabUser?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabUserProjectContribution>> GetUserProjectContributionsAsync(long userId, string? userEmail = null, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabProject>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabProject>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public Task<IReadOnlyList<GitLabCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException("Real GitLab API client not yet implemented");
 }

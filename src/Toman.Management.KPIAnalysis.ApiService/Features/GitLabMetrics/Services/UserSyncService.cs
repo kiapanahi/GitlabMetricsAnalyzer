@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using NGitLab.Models;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -145,7 +145,7 @@ public sealed class UserSyncService : IUserSyncService
         return await SyncUserToDimTableAsync(gitLabUser, cancellationToken);
     }
 
-    private async Task<bool> SyncUserToDimTableAsync(User gitLabUser, CancellationToken cancellationToken)
+    private async Task<bool> SyncUserToDimTableAsync(GitLabUser gitLabUser, CancellationToken cancellationToken)
     {
         try
         {
@@ -165,7 +165,7 @@ public sealed class UserSyncService : IUserSyncService
                     Name = gitLabUser.Name ?? existingUser.Name,
                     State = gitLabUser.State?.ToString() ?? existingUser.State,
                     Email = gitLabUser.Email ?? existingUser.Email,
-                    IsBot = gitLabUser.Bot
+                    IsBot = false // Mock implementation doesn't distinguish bots
                 };
 
                 await _dbContext.DimUsers.AddAsync(updatedUser, cancellationToken);
@@ -181,7 +181,7 @@ public sealed class UserSyncService : IUserSyncService
                     Name = gitLabUser.Name ?? gitLabUser.Username ?? $"User {gitLabUser.Id}",
                     State = gitLabUser.State?.ToString() ?? "active",
                     Email = gitLabUser.Email ?? $"user{gitLabUser.Id}@unknown.com",
-                    IsBot = gitLabUser.Bot
+                    IsBot = false // Mock implementation doesn't distinguish bots
                 };
 
                 await _dbContext.DimUsers.AddAsync(newUser, cancellationToken);

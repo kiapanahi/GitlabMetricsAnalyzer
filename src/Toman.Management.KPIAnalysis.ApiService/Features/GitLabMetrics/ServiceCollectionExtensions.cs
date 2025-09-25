@@ -3,8 +3,6 @@ using System.Net.Http.Headers;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
-using NGitLab;
-
 using Polly.CircuitBreaker;
 
 using Quartz;
@@ -45,24 +43,23 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IUserMetricsCollectionService, UserMetricsCollectionService>();
         builder.Services.AddScoped<IUserSyncService, UserSyncService>();
 
-        builder.Services.AddSingleton<IGitLabClient>(sp =>
+        // Add HTTP client for GitLab API calls (mock in development, real in production)
+        if (builder.Environment.IsDevelopment())
         {
-            var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
-            var configuration = options.Value;
-            var gitLabClient = new GitLabClient(configuration.BaseUrl, configuration.Token);
-            return gitLabClient;
-        });
-
-        // Add HTTP client for direct GitLab API calls
-        builder.Services
-        .AddHttpClient<IGitLabHttpClient, GitLabHttpClient>((sp, client) =>
+            builder.Services.AddSingleton<IGitLabHttpClient, MockGitLabHttpClient>();
+        }
+        else
         {
-            var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
-            var configuration = options.Value;
-            client.BaseAddress = new Uri(configuration.BaseUrl.TrimEnd('/') + "/api/v4/");
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
-        })
-        .AddStandardResilienceHandler();
+            builder.Services
+            .AddHttpClient<IGitLabHttpClient, GitLabHttpClient>((sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
+                var configuration = options.Value;
+                client.BaseAddress = new Uri(configuration.BaseUrl.TrimEnd('/') + "/api/v4/");
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
+            })
+            .AddStandardResilienceHandler();
+        }
 
 
         if (!builder.Environment.IsDevelopment())
