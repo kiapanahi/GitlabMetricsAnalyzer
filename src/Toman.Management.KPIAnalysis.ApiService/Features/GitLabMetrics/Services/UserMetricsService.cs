@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-
 using System.Text.Json;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
@@ -51,16 +51,18 @@ public sealed class UserMetricsService : IUserMetricsService
         var quality = CalculateQualityMetrics(pipelines, commits, mergeRequests);
         var productivity = CalculateProductivityMetrics(commits, mergeRequests, pipelines, fromDate, toDate);
 
-        var metadata = new MetricsMetadata(
-            DateTimeOffset.UtcNow,
-            "GitLab API",
+        var metadata = await CreateEnhancedMetadataAsync(
+            userId, 
+            fromDate, 
+            toDate,
             commits.Count + mergeRequests.Count + pipelines.Count + issues.Count,
             commits.Select(c => c.IngestedAt)
                    .Concat(mergeRequests.Select(mr => mr.IngestedAt))
                    .Concat(pipelines.Select(p => p.IngestedAt))
                    .Concat(issues.Select(i => i.CreatedAt))
                    .DefaultIfEmpty()
-                   .Max()
+                   .Max(),
+            cancellationToken
         );
 
         return new UserMetricsResponse(
@@ -775,6 +777,63 @@ public sealed class UserMetricsService : IUserMetricsService
         var estimatedHoursPerDay = Math.Min(8, Math.Max(1, avgCommitsPerActiveDay * 0.5));
 
         return (int)(commitDays * estimatedHoursPerDay);
+    }
+    
+    /// <summary>
+    /// Create enhanced metadata with data quality information
+    /// </summary>
+    private async Task<MetricsMetadataWithQuality> CreateEnhancedMetadataAsync(
+        long userId, 
+        DateTimeOffset fromDate, 
+        DateTimeOffset toDate,
+        int totalDataPoints,
+        DateTimeOffset lastDataUpdate,
+        CancellationToken cancellationToken)
+    {
+        // Check for recent fact data with quality information
+        var recentFactData = await _dbContext.FactUserMetrics
+            .Where(f => f.UserId == userId 
+                     && f.FromDate >= fromDate.AddDays(-1) 
+                     && f.ToDate <= toDate.AddDays(1)
+                     && f.CollectedAt > DateTimeOffset.UtcNow.AddHours(-24))
+            .OrderByDescending(f => f.CollectedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+            
+        if (recentFactData?.MetricQualityJson is not null)
+        {
+            // Use stored quality information
+            var metricQualities = JsonSerializer.Deserialize<Dictionary<string, MetricQuality>>(recentFactData.MetricQualityJson);
+            var qualityWarnings = string.IsNullOrEmpty(recentFactData.DataQualityWarnings) 
+                ? new List<string>() 
+                : recentFactData.DataQualityWarnings.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(w => w.Trim()).ToList();
+                
+            return new MetricsMetadataWithQuality(
+                DateTimeOffset.UtcNow,
+                "GitLab API",
+                totalDataPoints,
+                lastDataUpdate,
+                recentFactData.DataQuality ?? "Unknown",
+                recentFactData.OverallConfidenceScore,
+                qualityWarnings,
+                metricQualities
+            );
+        }
+        
+        // Fallback to basic metadata calculation
+        var periodDays = (int)(toDate - fromDate).TotalDays;
+        var quality = DataQualityCategories.DetermineQuality(totalDataPoints, periodDays);
+        var confidence = DataQualityCategories.CalculateConfidence(totalDataPoints, periodDays, false);
+        var fallbackWarnings = DataQualityCategories.GenerateWarnings(totalDataPoints, periodDays, 0, 20); // Estimate 20 key metrics
+        
+        return new MetricsMetadataWithQuality(
+            DateTimeOffset.UtcNow,
+            "GitLab API",
+            totalDataPoints,
+            lastDataUpdate,
+            quality,
+            confidence,
+            fallbackWarnings
+        );
     }
 
     #endregion

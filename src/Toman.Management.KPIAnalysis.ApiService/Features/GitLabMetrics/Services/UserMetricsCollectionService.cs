@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -107,13 +109,85 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             DataQuality = DetermineDataQuality(userMetrics.Metadata.TotalDataPoints, (int)(to - from).TotalDays)
         };
 
+        // Calculate enhanced data quality indicators
+        var periodDays = (int)(to - from).TotalDays;
+        var (metricQualities, approximationCount) = CalculateMetricQualities(userMetrics, periodDays);
+        
+        // Create a new instance with quality information
+        var enhancedFactUserMetrics = new FactUserMetrics
+        {
+            UserId = factUserMetrics.UserId,
+            Username = factUserMetrics.Username,
+            Email = factUserMetrics.Email,
+            CollectedAt = factUserMetrics.CollectedAt,
+            FromDate = factUserMetrics.FromDate,
+            ToDate = factUserMetrics.ToDate,
+            PeriodDays = factUserMetrics.PeriodDays,
+            
+            // Code Contribution Metrics
+            TotalCommits = factUserMetrics.TotalCommits,
+            TotalLinesAdded = factUserMetrics.TotalLinesAdded,
+            TotalLinesDeleted = factUserMetrics.TotalLinesDeleted,
+            TotalLinesChanged = factUserMetrics.TotalLinesChanged,
+            AverageCommitsPerDay = factUserMetrics.AverageCommitsPerDay,
+            AverageLinesChangedPerCommit = factUserMetrics.AverageLinesChangedPerCommit,
+            ActiveProjects = factUserMetrics.ActiveProjects,
+            
+            // Code Review Metrics
+            TotalMergeRequestsCreated = factUserMetrics.TotalMergeRequestsCreated,
+            TotalMergeRequestsMerged = factUserMetrics.TotalMergeRequestsMerged,
+            TotalMergeRequestsReviewed = factUserMetrics.TotalMergeRequestsReviewed,
+            AverageMergeRequestCycleTimeHours = factUserMetrics.AverageMergeRequestCycleTimeHours,
+            MergeRequestMergeRate = factUserMetrics.MergeRequestMergeRate,
+            
+            // Quality Metrics
+            TotalPipelinesTriggered = factUserMetrics.TotalPipelinesTriggered,
+            SuccessfulPipelines = factUserMetrics.SuccessfulPipelines,
+            FailedPipelines = factUserMetrics.FailedPipelines,
+            PipelineSuccessRate = factUserMetrics.PipelineSuccessRate,
+            AveragePipelineDurationMinutes = factUserMetrics.AveragePipelineDurationMinutes,
+            
+            // Issue Management Metrics
+            TotalIssuesCreated = factUserMetrics.TotalIssuesCreated,
+            TotalIssuesAssigned = factUserMetrics.TotalIssuesAssigned,
+            TotalIssuesClosed = factUserMetrics.TotalIssuesClosed,
+            AverageIssueResolutionTimeHours = factUserMetrics.AverageIssueResolutionTimeHours,
+            
+            // Collaboration Metrics
+            TotalCommentsOnMergeRequests = factUserMetrics.TotalCommentsOnMergeRequests,
+            TotalCommentsOnIssues = factUserMetrics.TotalCommentsOnIssues,
+            CollaborationScore = factUserMetrics.CollaborationScore,
+            
+            // Productivity Metrics
+            ProductivityScore = factUserMetrics.ProductivityScore,
+            ProductivityLevel = factUserMetrics.ProductivityLevel,
+            CodeChurnRate = factUserMetrics.CodeChurnRate,
+            ReviewThroughput = factUserMetrics.ReviewThroughput,
+            
+            // Metadata
+            TotalDataPoints = factUserMetrics.TotalDataPoints,
+            DataQuality = factUserMetrics.DataQuality,
+            
+            // Enhanced Data Quality Indicators
+            MetricQualityJson = JsonSerializer.Serialize(metricQualities),
+            OverallConfidenceScore = DataQualityCategories.CalculateConfidence(
+                userMetrics.Metadata.TotalDataPoints, 
+                periodDays, 
+                approximationCount > 0),
+            DataQualityWarnings = string.Join("; ", DataQualityCategories.GenerateWarnings(
+                userMetrics.Metadata.TotalDataPoints,
+                periodDays,
+                approximationCount,
+                metricQualities.Count))
+        };
+
         // Store in database
-        _dbContext.FactUserMetrics.Add(factUserMetrics);
+        _dbContext.FactUserMetrics.Add(enhancedFactUserMetrics);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Successfully stored metrics snapshot for user {UserId} with ID {MetricsId}", userId, factUserMetrics.Id);
+        _logger.LogInformation("Successfully stored metrics snapshot for user {UserId} with ID {MetricsId}", userId, enhancedFactUserMetrics.Id);
 
-        return factUserMetrics;
+        return enhancedFactUserMetrics;
     }
 
     public async Task<List<FactUserMetrics>> GetUserMetricsHistoryAsync(long userId, int limit = 10, CancellationToken cancellationToken = default)
@@ -231,6 +305,124 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             OverallTrend = overallTrend,
             KeyImprovements = improvements,
             AreasOfConcern = concerns
+        };
+    }
+    
+    /// <summary>
+    /// Calculate quality indicators for individual metrics
+    /// </summary>
+    /// <param name="userMetrics">User metrics response</param>
+    /// <param name="periodDays">Analysis period in days</param>
+    /// <returns>Dictionary of metric qualities and count of approximations</returns>
+    private static (Dictionary<string, MetricQuality> qualities, int approximationCount) CalculateMetricQualities(UserMetricsResponse userMetrics, int periodDays)
+    {
+        var qualities = new Dictionary<string, MetricQuality>();
+        var approximationCount = 0;
+        
+        // Code Contribution Metrics - These are usually exact
+        AddMetricQuality(qualities, "TotalCommits", userMetrics.CodeContribution.TotalCommits, 
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Direct count from commit data");
+            
+        AddMetricQuality(qualities, "CommitsPerDay", userMetrics.CodeContribution.CommitsPerDay,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Calculated from total commits / period");
+            
+        AddMetricQuality(qualities, "TotalLinesChanged", userMetrics.CodeContribution.TotalLinesChanged,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Direct sum from commit statistics");
+
+        // Code Review Metrics - Some approximations
+        AddMetricQuality(qualities, "MergeRequestsCreated", userMetrics.CodeReview.MergeRequestsCreated,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Direct count from MR data");
+            
+        AddMetricQuality(qualities, "MergeRequestsReviewed", userMetrics.CodeReview.MergeRequestsReviewed,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Count of MRs where user provided reviews");
+            
+        AddMetricQuality(qualities, "SelfMergeRate", userMetrics.CodeReview.SelfMergeRate,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Calculated from MRs merged by same author");
+
+        // Approximated metrics from code analysis
+        AddMetricQuality(qualities, "TotalMergeRequestsMerged", userMetrics.CodeReview.ApprovalsReceived,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Approximated using approvals received count");
+        approximationCount++;
+
+        AddMetricQuality(qualities, "MergeRequestMergeRate", 1.0 - userMetrics.CodeReview.SelfMergeRate,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Inverse approximation of self-merge rate");
+        approximationCount++;
+
+        // Quality Metrics - Several approximations
+        AddMetricQuality(qualities, "PipelineSuccessRate", userMetrics.Quality.PipelineSuccessRate,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Calculated from pipeline status data");
+            
+        AddMetricQuality(qualities, "PipelineFailures", userMetrics.Quality.PipelineFailures,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Direct count of failed pipelines");
+
+        // Approximated pipeline metrics
+        var pipelineTotal = userMetrics.Quality.PipelineFailures + (int)(userMetrics.Quality.PipelineSuccessRate * 100);
+        AddMetricQuality(qualities, "TotalPipelinesTriggered", pipelineTotal,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Approximated from failure count + success rate percentage");
+        approximationCount++;
+
+        var successfulPipelines = (int)(userMetrics.Quality.PipelineSuccessRate * 100);
+        AddMetricQuality(qualities, "SuccessfulPipelines", successfulPipelines,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Approximated from success rate percentage");
+        approximationCount++;
+
+        // Issue Management Metrics
+        AddMetricQuality(qualities, "IssuesCreated", userMetrics.IssueManagement.IssuesCreated,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Direct count from issue data");
+            
+        AddMetricQuality(qualities, "IssuesResolved", userMetrics.IssueManagement.IssuesResolved,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Count of issues closed/resolved by user");
+
+        // Approximated issue metrics
+        AddMetricQuality(qualities, "TotalIssuesAssigned", userMetrics.IssueManagement.IssuesCreated,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Approximated using issues created count as proxy");
+        approximationCount++;
+
+        // Collaboration Metrics - Several approximations
+        AddMetricQuality(qualities, "KnowledgeSharingScore", userMetrics.Collaboration.KnowledgeSharingScore,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Calculated from review and mentorship activities");
+            
+        AddMetricQuality(qualities, "UniqueReviewers", userMetrics.Collaboration.UniqueReviewers,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Count of distinct users who reviewed user's MRs");
+
+        // Approximated collaboration metrics
+        var commentsOnMRs = userMetrics.Collaboration.UniqueReviewers * 2;
+        AddMetricQuality(qualities, "TotalCommentsOnMergeRequests", commentsOnMRs,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Approximated as unique reviewers × 2");
+        approximationCount++;
+
+        AddMetricQuality(qualities, "TotalCommentsOnIssues", userMetrics.Collaboration.MentorshipActivities,
+            userMetrics.Metadata.TotalDataPoints, periodDays, true, "Approximated using mentorship activities count");
+        approximationCount++;
+
+        // Productivity Metrics
+        AddMetricQuality(qualities, "VelocityScore", userMetrics.Productivity.VelocityScore,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Calculated from commit frequency and MR throughput");
+            
+        AddMetricQuality(qualities, "ProductivityTrend", userMetrics.Productivity.ProductivityTrend,
+            userMetrics.Metadata.TotalDataPoints, periodDays, false, "Trend analysis over time periods");
+
+        return (qualities, approximationCount);
+    }
+    
+    /// <summary>
+    /// Helper method to add metric quality information
+    /// </summary>
+    private static void AddMetricQuality(Dictionary<string, MetricQuality> qualities, string metricName, object value, 
+        int totalDataPoints, int periodDays, bool isApproximation, string methodologyNote)
+    {
+        var quality = DataQualityCategories.DetermineQuality(totalDataPoints, periodDays);
+        var confidence = DataQualityCategories.CalculateConfidence(totalDataPoints, periodDays, isApproximation);
+        
+        qualities[metricName] = new MetricQuality
+        {
+            MetricName = metricName,
+            Value = value,
+            Quality = quality,
+            Confidence = confidence,
+            DataPoints = totalDataPoints,
+            IsApproximation = isApproximation,
+            MethodologyNote = methodologyNote
         };
     }
 

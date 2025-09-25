@@ -85,4 +85,9 @@ public sealed class FactUserMetrics
     // Metadata
     public int TotalDataPoints { get; init; }
     public string? DataQuality { get; init; } // Excellent, Good, Fair, Poor
+    
+    // Enhanced Data Quality Indicators
+    public string? MetricQualityJson { get; init; } // JSON with per-metric quality info
+    public double OverallConfidenceScore { get; init; }
+    public string? DataQualityWarnings { get; init; }
 }

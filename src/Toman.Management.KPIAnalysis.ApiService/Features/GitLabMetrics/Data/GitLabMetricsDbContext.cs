@@ -313,6 +313,11 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.TotalDataPoints).HasColumnName("total_data_points");
             entity.Property(e => e.DataQuality).HasColumnName("data_quality").HasMaxLength(50);
             
+            // Enhanced Data Quality Indicators
+            entity.Property(e => e.MetricQualityJson).HasColumnName("metric_quality_json").HasColumnType("jsonb");
+            entity.Property(e => e.OverallConfidenceScore).HasColumnName("overall_confidence_score").HasPrecision(5, 4);
+            entity.Property(e => e.DataQualityWarnings).HasColumnName("data_quality_warnings").HasColumnType("text");
+            
             // Indexes for performance
             entity.HasIndex(e => e.UserId).HasDatabaseName("idx_fact_user_metrics_user_id");
             entity.HasIndex(e => e.CollectedAt).HasDatabaseName("idx_fact_user_metrics_collected_at");

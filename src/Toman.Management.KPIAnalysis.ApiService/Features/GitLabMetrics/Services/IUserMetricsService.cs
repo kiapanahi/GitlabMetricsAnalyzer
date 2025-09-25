@@ -1,3 +1,5 @@
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
+
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
@@ -41,7 +43,7 @@ public sealed record UserMetricsResponse(
     UserCollaborationMetrics Collaboration,
     UserQualityMetrics Quality,
     UserProductivityMetrics Productivity,
-    MetricsMetadata Metadata
+    MetricsMetadataWithQuality Metadata
 );
 
 /// <summary>
@@ -201,6 +203,20 @@ public sealed record MetricsMetadata(
     int TotalDataPoints,
     DateTimeOffset? LastDataUpdate
 );
+
+/// <summary>
+/// Enhanced metadata about metrics calculation with quality indicators
+/// </summary>
+public sealed record MetricsMetadataWithQuality(
+    DateTimeOffset CalculatedAt,
+    string DataSource,
+    int TotalDataPoints,
+    DateTimeOffset? LastDataUpdate,
+    string DataQuality,
+    double OverallConfidenceScore,
+    List<string> DataQualityWarnings,
+    Dictionary<string, MetricQuality>? MetricQualities = null
+) ;
 
 /// <summary>
 /// Trend period enumeration
