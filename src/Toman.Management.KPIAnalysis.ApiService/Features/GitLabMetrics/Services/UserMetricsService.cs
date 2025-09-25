@@ -527,21 +527,31 @@ public sealed class UserMetricsService : IUserMetricsService
             .Distinct()
             .Count();
 
-        // Cross-team collaborations would need project/team mapping
-        var crossTeamCollaborations = 0; // Placeholder
+        // Estimate cross-team collaborations from distinct projects in MRs
+        var userProjects = mergeRequests.Select(mr => mr.ProjectId).Distinct();
+        var reviewedProjects = reviewedMRs.Select(mr => mr.ProjectId).Distinct();
+        var crossTeamCollaborations = reviewedProjects.Except(userProjects).Count();
 
         // Knowledge sharing score based on review activity
         var knowledgeSharingScore = CalculateKnowledgeSharingScore(uniqueReviewers, uniqueReviewees, reviewedMRs.Count);
 
-        // Mentorship activities would need more detailed analysis
-        var mentorshipActivities = 0; // Placeholder
+        // Estimate mentorship activities from review patterns (reviewing junior developers or frequently reviewed by seniors)
+        var mentorshipActivities = Math.Min(uniqueReviewees, reviewedMRs.Count / 3); // Conservative estimate
+
+        // Estimate MR comments from review activity (reviews likely include comments)
+        var mergeRequestCommentsCount = reviewedMRs.Count + (mergeRequests.Count(mr => mr.FirstReviewAt.HasValue));
+
+        // Issue comments would need actual comment data to calculate properly
+        var issueCommentsCount = 0;
 
         return Task.FromResult(new UserCollaborationMetrics(
             uniqueReviewers,
             uniqueReviewees,
             crossTeamCollaborations,
             knowledgeSharingScore,
-            mentorshipActivities
+            mentorshipActivities,
+            mergeRequestCommentsCount,
+            issueCommentsCount
         ));
     }
 

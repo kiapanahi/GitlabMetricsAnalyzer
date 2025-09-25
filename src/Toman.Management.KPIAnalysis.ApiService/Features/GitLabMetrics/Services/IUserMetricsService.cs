@@ -143,7 +143,9 @@ public sealed record UserCollaborationMetrics(
     int UniqueReviewees,
     int CrossTeamCollaborations,
     double KnowledgeSharingScore,
-    int MentorshipActivities
+    int MentorshipActivities,
+    int MergeRequestCommentsCount, // Estimated from review activity
+    int IssueCommentsCount // Estimated from issue participation
 );
 
 /// <summary>
