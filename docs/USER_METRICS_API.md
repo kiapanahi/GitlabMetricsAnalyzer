@@ -247,8 +247,10 @@ Returns comparative analysis showing how the user's performance compares to peer
 
 ### Quality Metrics
 - **Pipeline Success Rate**: Percentage of successful CI/CD runs
-- **Code Revert Rate**: Frequency of code reversions
-- **Bug Fix Ratio**: Proportion of work dedicated to bug fixes
+- **Code Revert Rate**: Frequency of code reversions detected through commit message analysis (revert, rollback, undo patterns)
+- **Bug Fix Ratio**: Proportion of work dedicated to bug fixes, analyzed from commit messages and MR titles with keywords like fix, bug, hotfix, patch
+- **Test Coverage**: Estimated coverage based on test-related commits and pipeline success rates (capped at 85% as it's an estimate)
+- **Security Issues**: Count of security-related work items detected from commit messages and MR titles with security keywords
 
 ### Productivity Scoring
 The productivity score is calculated using a weighted algorithm considering:
