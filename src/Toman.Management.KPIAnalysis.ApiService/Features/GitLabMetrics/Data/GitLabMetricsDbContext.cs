@@ -18,6 +18,8 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     // Raw Snapshots
     public DbSet<RawCommit> RawCommits => Set<RawCommit>();
     public DbSet<RawMergeRequest> RawMergeRequests => Set<RawMergeRequest>();
+    public DbSet<RawMergeRequestNote> RawMergeRequestNotes => Set<RawMergeRequestNote>();
+    public DbSet<RawIssueNote> RawIssueNotes => Set<RawIssueNote>();
     public DbSet<RawPipeline> RawPipelines => Set<RawPipeline>();
     public DbSet<RawJob> RawJobs => Set<RawJob>();
     public DbSet<RawIssue> RawIssues => Set<RawIssue>();
@@ -204,6 +206,60 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
             // Unique constraint on project + issue id
             entity.HasIndex(e => new { e.ProjectId, e.IssueId }).HasDatabaseName("idx_raw_issue_project_issue").IsUnique();
+        });
+
+        modelBuilder.Entity<RawMergeRequestNote>(entity =>
+        {
+            entity.ToTable("raw_merge_request_note");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
+            entity.Property(e => e.MergeRequestIid).HasColumnName("merge_request_iid");
+            entity.Property(e => e.NoteId).HasColumnName("note_id");
+            entity.Property(e => e.AuthorId).HasColumnName("author_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.Body).HasColumnName("body").HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.System).HasColumnName("system");
+            entity.Property(e => e.Resolvable).HasColumnName("resolvable");
+            entity.Property(e => e.Resolved).HasColumnName("resolved");
+            entity.Property(e => e.ResolvedById).HasColumnName("resolved_by_id");
+            entity.Property(e => e.ResolvedBy).HasColumnName("resolved_by").HasMaxLength(255);
+            entity.Property(e => e.NoteableType).HasColumnName("noteable_type").HasMaxLength(50);
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+            
+            // Indexes
+            entity.HasIndex(e => new { e.ProjectId, e.MergeRequestIid }).HasDatabaseName("idx_raw_mr_note_project_mr");
+            entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_mr_note_author");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_mr_note_created_at");
+            entity.HasIndex(e => new { e.ProjectId, e.NoteId }).HasDatabaseName("idx_raw_mr_note_project_note").IsUnique();
+        });
+
+        modelBuilder.Entity<RawIssueNote>(entity =>
+        {
+            entity.ToTable("raw_issue_note");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
+            entity.Property(e => e.IssueIid).HasColumnName("issue_iid");
+            entity.Property(e => e.NoteId).HasColumnName("note_id");
+            entity.Property(e => e.AuthorId).HasColumnName("author_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.Body).HasColumnName("body").HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.System).HasColumnName("system");
+            entity.Property(e => e.NoteableType).HasColumnName("noteable_type").HasMaxLength(50);
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+            
+            // Indexes
+            entity.HasIndex(e => new { e.ProjectId, e.IssueIid }).HasDatabaseName("idx_raw_issue_note_project_issue");
+            entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_issue_note_author");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_issue_note_created_at");
+            entity.HasIndex(e => new { e.ProjectId, e.NoteId }).HasDatabaseName("idx_raw_issue_note_project_note").IsUnique();
         });
     }
 

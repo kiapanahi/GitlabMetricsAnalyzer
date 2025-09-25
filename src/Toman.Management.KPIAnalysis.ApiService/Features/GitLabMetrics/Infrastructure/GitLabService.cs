@@ -555,4 +555,20 @@ public sealed class GitLabService : IGitLabService
 
         return rawCommits.AsReadOnly();
     }
+
+    public Task<IReadOnlyList<RawMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("GetMergeRequestNotesAsync is not yet implemented - placeholder implementation");
+        // TODO: Implement actual GitLab API call for merge request notes
+        // This is a placeholder until we can determine the correct NGitLab API method
+        return Task.FromResult(new List<RawMergeRequestNote>().AsReadOnly() as IReadOnlyList<RawMergeRequestNote>);
+    }
+
+    public Task<IReadOnlyList<RawIssueNote>> GetIssueNotesAsync(long projectId, long issueIid, CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("GetIssueNotesAsync is not yet implemented - placeholder implementation");
+        // TODO: Implement actual GitLab API call for issue notes
+        // This is a placeholder until we can determine the correct NGitLab API method
+        return Task.FromResult(new List<RawIssueNote>().AsReadOnly() as IReadOnlyList<RawIssueNote>);
+    }
 }
