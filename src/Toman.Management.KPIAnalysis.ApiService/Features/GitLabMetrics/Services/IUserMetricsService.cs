@@ -111,6 +111,8 @@ public sealed record UserCodeContributionMetrics(
 public sealed record UserCodeReviewMetrics(
     int MergeRequestsCreated,
     int MergeRequestsReviewed,
+    int MergeRequestsMerged,
+    double MergeRequestMergeRate,
     double AverageMRSize,
     TimeSpan? AverageMRCycleTime,
     TimeSpan? AverageTimeToFirstReview,

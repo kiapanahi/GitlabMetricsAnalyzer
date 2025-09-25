@@ -429,6 +429,9 @@ public sealed class UserMetricsService : IUserMetricsService
         var averageMRSize = mergeRequests.Count > 0 ? mergeRequests.Average(mr => mr.ChangesCount) : 0;
 
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
+        var mergeRequestsMerged = mergedMRs.Count;
+        var mergeRequestMergeRate = mergeRequests.Count > 0 ? (double)mergedMRs.Count / mergeRequests.Count : 0;
+        
         var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
@@ -461,6 +464,8 @@ public sealed class UserMetricsService : IUserMetricsService
         return new UserCodeReviewMetrics(
             mergeRequestsCreated,
             mergeRequestsReviewed,
+            mergeRequestsMerged,
+            mergeRequestMergeRate,
             averageMRSize,
             averageMRCycleTime,
             averageTimeToFirstReview,

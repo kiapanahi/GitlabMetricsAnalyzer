@@ -255,4 +255,6 @@ public class UserMetricsServiceTests
         Assert.Equal(2.0/3.0, result.PipelineSuccessRate, 2); // Success rate should be 2/3 ≈ 0.67
         Assert.Equal(6.0, result.AveragePipelineDurationMinutes, 1); // Average duration should be (5+3+10)/3 = 6 minutes
     }
+    
+    // TODO: Add test for CalculateCodeReviewMetricsAsync when we can properly mock the DbContext
 }
