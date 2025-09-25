@@ -79,11 +79,11 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             MergeRequestMergeRate = 1.0 - userMetrics.CodeReview.SelfMergeRate, // Inverse approximation
             
             // Quality Metrics
-            TotalPipelinesTriggered = userMetrics.Quality.PipelineFailures + (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation
-            SuccessfulPipelines = (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation
+            TotalPipelinesTriggered = userMetrics.Quality.TotalPipelines,
+            SuccessfulPipelines = userMetrics.Quality.SuccessfulPipelines,
             FailedPipelines = userMetrics.Quality.PipelineFailures,
             PipelineSuccessRate = userMetrics.Quality.PipelineSuccessRate,
-            AveragePipelineDurationMinutes = 0, // Not available in current model
+            AveragePipelineDurationMinutes = userMetrics.Quality.AveragePipelineDurationMinutes,
             
             // Issue Management Metrics
             TotalIssuesCreated = userMetrics.IssueManagement.IssuesCreated,

@@ -173,4 +173,86 @@ public class UserMetricsServiceTests
         Assert.Equal(2, result.TotalCommits); // 2 commits total
         Assert.Equal(1, result.FilesModified); // 1 distinct project - MAIN ASSERTION FOR THE FIX
     }
+
+    [Fact]
+    public void CalculateQualityMetrics_Should_Calculate_Correct_Pipeline_Counts()
+    {
+        // Arrange - Create test pipeline data
+        var pipelines = new List<RawPipeline>
+        {
+            new()
+            {
+                Id = 1,
+                ProjectId = 100,
+                ProjectName = "Test Project",
+                PipelineId = 1001,
+                Sha = "abc123",
+                Ref = "main",
+                Status = "success",
+                AuthorUserId = 1,
+                AuthorName = "John Doe",
+                TriggerSource = "push",
+                CreatedAt = DateTimeOffset.Now.AddDays(-1),
+                UpdatedAt = DateTimeOffset.Now.AddDays(-1),
+                StartedAt = DateTimeOffset.Now.AddDays(-1),
+                FinishedAt = DateTimeOffset.Now.AddDays(-1).AddMinutes(5),
+                DurationSec = 300,
+                IngestedAt = DateTimeOffset.Now
+            },
+            new()
+            {
+                Id = 2,
+                ProjectId = 100,
+                ProjectName = "Test Project",
+                PipelineId = 1002,
+                Sha = "def456",
+                Ref = "main",
+                Status = "failed",
+                AuthorUserId = 1,
+                AuthorName = "John Doe",
+                TriggerSource = "push",
+                CreatedAt = DateTimeOffset.Now.AddDays(-1),
+                UpdatedAt = DateTimeOffset.Now.AddDays(-1),
+                StartedAt = DateTimeOffset.Now.AddDays(-1),
+                FinishedAt = DateTimeOffset.Now.AddDays(-1).AddMinutes(3),
+                DurationSec = 180,
+                IngestedAt = DateTimeOffset.Now
+            },
+            new()
+            {
+                Id = 3,
+                ProjectId = 100,
+                ProjectName = "Test Project",
+                PipelineId = 1003,
+                Sha = "ghi789",
+                Ref = "feature",
+                Status = "success",
+                AuthorUserId = 1,
+                AuthorName = "John Doe",
+                TriggerSource = "push",
+                CreatedAt = DateTimeOffset.Now.AddDays(-1),
+                UpdatedAt = DateTimeOffset.Now.AddDays(-1),
+                StartedAt = DateTimeOffset.Now.AddDays(-1),
+                FinishedAt = DateTimeOffset.Now.AddDays(-1).AddMinutes(10),
+                DurationSec = 600,
+                IngestedAt = DateTimeOffset.Now
+            }
+        };
+
+        var commits = new List<RawCommit>();
+        var mergeRequests = new List<RawMergeRequest>();
+
+        // Act - Use reflection to call the private static method
+        var method = typeof(UserMetricsService).GetMethod("CalculateQualityMetrics", 
+            BindingFlags.NonPublic | BindingFlags.Static);
+        
+        var result = (UserQualityMetrics)method!.Invoke(null, new object[] { pipelines, commits, mergeRequests })!;
+
+        // Assert - Verify the fix: should be actual counts, not rate * 100
+        Assert.Equal(3, result.TotalPipelines); // Total pipelines count
+        Assert.Equal(2, result.SuccessfulPipelines); // Successful pipelines count 
+        Assert.Equal(1, result.PipelineFailures); // Failed pipelines count
+        Assert.Equal(2.0/3.0, result.PipelineSuccessRate, 2); // Success rate should be 2/3 ≈ 0.67
+        Assert.Equal(6.0, result.AveragePipelineDurationMinutes, 1); // Average duration should be (5+3+10)/3 = 6 minutes
+    }
 }

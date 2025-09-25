@@ -535,9 +535,16 @@ public sealed class UserMetricsService : IUserMetricsService
         List<Models.Raw.RawCommit> commits,
         List<Models.Raw.RawMergeRequest> mergeRequests)
     {
+        var totalPipelines = pipelines.Count;
         var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
-        var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
-        var pipelineFailures = pipelines.Count - successfulPipelines;
+        var pipelineSuccessRate = totalPipelines > 0 ? (double)successfulPipelines / totalPipelines : 0;
+        var pipelineFailures = totalPipelines - successfulPipelines;
+
+        // Calculate average pipeline duration
+        var pipelinesWithDuration = pipelines.Where(p => p.StartedAt.HasValue && p.FinishedAt.HasValue).ToList();
+        var averagePipelineDurationMinutes = pipelinesWithDuration.Count > 0
+            ? pipelinesWithDuration.Average(p => (p.FinishedAt!.Value - p.StartedAt!.Value).TotalMinutes)
+            : 0.0;
 
         // Code revert rate would need commit message analysis
         var codeRevertRate = 0.0; // Placeholder
@@ -554,6 +561,9 @@ public sealed class UserMetricsService : IUserMetricsService
         return new UserQualityMetrics(
             pipelineSuccessRate,
             pipelineFailures,
+            totalPipelines,
+            successfulPipelines,
+            averagePipelineDurationMinutes,
             codeRevertRate,
             bugFixRatio,
             testCoverage,
