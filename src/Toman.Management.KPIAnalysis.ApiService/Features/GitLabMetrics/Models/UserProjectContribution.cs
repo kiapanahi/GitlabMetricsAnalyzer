@@ -1,4 +1,4 @@
-using NGitLab.Models;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 
@@ -7,7 +7,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 /// </summary>
 public sealed class UserProjectContribution
 {
-    public required Project Project { get; init; }
+    public required GitLabProject Project { get; init; }
     
     /// <summary>
     /// Number of commits by the user in this project

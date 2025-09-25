@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -64,8 +65,8 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserMetricsResponse(
             userId,
-            user.Username,
-            user.Email,
+            user.Username ?? $"user_{userId}",
+            user.Email ?? $"user{userId}@unknown.com",
             fromDate,
             toDate,
             codeContribution,
@@ -117,7 +118,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserMetricsSummaryResponse(
             userId,
-            user.Username,
+            user.Username ?? $"user_{userId}",
             fromDate,
             toDate,
             totalCommits,
@@ -187,7 +188,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserMetricsTrendsResponse(
             userId,
-            user.Username,
+            user.Username ?? $"user_{userId}",
             fromDate,
             toDate,
             period,
@@ -235,7 +236,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserMetricsComparisonResponse(
             userId,
-            user.Username,
+            user.Username ?? $"user_{userId}",
             fromDate,
             toDate,
             userMetrics!,
@@ -260,7 +261,7 @@ public sealed class UserMetricsService : IUserMetricsService
         }
     }
 
-    private async Task<NGitLab.Models.User?> GetUserInfoAsync(long userId, CancellationToken cancellationToken)
+    private async Task<GitLabUser?> GetUserInfoAsync(long userId, CancellationToken cancellationToken)
     {
         // First try to get user info from GitLab API directly
         var gitLabUser = await _gitLabService.GetUserByIdAsync(userId, cancellationToken);
@@ -277,8 +278,8 @@ public sealed class UserMetricsService : IUserMetricsService
         if (dbUser is not null)
         {
             _logger.LogDebug("Retrieved user {UserId} from local database: {Username}", userId, dbUser.Name);
-            // Convert DimUser to NGitLab User for consistency
-            return new NGitLab.Models.User
+            // Convert DimUser to GitLabUser for consistency
+            return new GitLabUser
             {
                 Id = dbUser.UserId,
                 Username = dbUser.Username,
@@ -308,7 +309,7 @@ public sealed class UserMetricsService : IUserMetricsService
         }
 
         _logger.LogInformation("Fetching on-demand data for user {UserId} ({UserEmail}) from {FromDate} to {ToDate}",
-            userId, user.Email, fromDate, toDate);
+            userId, user.Email ?? "unknown", fromDate, toDate);
 
         var allCommits = new List<Models.Raw.RawCommit>();
         var allMergeRequests = new List<Models.Raw.RawMergeRequest>();
@@ -327,7 +328,7 @@ public sealed class UserMetricsService : IUserMetricsService
                 try
                 {
                     // Get commits filtered by user email
-                    var commits = await _gitLabService.GetCommitsByUserEmailAsync(project.Id, user.Email!, fromDate, cancellationToken);
+                    var commits = await _gitLabService.GetCommitsByUserEmailAsync(project.Id, user.Email ?? $"user{userId}@unknown.com", fromDate, cancellationToken);
 
                     // Get merge requests for this project
                     var mergeRequests = await _gitLabService.GetMergeRequestsAsync(project.Id, fromDate, cancellationToken);
@@ -618,7 +619,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserMetricsComparisonData(
             userId,
-            user.Username,
+            user.Username ?? $"user_{userId}",
             commits.Count,
             mergeRequests.Count,
             pipelineSuccessRate,

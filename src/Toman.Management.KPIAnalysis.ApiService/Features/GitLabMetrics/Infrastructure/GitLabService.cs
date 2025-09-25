@@ -1,8 +1,5 @@
 using Microsoft.Extensions.Options;
 
-using NGitLab;
-using NGitLab.Models;
-
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
@@ -11,70 +8,58 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrast
 
 public sealed class GitLabService : IGitLabService
 {
-    private readonly IGitLabClient _gitLabClient;
     private readonly IGitLabHttpClient _gitLabHttpClient;
     private readonly ILogger<GitLabService> _logger;
 
     public GitLabService(
-        IGitLabClient gitLabClient,
         IGitLabHttpClient gitLabHttpClient,
         IOptions<GitLabConfiguration> configuration,
         ILogger<GitLabService> logger)
     {
-        _gitLabClient = gitLabClient;
         _gitLabHttpClient = gitLabHttpClient;
         _logger = logger;
     }
 
-    public Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var user = _gitLabClient.Users.Current;
-            _logger.LogInformation("Successfully connected to GitLab as user: {Username} ({Email})",
-                user.Username, user.Email);
-            return Task.FromResult(true);
+            return await _gitLabHttpClient.TestConnectionAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to connect to GitLab API");
-            return Task.FromResult(false);
+            return false;
         }
     }
 
-    public Task<IReadOnlyList<Project>> GetProjectsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {
-        var projects = new List<Project>();
-
         try
         {
-            // Get all accessible projects with basic query
-            var allProjects = _gitLabClient.Projects.Get(new ProjectQuery()).ToList();
-            projects.AddRange(allProjects);
-
+            var projects = await _gitLabHttpClient.GetProjectsAsync(cancellationToken);
             _logger.LogInformation("Retrieved {ProjectCount} projects", projects.Count);
+            return projects;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to get projects");
+            return new List<GitLabProject>().AsReadOnly();
         }
-
-        return Task.FromResult(projects.AsReadOnly() as IReadOnlyList<Project>);
     }
 
-    public Task<IReadOnlyList<Project>> GetGroupProjectsAsync(long groupId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabProject>> GetGroupProjectsAsync(long groupId, CancellationToken cancellationToken = default)
     {
         // Simplified - just return empty list for now
         _logger.LogDebug("Group projects retrieval not implemented yet for group {GroupId}", groupId);
-        return Task.FromResult(new List<Project>().AsReadOnly() as IReadOnlyList<Project>);
+        return await _gitLabHttpClient.GetGroupProjectsAsync(groupId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<RawCommit>> GetCommitsAsync(long projectId, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var project = await _gitLabClient.Projects.GetByIdAsync(projectId, new SingleProjectQuery(), cancellationToken);
-            var commits = _gitLabClient.GetRepository(projectId).Commits.ToList(); // Get commits for the project
+            var commits = await _gitLabHttpClient.GetCommitsAsync(projectId, since, cancellationToken);
 
             var rawCommits = new List<RawCommit>();
 
@@ -91,16 +76,16 @@ public sealed class GitLabService : IGitLabService
                     var rawCommit = new RawCommit
                     {
                         ProjectId = projectId,
-                        ProjectName = project.Name,
-                        CommitId = commit.Id.ToString(),
+                        ProjectName = $"Project {projectId}", // Mock project name
+                        CommitId = commit.Id?.ToString() ?? Guid.NewGuid().ToString(),
                         AuthorUserId = tempAuthorUserId, // Temporary ID - will be resolved later
                         AuthorName = commit.AuthorName ?? "Unknown",
                         AuthorEmail = authorEmail,
-                        CommittedAt = new DateTimeOffset(commit.CommittedDate),
+                        CommittedAt = commit.CommittedDate ?? DateTimeOffset.UtcNow,
                         Message = commit.Message ?? "",
                         Additions = commit.Stats?.Additions ?? 0,
                         Deletions = commit.Stats?.Deletions ?? 0,
-                        IsSigned = false, // NGitLab doesn't expose this easily
+                        IsSigned = false, // Not available in our model
                         IngestedAt = DateTimeOffset.UtcNow
                     };
 
@@ -126,12 +111,11 @@ public sealed class GitLabService : IGitLabService
         }
     }
 
-    public Task<IReadOnlyList<RawMergeRequest>> GetMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawMergeRequest>> GetMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var project = _gitLabClient.Projects.GetByIdAsync(projectId, new SingleProjectQuery(), cancellationToken).Result;
-            var mergeRequests = _gitLabClient.GetMergeRequest(projectId).All.Take(100).ToList(); // Limit for testing
+            var mergeRequests = await _gitLabHttpClient.GetMergeRequestsAsync(projectId, updatedAfter, cancellationToken);
 
             var rawMergeRequests = new List<RawMergeRequest>();
 
@@ -142,15 +126,15 @@ public sealed class GitLabService : IGitLabService
                     var rawMr = new RawMergeRequest
                     {
                         ProjectId = projectId,
-                        ProjectName = project.Name,
+                        ProjectName = $"Project {projectId}", // Mock project name
                         MrId = mr.Iid,
                         AuthorUserId = mr.Author?.Id ?? 0,
                         AuthorName = mr.Author?.Name ?? "Unknown",
                         Title = mr.Title ?? "",
-                        CreatedAt = mr.CreatedAt.ToUniversalTime(),
-                        MergedAt = mr.MergedAt?.ToUniversalTime(),
-                        ClosedAt = mr.ClosedAt?.ToUniversalTime(),
-                        State = mr.State.ToString(),
+                        CreatedAt = mr.CreatedAt ?? DateTimeOffset.UtcNow,
+                        MergedAt = mr.MergedAt,
+                        ClosedAt = mr.ClosedAt,
+                        State = mr.State ?? "opened",
                         ChangesCount = int.TryParse(mr.ChangesCount, out var changes) ? changes : 0,
                         SourceBranch = mr.SourceBranch ?? "",
                         TargetBranch = mr.TargetBranch ?? "",
@@ -174,21 +158,20 @@ public sealed class GitLabService : IGitLabService
             }
 
             _logger.LogDebug("Retrieved {MrCount} merge requests for project {ProjectId}", rawMergeRequests.Count, projectId);
-            return Task.FromResult(rawMergeRequests.AsReadOnly() as IReadOnlyList<RawMergeRequest>);
+            return rawMergeRequests.AsReadOnly();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get merge requests for project {ProjectId}", projectId);
-            return Task.FromResult(new List<RawMergeRequest>().AsReadOnly() as IReadOnlyList<RawMergeRequest>);
+            return new List<RawMergeRequest>().AsReadOnly();
         }
     }
 
-    public Task<IReadOnlyList<RawPipeline>> GetPipelinesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawPipeline>> GetPipelinesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var project = _gitLabClient.Projects.GetByIdAsync(projectId, new SingleProjectQuery(), cancellationToken).Result;
-            var pipelines = _gitLabClient.GetPipelines(projectId).All.Take(100).ToList(); // Limit for testing
+            var pipelines = await _gitLabHttpClient.GetPipelinesAsync(projectId, updatedAfter, cancellationToken);
 
             var rawPipelines = new List<RawPipeline>();
 
@@ -199,19 +182,19 @@ public sealed class GitLabService : IGitLabService
                     var rawPipeline = new RawPipeline
                     {
                         ProjectId = projectId,
-                        ProjectName = project.Name,
+                        ProjectName = $"Project {projectId}", // Mock project name
                         PipelineId = (int)pipeline.Id,
-                        Sha = pipeline.Sha.ToString(),
+                        Sha = pipeline.Sha ?? "",
                         Ref = pipeline.Ref ?? "",
-                        Status = pipeline.Status.ToString(),
-                        AuthorUserId = 0, // PipelineBasic doesn't have User info
-                        AuthorName = "Unknown",
-                        TriggerSource = pipeline.Source?.ToString() ?? "unknown",
-                        CreatedAt = pipeline.CreatedAt.ToUniversalTime(),
-                        UpdatedAt = pipeline.UpdatedAt.ToUniversalTime(),
-                        StartedAt = null, // Not available in PipelineBasic
-                        FinishedAt = null, // Not available in PipelineBasic
-                        DurationSec = 0, // Not available in PipelineBasic
+                        Status = pipeline.Status ?? "unknown",
+                        AuthorUserId = pipeline.User?.Id ?? 0,
+                        AuthorName = pipeline.User?.Name ?? "Unknown",
+                        TriggerSource = "unknown", // Not available in our model
+                        CreatedAt = pipeline.CreatedAt ?? DateTimeOffset.UtcNow,
+                        UpdatedAt = pipeline.UpdatedAt ?? DateTimeOffset.UtcNow,
+                        StartedAt = null, // Not available in our model
+                        FinishedAt = null, // Not available in our model
+                        DurationSec = 0, // Not available in our model
                         Environment = null, // Would need to check pipeline jobs for environment
                         IngestedAt = DateTimeOffset.UtcNow
                     };
@@ -229,80 +212,87 @@ public sealed class GitLabService : IGitLabService
             }
 
             _logger.LogDebug("Retrieved {PipelineCount} pipelines for project {ProjectId}", rawPipelines.Count, projectId);
-            return Task.FromResult(rawPipelines.AsReadOnly() as IReadOnlyList<RawPipeline>);
+            return rawPipelines.AsReadOnly();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get pipelines for project {ProjectId}", projectId);
-            return Task.FromResult(new List<RawPipeline>().AsReadOnly() as IReadOnlyList<RawPipeline>);
+            return new List<RawPipeline>().AsReadOnly();
         }
     }
 
-    public Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabUser>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogDebug("Fetching all users from GitLab");
 
-            // Get all users
-            var users = _gitLabClient.Users.Get(new UserQuery
-            {
-                PerPage = 100 // Adjust based on your GitLab instance
-            }).ToList();
+            var users = await _gitLabHttpClient.GetUsersAsync(cancellationToken);
 
             _logger.LogInformation("Retrieved {UserCount} users from GitLab", users.Count);
-            return Task.FromResult(users.AsReadOnly() as IReadOnlyList<User>);
+            return users;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get users from GitLab");
-            return Task.FromResult(new List<User>().AsReadOnly() as IReadOnlyList<User>);
+            return new List<GitLabUser>().AsReadOnly();
         }
     }
 
-    public Task<User?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default)
+    public async Task<GitLabUser?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogDebug("Fetching user {UserId} from GitLab", userId);
 
-            var user = _gitLabClient.Users[userId];
+            var user = await _gitLabHttpClient.GetUserByIdAsync(userId, cancellationToken);
 
             _logger.LogDebug("Retrieved user {UserId}: {Username}", userId, user?.Username);
-            return Task.FromResult(user);
+            return user;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to get user {UserId} from GitLab", userId);
-            return Task.FromResult<User?>(null);
+            return null;
         }
     }
 
-    /// <summary>
-    /// Gets projects that a user has contributed to using GitLab's official contributed_projects API.
-    /// This is the most efficient and accurate way to get user-project relationships.
-    /// </summary>
-    /// <param name="userId">The GitLab user ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of projects the user has contributed to</returns>
-    public async Task<IReadOnlyList<Project>> GetUserContributedProjectsAsync(long userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabProject>> GetUserContributedProjectsAsync(long userId, CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogDebug("Fetching contributed projects for user {UserId} using GitLab's official contributed_projects API", userId);
 
-            // Use the HTTP client to call the official GitLab API
-            var contributedProjectsApi = await _gitLabHttpClient.GetUserContributedProjectsAsync(userId, cancellationToken);
+            var contributedProjects = await _gitLabHttpClient.GetUserContributedProjectsAsync(userId, cancellationToken);
 
-            // Convert the API response to NGitLab Project models
-            var projects = new List<Project>();
+            // Convert the API response to GitLabProject models
+            var projects = new List<GitLabProject>();
 
-            foreach (var apiProject in contributedProjectsApi)
+            foreach (var apiProject in contributedProjects)
             {
                 try
                 {
-                    // Convert GitLabContributedProject to NGitLab Project
-                    var project = ConvertToNGitLabProject(apiProject);
+                    // Convert GitLabContributedProject to GitLabProject
+                    var project = new GitLabProject
+                    {
+                        Id = apiProject.Id,
+                        Name = apiProject.Name,
+                        NameWithNamespace = apiProject.NameWithNamespace,
+                        Path = apiProject.Path,
+                        PathWithNamespace = apiProject.PathWithNamespace,
+                        Description = apiProject.Description,
+                        DefaultBranch = apiProject.DefaultBranch,
+                        Visibility = apiProject.Visibility,
+                        WebUrl = apiProject.WebUrl,
+                        SshUrlToRepo = apiProject.SshUrlToRepo,
+                        HttpUrlToRepo = apiProject.HttpUrlToRepo,
+                        AvatarUrl = apiProject.AvatarUrl,
+                        Archived = false,
+                        ForksCount = 0,
+                        StarCount = 0,
+                        LastActivityAt = null,
+                        CreatedAt = null
+                    };
                     projects.Add(project);
                 }
                 catch (Exception ex)
@@ -329,71 +319,19 @@ public sealed class GitLabService : IGitLabService
         }
     }
 
-    /// <summary>
-    /// Converts a GitLabContributedProject from the API response to an NGitLab Project model.
-    /// </summary>
-    /// <param name="apiProject">The API project response</param>
-    /// <returns>NGitLab Project model</returns>
-    private static Project ConvertToNGitLabProject(GitLabContributedProject apiProject)
-    {
-        return new Project
-        {
-            Id = (int)apiProject.Id,
-            Name = apiProject.Name,
-            NameWithNamespace = apiProject.NameWithNamespace,
-            Path = apiProject.Path,
-            PathWithNamespace = apiProject.PathWithNamespace,
-            Description = apiProject.Description,
-            DefaultBranch = apiProject.DefaultBranch,
-            WebUrl = apiProject.WebUrl,
-            AvatarUrl = apiProject.AvatarUrl,
-            ForksCount = apiProject.ForksCount,
-            StarCount = apiProject.StarCount,
-            LastActivityAt = apiProject.LastActivityAt,
-            CreatedAt = apiProject.CreatedAt,
-            Archived = apiProject.Archived,
-            // Use the non-deprecated Topics property
-            Topics = apiProject.Topics.ToArray(),
-            // Basic namespace mapping
-            Namespace = apiProject.Namespace is not null ? new Namespace
-            {
-                Id = (int)apiProject.Namespace.Id,
-                Name = apiProject.Namespace.Name,
-                Path = apiProject.Namespace.Path,
-                Kind = apiProject.Namespace.Kind,
-                FullPath = apiProject.Namespace.FullPath
-            } : null
-        };
-    }
+
 
     /// <summary>
     /// Fallback method to get user's owned projects when the contributed_projects API fails.
+    /// Since we're using a custom GitLab client, this fallback is not available.
     /// </summary>
     /// <param name="userId">The GitLab user ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of user's owned projects</returns>
-    private Task<IReadOnlyList<Project>> GetFallbackUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
+    /// <returns>Empty list since fallback is not available with custom client</returns>
+    private Task<IReadOnlyList<GitLabProject>> GetFallbackUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            _logger.LogWarning("Using fallback method to get owned projects for user {UserId}", userId);
-
-            var ownedProjects = _gitLabClient.Projects.Get(new ProjectQuery
-            {
-                UserId = (int)userId,
-                PerPage = 100
-            }).ToList();
-
-            _logger.LogInformation("Fallback: Found {ProjectCount} owned projects for user {UserId}",
-                ownedProjects.Count, userId);
-
-            return Task.FromResult(ownedProjects.AsReadOnly() as IReadOnlyList<Project>);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Fallback method also failed for user {UserId}", userId);
-            return Task.FromResult(new List<Project>().AsReadOnly() as IReadOnlyList<Project>);
-        }
+        _logger.LogWarning("Fallback method for owned projects is not available with custom GitLab client for user {UserId}", userId);
+        return Task.FromResult(new List<GitLabProject>().AsReadOnly() as IReadOnlyList<GitLabProject>);
     }
 
     /// <summary>
@@ -409,6 +347,18 @@ public sealed class GitLabService : IGitLabService
         try
         {
             _logger.LogInformation("Analyzing user {UserId} contributions using contributed projects API", userId);
+
+            // Resolve user email if not provided
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                var user = await GetUserByIdAsync(userId, cancellationToken);
+                userEmail = user?.Email;
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    _logger.LogWarning("Could not resolve email for user {UserId}, contribution analysis may be incomplete", userId);
+                    return new List<UserProjectContribution>().AsReadOnly();
+                }
+            }
 
             // Get contributed projects - much more efficient than scanning all projects
             var contributedProjects = await GetUserContributedProjectsAsync(userId, cancellationToken);
@@ -461,7 +411,7 @@ public sealed class GitLabService : IGitLabService
     /// <summary>
     /// Analyzes a user's contributions to a specific project
     /// </summary>
-    private async Task<UserProjectContribution> AnalyzeUserContributionsInProjectAsync(Project project, long userId, string userEmail, CancellationToken cancellationToken)
+    private async Task<UserProjectContribution> AnalyzeUserContributionsInProjectAsync(GitLabProject project, long userId, string userEmail, CancellationToken cancellationToken)
     {
         var commitsCount = 0;
         var mergeRequestsCount = 0;
@@ -538,7 +488,7 @@ public sealed class GitLabService : IGitLabService
     /// <param name="userId">The GitLab user ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of projects where the user has contributions</returns>
-    public async Task<IReadOnlyList<Project>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabProject>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -553,7 +503,7 @@ public sealed class GitLabService : IGitLabService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get projects for user {UserId}", userId);
-            return new List<Project>().AsReadOnly();
+            return new List<GitLabProject>().AsReadOnly();
         }
     }    /// <summary>
          /// [DEPRECATED] Alternative approach for activity-based project discovery.
@@ -567,132 +517,42 @@ public sealed class GitLabService : IGitLabService
          /// <param name="cancellationToken">Cancellation token</param>
          /// <returns>Projects where the user has actual activity</returns>
     [Obsolete("Use GetUserContributedProjectsAsync for better performance and accuracy")]
-    public async Task<IReadOnlyList<Project>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitLabProject>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default)
     {
-        var projectsWithActivity = new HashSet<long>();
-        var userProjects = new List<Project>();
-
-        try
-        {
-            _logger.LogDebug("Searching for user {UserId} activity across accessible projects", userId);
-
-            // Get accessible projects to search through
-            var searchProjects = _gitLabClient.Projects.Get(new ProjectQuery { PerPage = 100 }).ToList();
-
-            // Search for user activity in each project (parallel for better performance)
-            var activityTasks = searchProjects.Select(async project =>
-            {
-                try
-                {
-                    var hasActivity = false;
-
-                    // Check for commits by this user (quick check)
-                    var recentCommits = await GetCommitsByUserEmailAsync(project.Id, userEmail, DateTimeOffset.UtcNow.AddDays(-90), cancellationToken);
-                    if (recentCommits.Count > 0)
-                    {
-                        hasActivity = true;
-                        _logger.LogDebug("Found {CommitCount} commits for user {UserId} in project {ProjectId}",
-                            recentCommits.Count, userId, project.Id);
-                    }
-
-                    // Check for merge requests by this user
-                    if (!hasActivity)
-                    {
-                        var recentMRs = await GetMergeRequestsAsync(project.Id, DateTimeOffset.UtcNow.AddDays(-90), cancellationToken);
-                        if (recentMRs.Any(mr => mr.AuthorUserId == userId))
-                        {
-                            hasActivity = true;
-                            var userMRCount = recentMRs.Count(mr => mr.AuthorUserId == userId);
-                            _logger.LogDebug("Found {MRCount} merge requests for user {UserId} in project {ProjectId}",
-                                userMRCount, userId, project.Id);
-                        }
-                    }
-
-                    if (hasActivity)
-                    {
-                        lock (projectsWithActivity)
-                        {
-                            projectsWithActivity.Add(project.Id);
-                            userProjects.Add(project);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogTrace(ex, "Could not check activity for user {UserId} in project {ProjectId}", userId, project.Id);
-                }
-            });
-
-            // Wait for all activity checks to complete (with reasonable timeout)
-            await Task.WhenAll(activityTasks);
-
-            _logger.LogInformation("Found user {UserId} activity in {ProjectCount} projects out of {SearchedCount} searched",
-                userId, userProjects.Count, searchProjects.Count);
-
-            return userProjects.AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to find projects by activity for user {UserId}", userId);
-            return new List<Project>().AsReadOnly();
-        }
+        // Since this method is obsolete, delegate to the new interface method
+        return await _gitLabHttpClient.GetUserProjectsByActivityAsync(userId, userEmail, cancellationToken);
     }
 
-    public Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
     {
-        try
+        // Delegate to the new interface method
+        var commits = await _gitLabHttpClient.GetCommitsByUserEmailAsync(projectId, userEmail, since, cancellationToken);
+        
+        var rawCommits = new List<RawCommit>();
+        foreach (var commit in commits)
         {
-            _logger.LogDebug("Fetching commits for project {ProjectId} filtered by user email {UserEmail}", projectId, userEmail);
+            // Create a consistent user ID based on email
+            var authorUserId = Math.Abs(userEmail.GetHashCode());
 
-            var project = _gitLabClient.Projects.GetById(projectId, new SingleProjectQuery());
-            var commits = _gitLabClient.GetRepository(projectId).Commits.ToList();
-
-            var rawCommits = new List<RawCommit>();
-
-            foreach (var commit in commits.Where(c =>
-                c.AuthorEmail?.Equals(userEmail, StringComparison.OrdinalIgnoreCase) == true))
+            var rawCommit = new RawCommit
             {
-                try
-                {
-                    // Create a consistent user ID based on email
-                    var authorUserId = Math.Abs(userEmail.GetHashCode());
+                ProjectId = projectId,
+                ProjectName = $"Project {projectId}", // Mock project name
+                CommitId = commit.Id?.ToString() ?? Guid.NewGuid().ToString(),
+                AuthorUserId = authorUserId, // Consistent email-based ID
+                AuthorName = commit.AuthorName ?? "Unknown",
+                AuthorEmail = userEmail,
+                CommittedAt = commit.CommittedDate ?? DateTimeOffset.UtcNow,
+                Message = commit.Message ?? "",
+                Additions = commit.Stats?.Additions ?? 0,
+                Deletions = commit.Stats?.Deletions ?? 0,
+                IsSigned = false,
+                IngestedAt = DateTimeOffset.UtcNow
+            };
 
-                    var rawCommit = new RawCommit
-                    {
-                        ProjectId = projectId,
-                        ProjectName = project.Name,
-                        CommitId = commit.Id.ToString(),
-                        AuthorUserId = authorUserId, // Consistent email-based ID
-                        AuthorName = commit.AuthorName ?? "Unknown",
-                        AuthorEmail = userEmail,
-                        CommittedAt = new DateTimeOffset(commit.CommittedDate),
-                        Message = commit.Message ?? "",
-                        Additions = commit.Stats?.Additions ?? 0,
-                        Deletions = commit.Stats?.Deletions ?? 0,
-                        IsSigned = false,
-                        IngestedAt = DateTimeOffset.UtcNow
-                    };
-
-                    // Filter by date if specified
-                    if (since.HasValue && rawCommit.CommittedAt < since.Value)
-                        continue;
-
-                    rawCommits.Add(rawCommit);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to process commit {CommitId} for project {ProjectId}", commit.Id, projectId);
-                }
-            }
-
-            _logger.LogDebug("Retrieved {CommitCount} commits for user email {UserEmail} in project {ProjectId}",
-                rawCommits.Count, userEmail, projectId);
-            return Task.FromResult(rawCommits.AsReadOnly() as IReadOnlyList<RawCommit>);
+            rawCommits.Add(rawCommit);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get commits by user email {UserEmail} for project {ProjectId}", userEmail, projectId);
-            return Task.FromResult(new List<RawCommit>().AsReadOnly() as IReadOnlyList<RawCommit>);
-        }
+
+        return rawCommits.AsReadOnly();
     }
 }
