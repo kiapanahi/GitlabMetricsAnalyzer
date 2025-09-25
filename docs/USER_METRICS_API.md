@@ -84,7 +84,39 @@ Returns detailed metrics across all categories for a specific user.
     "calculatedAt": "2024-02-01T10:30:00Z",
     "dataSource": "GitLab API",
     "totalDataPoints": 156,
-    "lastDataUpdate": "2024-01-31T23:45:00Z"
+    "lastDataUpdate": "2024-01-31T23:45:00Z",
+    "dataQuality": "Excellent",
+    "overallConfidenceScore": 0.92,
+    "dataQualityWarnings": [],
+    "metricQualities": {
+      "totalCommits": {
+        "metricName": "totalCommits",
+        "value": 45,
+        "quality": "Excellent",
+        "confidence": 0.95,
+        "dataPoints": 156,
+        "isApproximation": false,
+        "methodologyNote": "Direct count from commit data"
+      },
+      "totalPipelinesTriggered": {
+        "metricName": "totalPipelinesTriggered",
+        "value": 28,
+        "quality": "Good",
+        "confidence": 0.76,
+        "dataPoints": 156,
+        "isApproximation": true,
+        "methodologyNote": "Approximated from failure count + success rate percentage"
+      },
+      "selfMergeRate": {
+        "metricName": "selfMergeRate",
+        "value": 0.11,
+        "quality": "Excellent",
+        "confidence": 0.95,
+        "dataPoints": 156,
+        "isApproximation": false,
+        "methodologyNote": "Calculated from MRs merged by same author"
+      }
+    }
   }
 }
 ```
@@ -260,6 +292,72 @@ Scores are normalized to a 0-10 scale:
 - **High**: 7.5-10
 - **Medium**: 5.0-7.4
 - **Low**: 0-4.9
+
+## Data Quality Indicators
+
+### Overview
+All metrics now include comprehensive data quality indicators to help executives understand the reliability and trustworthiness of the presented data. This transparency enables better decision-making by clearly indicating when data might be approximate or based on limited information.
+
+### Quality Categories
+
+#### Excellent (Green) 
+- **Data Points**: ≥150 for a 30-day period (≥5 per day)
+- **Confidence**: 95%
+- **Characteristics**: High data density, no approximations
+- **Reliability**: Metrics can be trusted for critical decisions
+
+#### Good (Light Green)
+- **Data Points**: 50-150 for a 30-day period (1.7-5 per day) 
+- **Confidence**: 80%
+- **Characteristics**: Adequate data density, minimal approximations
+- **Reliability**: Reliable for most decision-making contexts
+
+#### Fair (Yellow)
+- **Data Points**: 20-50 for a 30-day period (0.7-1.7 per day)
+- **Confidence**: 60%
+- **Characteristics**: Limited data, some approximations
+- **Reliability**: Should be interpreted with caution
+
+#### Poor (Red)
+- **Data Points**: <20 for a 30-day period (<0.7 per day)
+- **Confidence**: 30%
+- **Characteristics**: Very limited data, significant approximations
+- **Reliability**: High uncertainty, consider extending analysis period
+
+### Metric Quality Information
+
+Each metric includes:
+- **Value**: The calculated metric value
+- **Quality**: Overall quality category (Excellent/Good/Fair/Poor)
+- **Confidence**: Confidence score from 0.0 to 1.0
+- **IsApproximation**: Boolean indicating if the metric is approximated
+- **MethodologyNote**: Explanation of how the metric was calculated
+- **DataPoints**: Number of data points used in calculation
+
+### Approximated Metrics
+The following metrics are calculated using approximations and are clearly marked:
+
+1. **Total Merge Requests Merged** - Approximated using approvals received count
+2. **Merge Request Merge Rate** - Inverse approximation of self-merge rate  
+3. **Total Pipelines Triggered** - Approximated from failure count + success rate percentage
+4. **Successful Pipelines** - Approximated from success rate percentage
+5. **Total Issues Assigned** - Approximated using issues created count as proxy
+6. **Total Comments on MRs** - Approximated as unique reviewers × 2
+7. **Total Comments on Issues** - Approximated using mentorship activities count
+
+### Executive Dashboard Warnings
+
+The system automatically generates warnings for executives when:
+- Data points are insufficient for reliable analysis
+- High percentage of metrics are approximated (≥25%)
+- Analysis period is too short (<7 days) 
+- Overall confidence score drops below acceptable thresholds
+
+### Visual Indicators (UI)
+- **Color coding**: Green (Excellent) → Yellow (Fair) → Red (Poor)
+- **Icons**: ⚠️ for approximated metrics, ℹ️ for methodology tooltips
+- **Confidence intervals**: Displayed on trend charts where applicable
+- **Warning badges**: Alert icons when data quality issues detected
 
 ## Error Handling
 

@@ -1,0 +1,143 @@
+{
+  "userId": 123,
+  "userName": "john.doe",
+  "email": "john.doe@company.com",
+  "fromDate": "2024-01-01T00:00:00Z",
+  "toDate": "2024-01-31T23:59:59Z",
+  "codeContribution": {
+    "totalCommits": 45,
+    "commitsPerDay": 1.5,
+    "totalLinesAdded": 2840,
+    "totalLinesDeleted": 1950,
+    "totalLinesChanged": 4790,
+    "averageCommitSize": 106.4,
+    "filesModified": 3,
+    "topLanguages": ["C#", "TypeScript", "SQL"],
+    "weekendCommits": 3,
+    "eveningCommits": 12
+  },
+  "codeReview": {
+    "mergeRequestsCreated": 18,
+    "mergeRequestsReviewed": 23,
+    "averageMRSize": 145.2,
+    "averageMRCycleTime": "2.14:30:00",
+    "averageTimeToFirstReview": "0.06:15:00",
+    "averageTimeInReview": "1.12:45:00",
+    "reviewParticipationRate": 0.78,
+    "approvalsGiven": 23,
+    "approvalsReceived": 16,
+    "selfMergeRate": 0.11
+  },
+  "issueManagement": {
+    "issuesCreated": 8,
+    "issuesResolved": 12,
+    "averageIssueResolutionTime": "3.08:30:00",
+    "issueResolutionRate": 0.92,
+    "reopenedIssues": 1
+  },
+  "collaboration": {
+    "uniqueReviewers": 6,
+    "uniqueReviewees": 8,
+    "crossTeamCollaborations": 4,
+    "knowledgeSharingScore": 7.8,
+    "mentorshipActivities": 2
+  },
+  "quality": {
+    "pipelineSuccessRate": 0.94,
+    "pipelineFailures": 3,
+    "codeRevertRate": 0.02,
+    "bugFixRatio": 0.15,
+    "testCoverage": 0.85,
+    "securityIssues": 0
+  },
+  "productivity": {
+    "velocityScore": 8.2,
+    "efficiencyScore": 7.9,
+    "impactScore": 8.5,
+    "productivityTrend": "Increasing",
+    "focusTimeHours": 120
+  },
+  "metadata": {
+    "calculatedAt": "2024-02-01T10:30:00Z",
+    "dataSource": "GitLab API",
+    "totalDataPoints": 156,
+    "lastDataUpdate": "2024-01-31T23:45:00Z",
+    "dataQuality": "Excellent",
+    "overallConfidenceScore": 0.92,
+    "dataQualityWarnings": [],
+    "metricQualities": {
+      "TotalCommits": {
+        "metricName": "TotalCommits",
+        "value": 45,
+        "quality": "Excellent",
+        "confidence": 0.95,
+        "dataPoints": 156,
+        "isApproximation": false,
+        "methodologyNote": "Direct count from commit data"
+      },
+      "CommitsPerDay": {
+        "metricName": "CommitsPerDay",
+        "value": 1.5,
+        "quality": "Excellent",
+        "confidence": 0.95,
+        "dataPoints": 156,
+        "isApproximation": false,
+        "methodologyNote": "Calculated from total commits / period"
+      },
+      "TotalMergeRequestsMerged": {
+        "metricName": "TotalMergeRequestsMerged",
+        "value": 16,
+        "quality": "Good",
+        "confidence": 0.76,
+        "dataPoints": 156,
+        "isApproximation": true,
+        "methodologyNote": "Approximated using approvals received count"
+      },
+      "MergeRequestMergeRate": {
+        "metricName": "MergeRequestMergeRate",
+        "value": 0.89,
+        "quality": "Good",
+        "confidence": 0.76,
+        "dataPoints": 156,
+        "isApproximation": true,
+        "methodologyNote": "Inverse approximation of self-merge rate"
+      },
+      "TotalPipelinesTriggered": {
+        "metricName": "TotalPipelinesTriggered",
+        "value": 28,
+        "quality": "Good",
+        "confidence": 0.76,
+        "dataPoints": 156,
+        "isApproximation": true,
+        "methodologyNote": "Approximated from failure count + success rate percentage"
+      },
+      "PipelineSuccessRate": {
+        "metricName": "PipelineSuccessRate",
+        "value": 0.94,
+        "quality": "Excellent",
+        "confidence": 0.95,
+        "dataPoints": 156,
+        "isApproximation": false,
+        "methodologyNote": "Calculated from pipeline status data"
+      },
+      "SelfMergeRate": {
+        "metricName": "SelfMergeRate",
+        "value": 0.11,
+        "quality": "Excellent",
+        "confidence": 0.95,
+        "dataPoints": 156,
+        "isApproximation": false,
+        "methodologyNote": "Calculated from MRs merged by same author"
+      },
+      "TotalCommentsOnMergeRequests": {
+        "metricName": "TotalCommentsOnMergeRequests",
+        "value": 12,
+        "quality": "Good",
+        "confidence": 0.76,
+        "dataPoints": 156,
+        "isApproximation": true,
+        "methodologyNote": "Approximated as unique reviewers × 2"
+      }
+    }
+  }
+}

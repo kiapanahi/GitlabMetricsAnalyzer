@@ -1,0 +1,138 @@
+{
+  "userId": 456,
+  "userName": "jane.smith",
+  "email": "jane.smith@company.com",
+  "fromDate": "2024-01-28T00:00:00Z",
+  "toDate": "2024-01-31T23:59:59Z",
+  "codeContribution": {
+    "totalCommits": 3,
+    "commitsPerDay": 0.75,
+    "totalLinesAdded": 142,
+    "totalLinesDeleted": 89,
+    "totalLinesChanged": 231,
+    "averageCommitSize": 77.0,
+    "filesModified": 1,
+    "topLanguages": ["JavaScript"],
+    "weekendCommits": 0,
+    "eveningCommits": 1
+  },
+  "codeReview": {
+    "mergeRequestsCreated": 1,
+    "mergeRequestsReviewed": 2,
+    "averageMRSize": 120.0,
+    "averageMRCycleTime": "4.08:15:00",
+    "averageTimeToFirstReview": "0.12:30:00",
+    "averageTimeInReview": "2.04:45:00",
+    "reviewParticipationRate": 0.33,
+    "approvalsGiven": 2,
+    "approvalsReceived": 1,
+    "selfMergeRate": 0.0
+  },
+  "issueManagement": {
+    "issuesCreated": 0,
+    "issuesResolved": 1,
+    "averageIssueResolutionTime": "1.02:00:00",
+    "issueResolutionRate": 1.0,
+    "reopenedIssues": 0
+  },
+  "collaboration": {
+    "uniqueReviewers": 1,
+    "uniqueReviewees": 2,
+    "crossTeamCollaborations": 0,
+    "knowledgeSharingScore": 3.2,
+    "mentorshipActivities": 0
+  },
+  "quality": {
+    "pipelineSuccessRate": 0.67,
+    "pipelineFailures": 1,
+    "codeRevertRate": 0.0,
+    "bugFixRatio": 0.33,
+    "testCoverage": 0.45,
+    "securityIssues": 0
+  },
+  "productivity": {
+    "velocityScore": 3.1,
+    "efficiencyScore": 4.2,
+    "impactScore": 2.8,
+    "productivityTrend": "Stable",
+    "focusTimeHours": 8
+  },
+  "metadata": {
+    "calculatedAt": "2024-02-01T10:30:00Z",
+    "dataSource": "GitLab API",
+    "totalDataPoints": 8,
+    "lastDataUpdate": "2024-01-31T18:22:00Z",
+    "dataQuality": "Poor",
+    "overallConfidenceScore": 0.24,
+    "dataQualityWarnings": [
+      "Insufficient data points may affect metric reliability. Consider extending the analysis period.",
+      "Analysis period is less than one week. Short-term fluctuations may not represent typical performance.",
+      "Several key metrics are approximated (4 of 8). Review methodology for decision-making context."
+    ],
+    "metricQualities": {
+      "TotalCommits": {
+        "metricName": "TotalCommits",
+        "value": 3,
+        "quality": "Poor",
+        "confidence": 0.30,
+        "dataPoints": 8,
+        "isApproximation": false,
+        "methodologyNote": "Direct count from commit data"
+      },
+      "CommitsPerDay": {
+        "metricName": "CommitsPerDay",
+        "value": 0.75,
+        "quality": "Poor",
+        "confidence": 0.30,
+        "dataPoints": 8,
+        "isApproximation": false,
+        "methodologyNote": "Calculated from total commits / period"
+      },
+      "TotalMergeRequestsMerged": {
+        "metricName": "TotalMergeRequestsMerged",
+        "value": 1,
+        "quality": "Poor",
+        "confidence": 0.24,
+        "dataPoints": 8,
+        "isApproximation": true,
+        "methodologyNote": "Approximated using approvals received count"
+      },
+      "MergeRequestMergeRate": {
+        "metricName": "MergeRequestMergeRate",
+        "value": 1.0,
+        "quality": "Poor",
+        "confidence": 0.24,
+        "dataPoints": 8,
+        "isApproximation": true,
+        "methodologyNote": "Inverse approximation of self-merge rate"
+      },
+      "TotalPipelinesTriggered": {
+        "metricName": "TotalPipelinesTriggered",
+        "value": 3,
+        "quality": "Poor",
+        "confidence": 0.24,
+        "dataPoints": 8,
+        "isApproximation": true,
+        "methodologyNote": "Approximated from failure count + success rate percentage"
+      },
+      "PipelineSuccessRate": {
+        "metricName": "PipelineSuccessRate",
+        "value": 0.67,
+        "quality": "Poor",
+        "confidence": 0.30,
+        "dataPoints": 8,
+        "isApproximation": false,
+        "methodologyNote": "Calculated from pipeline status data"
+      },
+      "TotalCommentsOnMergeRequests": {
+        "metricName": "TotalCommentsOnMergeRequests",
+        "value": 2,
+        "quality": "Poor",
+        "confidence": 0.24,
+        "dataPoints": 8,
+        "isApproximation": true,
+        "methodologyNote": "Approximated as unique reviewers × 2"
+      }
+    }
+  }
+}
