@@ -49,7 +49,7 @@ public sealed class UserMetricsService : IUserMetricsService
         var issueManagement = CalculateIssueManagementMetrics(issues);
         var collaboration = await CalculateCollaborationMetricsAsync(mergeRequests, reviewedMRs, cancellationToken);
         var quality = CalculateQualityMetrics(pipelines, commits, mergeRequests);
-        var productivity = CalculateProductivityMetrics(commits, mergeRequests, pipelines, fromDate, toDate);
+        var productivity = await CalculateProductivityMetricsAsync(userId, commits, mergeRequests, pipelines, fromDate, toDate, cancellationToken);
 
         var metadata = new MetricsMetadata(
             DateTimeOffset.UtcNow,
@@ -561,12 +561,14 @@ public sealed class UserMetricsService : IUserMetricsService
         );
     }
 
-    private static UserProductivityMetrics CalculateProductivityMetrics(
+    private async Task<UserProductivityMetrics> CalculateProductivityMetricsAsync(
+        long userId,
         List<Models.Raw.RawCommit> commits,
         List<Models.Raw.RawMergeRequest> mergeRequests,
         List<Models.Raw.RawPipeline> pipelines,
         DateTimeOffset fromDate,
-        DateTimeOffset toDate)
+        DateTimeOffset toDate,
+        CancellationToken cancellationToken)
     {
         var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
 
@@ -579,8 +581,8 @@ public sealed class UserMetricsService : IUserMetricsService
         // Impact score based on lines changed and MR complexity
         var impactScore = CalculateImpactScore(commits, mergeRequests);
 
-        // Productivity trend would need historical comparison
-        var productivityTrend = "Stable"; // Placeholder
+        // Calculate productivity trend based on historical comparison
+        var productivityTrend = await CalculateProductivityTrendAsync(userId, velocityScore, efficiencyScore, impactScore, fromDate, toDate, cancellationToken);
 
         // Focus time estimation based on commit patterns
         var focusTimeHours = EstimateFocusTime(commits, daysDiff);
@@ -592,6 +594,185 @@ public sealed class UserMetricsService : IUserMetricsService
             productivityTrend,
             focusTimeHours
         );
+    }
+
+    /// <summary>
+    /// Calculate productivity trend based on historical comparison with statistical significance testing
+    /// </summary>
+    private async Task<string> CalculateProductivityTrendAsync(
+        long userId, 
+        double currentVelocityScore, 
+        double currentEfficiencyScore, 
+        double currentImpactScore,
+        DateTimeOffset fromDate,
+        DateTimeOffset toDate,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Calculate the composite productivity score for the current period
+            var currentProductivityScore = CalculateCompositeProductivityScore(currentVelocityScore, currentEfficiencyScore, currentImpactScore);
+            
+            // Get historical productivity data points for trend analysis
+            var historicalData = await GetHistoricalProductivityDataAsync(userId, fromDate, cancellationToken);
+            
+            if (historicalData.Count < 3)
+            {
+                _logger.LogDebug("Insufficient historical data for user {UserId} (found {Count} points, need at least 3). Returning Stable trend.", userId, historicalData.Count);
+                return "Stable";
+            }
+
+            // Calculate trends over different time horizons
+            var shortTermTrend = CalculateTrendFromData(historicalData.Take(6).ToList(), currentProductivityScore); // Last 6 data points (short term)
+            var mediumTermTrend = CalculateTrendFromData(historicalData.Take(12).ToList(), currentProductivityScore); // Last 12 data points (medium term) 
+            var longTermTrend = CalculateTrendFromData(historicalData, currentProductivityScore); // All available data (long term)
+
+            // Determine the overall trend with weighted consideration
+            var overallTrend = DetermineOverallTrend(shortTermTrend, mediumTermTrend, longTermTrend);
+            
+            _logger.LogDebug("Calculated productivity trend for user {UserId}: Short={ShortTerm}, Medium={MediumTerm}, Long={LongTerm}, Overall={Overall}", 
+                userId, shortTermTrend.Direction, mediumTermTrend.Direction, longTermTrend.Direction, overallTrend);
+            
+            return overallTrend;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error calculating productivity trend for user {UserId}, defaulting to Stable", userId);
+            return "Stable";
+        }
+    }
+
+    /// <summary>
+    /// Get historical productivity scores for trend analysis
+    /// </summary>
+    private async Task<List<double>> GetHistoricalProductivityDataAsync(long userId, DateTimeOffset beforeDate, CancellationToken cancellationToken)
+    {
+        // Get historical fact metrics ordered by collection date (newest first)
+        var historicalFacts = await _dbContext.FactUserMetrics
+            .Where(f => f.UserId == userId && f.CollectedAt < beforeDate)
+            .OrderByDescending(f => f.CollectedAt)
+            .Take(24) // Get up to 24 historical points for good trend analysis
+            .ToListAsync(cancellationToken);
+
+        // Convert to productivity scores (reverse order to get chronological sequence)
+        return historicalFacts
+            .Select(f => f.ProductivityScore)
+            .Reverse()
+            .ToList();
+    }
+
+    /// <summary>
+    /// Calculate a composite productivity score from individual components
+    /// </summary>
+    private static double CalculateCompositeProductivityScore(double velocityScore, double efficiencyScore, double impactScore)
+    {
+        // Weighted average with emphasis on efficiency and impact
+        return (velocityScore * 0.3 + efficiencyScore * 0.4 + impactScore * 0.3);
+    }
+
+    /// <summary>
+    /// Calculate trend direction and significance from historical data
+    /// </summary>
+    private static TrendAnalysisResult CalculateTrendFromData(List<double> historicalScores, double currentScore)
+    {
+        if (historicalScores.Count < 3)
+        {
+            return new TrendAnalysisResult("Stable", 0, false);
+        }
+
+        // Add current score for complete analysis
+        var allScores = historicalScores.Concat([currentScore]).ToList();
+        
+        // Calculate linear trend using least squares method
+        var n = allScores.Count;
+        var xSum = n * (n - 1) / 2.0; // 0 + 1 + 2 + ... + (n-1)
+        var ySum = allScores.Sum();
+        var xySum = allScores.Select((y, x) => x * y).Sum();
+        var xSquareSum = Enumerable.Range(0, n).Sum(x => x * x);
+
+        var slope = (n * xySum - xSum * ySum) / (n * xSquareSum - xSum * xSum);
+        
+        // Calculate R-squared for trend significance
+        var yMean = ySum / n;
+        var ssTotal = allScores.Sum(y => Math.Pow(y - yMean, 2));
+        var yPredicted = allScores.Select((_, x) => yMean + slope * (x - (n - 1) / 2.0)).ToList();
+        var ssResidual = allScores.Zip(yPredicted, (actual, predicted) => Math.Pow(actual - predicted, 2)).Sum();
+        var rSquared = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;
+        
+        // Determine trend significance (R² > 0.5 indicates strong trend)
+        var isSignificant = rSquared > 0.5 && Math.Abs(slope) > 0.1;
+        
+        // Calculate percent change from mean historical score to current
+        var historicalMean = historicalScores.Average();
+        var percentChange = historicalMean > 0 ? ((currentScore - historicalMean) / historicalMean) * 100 : 0;
+        
+        // Determine trend direction based on slope and significance
+        string direction;
+        if (!isSignificant)
+        {
+            direction = "Stable";
+        }
+        else if (slope > 0.15) // Strong positive trend
+        {
+            direction = "Increasing";
+        }
+        else if (slope < -0.15) // Strong negative trend  
+        {
+            direction = "Decreasing";
+        }
+        else
+        {
+            direction = "Stable";
+        }
+
+        return new TrendAnalysisResult(direction, percentChange, isSignificant);
+    }
+
+    /// <summary>
+    /// Determine overall trend from multiple time horizon analyses
+    /// </summary>
+    private static string DetermineOverallTrend(TrendAnalysisResult shortTerm, TrendAnalysisResult mediumTerm, TrendAnalysisResult longTerm)
+    {
+        // Weight recent trends more heavily
+        var trendScores = new Dictionary<string, double>
+        {
+            ["Increasing"] = 0,
+            ["Stable"] = 0,
+            ["Decreasing"] = 0
+        };
+        
+        // Short term trend gets highest weight (50%)
+        if (shortTerm.IsSignificant)
+        {
+            trendScores[shortTerm.Direction] += 0.5;
+        }
+        else
+        {
+            trendScores["Stable"] += 0.5;
+        }
+        
+        // Medium term trend gets moderate weight (30%)
+        if (mediumTerm.IsSignificant)
+        {
+            trendScores[mediumTerm.Direction] += 0.3;
+        }
+        else
+        {
+            trendScores["Stable"] += 0.3;
+        }
+        
+        // Long term trend gets lower weight (20%)
+        if (longTerm.IsSignificant)
+        {
+            trendScores[longTerm.Direction] += 0.2;
+        }
+        else
+        {
+            trendScores["Stable"] += 0.2;
+        }
+        
+        // Return trend with highest weighted score
+        return trendScores.OrderByDescending(kvp => kvp.Value).First().Key;
     }
 
     private async Task<UserMetricsComparisonData?> CalculateComparisonMetricsForUserAsync(
@@ -781,3 +962,8 @@ public sealed class UserMetricsService : IUserMetricsService
 
     #endregion
 }
+
+/// <summary>
+/// Result of trend analysis containing direction, magnitude, and significance
+/// </summary>
+public record TrendAnalysisResult(string Direction, double PercentChange, bool IsSignificant);
