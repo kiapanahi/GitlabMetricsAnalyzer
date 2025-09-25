@@ -42,6 +42,7 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IUserMetricsService, UserMetricsService>();
         builder.Services.AddScoped<IUserMetricsCollectionService, UserMetricsCollectionService>();
         builder.Services.AddScoped<IUserSyncService, UserSyncService>();
+        builder.Services.AddScoped<IMethodologyService, MethodologyService>();
 
         // Add HTTP client for GitLab API calls (mock in development, real in production)
         if (builder.Environment.IsDevelopment())

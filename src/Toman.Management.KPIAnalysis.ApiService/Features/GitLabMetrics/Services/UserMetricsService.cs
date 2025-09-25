@@ -15,15 +15,18 @@ public sealed class UserMetricsService : IUserMetricsService
 {
     private readonly GitLabMetricsDbContext _dbContext;
     private readonly IGitLabService _gitLabService;
+    private readonly IMethodologyService _methodologyService;
     private readonly ILogger<UserMetricsService> _logger;
 
     public UserMetricsService(
         GitLabMetricsDbContext dbContext,
         IGitLabService gitLabService,
+        IMethodologyService methodologyService,
         ILogger<UserMetricsService> logger)
     {
         _dbContext = dbContext;
         _gitLabService = gitLabService;
+        _methodologyService = methodologyService;
         _logger = logger;
     }
 
@@ -51,10 +54,23 @@ public sealed class UserMetricsService : IUserMetricsService
         var quality = CalculateQualityMetrics(pipelines, commits, mergeRequests);
         var productivity = CalculateProductivityMetrics(commits, mergeRequests, pipelines, fromDate, toDate);
 
+        // Record audit trail for productivity score calculation
+        var totalDataPoints = commits.Count + mergeRequests.Count + pipelines.Count + issues.Count;
+        var dataQuality = CalculateDataQuality(totalDataPoints, (toDate - fromDate).Days);
+        
+        await _methodologyService.RecordAuditTrailAsync(new Models.Methodology.AuditTrailEntry
+        {
+            Metric = "ProductivityScore", 
+            CalculatedAt = DateTimeOffset.UtcNow,
+            AlgorithmVersion = "2.1",
+            DataQualityScore = dataQuality,
+            Notes = $"User {userId}, Period: {fromDate:yyyy-MM-dd} to {toDate:yyyy-MM-dd}, Data points: {totalDataPoints}"
+        }, cancellationToken);
+
         var metadata = new MetricsMetadata(
             DateTimeOffset.UtcNow,
             "GitLab API",
-            commits.Count + mergeRequests.Count + pipelines.Count + issues.Count,
+            totalDataPoints,
             commits.Select(c => c.IngestedAt)
                    .Concat(mergeRequests.Select(mr => mr.IngestedAt))
                    .Concat(pipelines.Select(p => p.IngestedAt))
@@ -775,6 +791,22 @@ public sealed class UserMetricsService : IUserMetricsService
         var estimatedHoursPerDay = Math.Min(8, Math.Max(1, avgCommitsPerActiveDay * 0.5));
 
         return (int)(commitDays * estimatedHoursPerDay);
+    }
+
+    private static double CalculateDataQuality(int totalDataPoints, int periodDays)
+    {
+        // Calculate expected data points based on period length
+        var expectedMinDataPoints = Math.Max(1, periodDays * 0.1); // At least 0.1 data points per day
+        var expectedMaxDataPoints = periodDays * 5; // Up to 5 data points per day
+        
+        if (totalDataPoints >= expectedMinDataPoints)
+        {
+            // Good data quality if we have sufficient data points
+            return Math.Min(10.0, (double)totalDataPoints / expectedMinDataPoints * 2);
+        }
+        
+        // Poor data quality if insufficient data
+        return Math.Max(0.0, (double)totalDataPoints / expectedMinDataPoints * 5);
     }
 
     #endregion
