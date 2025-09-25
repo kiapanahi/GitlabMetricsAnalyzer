@@ -290,7 +290,7 @@ public class UserMetricsServiceTests
     }
 
     [Fact]
-    public async Task CalculateProductivityTrend_Should_Return_Stable_For_No_Historical_Data()
+    public void CalculateProductivityTrend_Should_Return_Stable_For_No_Historical_Data()
     {
         // For this test, we'll just verify that insufficient data returns Stable
         // We'll use the simpler method that doesn't require DbContext setup
