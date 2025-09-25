@@ -539,17 +539,17 @@ public sealed class UserMetricsService : IUserMetricsService
         var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
         var pipelineFailures = pipelines.Count - successfulPipelines;
 
-        // Code revert rate would need commit message analysis
-        var codeRevertRate = 0.0; // Placeholder
+        // Calculate code revert rate from commit message analysis
+        var codeRevertRate = CalculateCodeRevertRate(commits);
 
-        // Bug fix ratio would need issue linking
-        var bugFixRatio = 0.0; // Placeholder
+        // Calculate bug fix ratio from issue linking and commit message keywords
+        var bugFixRatio = CalculateBugFixRatio(commits, mergeRequests);
 
-        // Test coverage would need additional data
-        var testCoverage = 0.0; // Placeholder
+        // Calculate test coverage from available pipeline and commit data
+        var testCoverage = CalculateTestCoverage(commits, pipelines);
 
-        // Security issues would need integration with security scanning
-        var securityIssues = 0; // Placeholder
+        // Calculate security issues from commit patterns and merge request analysis
+        var securityIssues = CalculateSecurityIssues(commits, mergeRequests);
 
         return new UserQualityMetrics(
             pipelineSuccessRate,
@@ -775,6 +775,185 @@ public sealed class UserMetricsService : IUserMetricsService
         var estimatedHoursPerDay = Math.Min(8, Math.Max(1, avgCommitsPerActiveDay * 0.5));
 
         return (int)(commitDays * estimatedHoursPerDay);
+    }
+
+    private static double CalculateCodeRevertRate(List<Models.Raw.RawCommit> commits)
+    {
+        if (commits.Count == 0) return 0.0;
+
+        // Common revert patterns in commit messages
+        var revertPatterns = new[]
+        {
+            "revert",
+            "reverts",
+            "reverting",
+            "rollback",
+            "roll back",
+            "undo",
+            "undoing",
+            "back out",
+            "backing out"
+        };
+
+        var revertCommits = commits.Count(commit =>
+        {
+            var message = commit.Message.ToLowerInvariant();
+            return revertPatterns.Any(pattern => message.Contains(pattern)) ||
+                   // GitLab/Git specific revert format: "Revert \"commit title\""
+                   message.StartsWith("revert \"") ||
+                   // Check for revert merge format
+                   message.Contains("revert merge") ||
+                   // Check for common revert commit hash patterns
+                   System.Text.RegularExpressions.Regex.IsMatch(message, @"revert\s+[a-f0-9]{7,40}", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        });
+
+        return (double)revertCommits / commits.Count;
+    }
+
+    private static double CalculateBugFixRatio(List<Models.Raw.RawCommit> commits, List<Models.Raw.RawMergeRequest> mergeRequests)
+    {
+        if (commits.Count == 0 && mergeRequests.Count == 0) return 0.0;
+
+        // Common bug fix keywords in commit messages and MR titles
+        var bugFixKeywords = new[]
+        {
+            "fix",
+            "fixes",
+            "fixed",
+            "fixing",
+            "bug",
+            "bugfix",
+            "hotfix",
+            "patch",
+            "resolve",
+            "resolves",
+            "resolved",
+            "issue",
+            "defect",
+            "error",
+            "correction",
+            "repair"
+        };
+
+        // Count commits that appear to be bug fixes
+        var bugFixCommits = commits.Count(commit =>
+        {
+            var message = commit.Message.ToLowerInvariant();
+            return bugFixKeywords.Any(keyword => message.Contains(keyword)) ||
+                   // Check for issue reference patterns like "fixes #123" or "closes #456"
+                   System.Text.RegularExpressions.Regex.IsMatch(message, @"(fix|fixes|close|closes|resolve|resolves)\s+#\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        });
+
+        // Count merge requests that appear to be bug fixes
+        var bugFixMRs = mergeRequests.Count(mr =>
+        {
+            var title = mr.Title.ToLowerInvariant();
+            return bugFixKeywords.Any(keyword => title.Contains(keyword));
+        });
+
+        var totalWork = commits.Count + mergeRequests.Count;
+        var totalBugFixes = bugFixCommits + bugFixMRs;
+
+        return totalWork > 0 ? (double)totalBugFixes / totalWork : 0.0;
+    }
+
+    private static double CalculateTestCoverage(List<Models.Raw.RawCommit> commits, List<Models.Raw.RawPipeline> pipelines)
+    {
+        // Since we don't have direct test coverage data from GitLab API in the current implementation,
+        // we'll estimate coverage based on test-related commit patterns and pipeline success rates
+        
+        if (commits.Count == 0) return 0.0;
+
+        var testKeywords = new[]
+        {
+            "test",
+            "tests",
+            "testing",
+            "spec",
+            "specs",
+            "unittest",
+            "unit test",
+            "integration test",
+            "e2e test",
+            "coverage",
+            "jest",
+            "mocha",
+            "chai",
+            "junit",
+            "pytest",
+            "rspec",
+            "karma",
+            "cypress"
+        };
+
+        // Count commits that involve testing
+        var testCommits = commits.Count(commit =>
+        {
+            var message = commit.Message.ToLowerInvariant();
+            return testKeywords.Any(keyword => message.Contains(keyword));
+        });
+
+        // Base coverage estimate on test commits ratio
+        var testCommitRatio = (double)testCommits / commits.Count;
+        
+        // Factor in pipeline success rate as an indicator of test quality
+        var pipelineSuccessRate = pipelines.Count > 0 ? 
+            pipelines.Count(p => p.IsSuccessful) / (double)pipelines.Count : 0.0;
+
+        // Combine both factors to estimate coverage (scale 0-1)
+        // Higher test commit ratio and pipeline success rate suggest better test coverage
+        var estimatedCoverage = (testCommitRatio * 0.7 + pipelineSuccessRate * 0.3);
+        
+        // Cap at reasonable maximum since this is an estimate
+        return Math.Min(0.85, estimatedCoverage);
+    }
+
+    private static int CalculateSecurityIssues(List<Models.Raw.RawCommit> commits, List<Models.Raw.RawMergeRequest> mergeRequests)
+    {
+        // Since we don't have direct integration with GitLab security scanning yet,
+        // we'll detect potential security-related issues from commit messages and MR titles
+        
+        var securityKeywords = new[]
+        {
+            "security",
+            "vulnerability",
+            "exploit",
+            "injection",
+            "xss",
+            "csrf",
+            "auth",
+            "authentication",
+            "authorization",
+            "cve",
+            "sec",
+            "password",
+            "token",
+            "secret",
+            "credential",
+            "encrypt",
+            "decrypt",
+            "sanitize",
+            "validation",
+            "audit",
+            "permission"
+        };
+
+        // Count commits that mention security-related keywords
+        var securityCommits = commits.Count(commit =>
+        {
+            var message = commit.Message.ToLowerInvariant();
+            return securityKeywords.Any(keyword => message.Contains(keyword));
+        });
+
+        // Count merge requests that mention security-related keywords
+        var securityMRs = mergeRequests.Count(mr =>
+        {
+            var title = mr.Title.ToLowerInvariant();
+            return securityKeywords.Any(keyword => title.Contains(keyword));
+        });
+
+        // Return total count of potentially security-related work items
+        return securityCommits + securityMRs;
     }
 
     #endregion
