@@ -129,6 +129,7 @@ public sealed record UserCodeReviewMetrics(
 public sealed record UserIssueManagementMetrics(
     int IssuesCreated,
     int IssuesResolved,
+    int IssuesWorkedOn, // Issues user has resolved (best approximation for assignment without explicit data)
     TimeSpan? AverageIssueResolutionTime,
     double IssueResolutionRate,
     int ReopenedIssues

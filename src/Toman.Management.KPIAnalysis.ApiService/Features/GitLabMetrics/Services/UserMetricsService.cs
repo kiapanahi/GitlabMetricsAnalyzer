@@ -362,12 +362,18 @@ public sealed class UserMetricsService : IUserMetricsService
                 allPipelines.AddRange(pipelines.Where(p => p.CreatedAt >= fromDate && p.CreatedAt < toDate));
             }
 
-            // Note: Issues are typically project-scoped and would need additional API calls
-            // For now, returning empty list - this could be enhanced later
-            _logger.LogDebug("Issue fetching not implemented in on-demand mode yet");
+            // Collect issues authored by or related to the user
+            // For now, we'll get issues authored by the user from existing data
+            var userIssues = await _dbContext.RawIssues
+                .Where(i => i.AuthorUserId == userId && i.CreatedAt >= fromDate && i.CreatedAt < toDate)
+                .ToListAsync(cancellationToken);
+            
+            allIssues.AddRange(userIssues);
+            
+            _logger.LogDebug("Fetched {IssueCount} issues authored by user {UserId} in on-demand mode", userIssues.Count, userId);
 
-            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
-                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count);
+            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines, {IssueCount} issues",
+                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count, allIssues.Count);
         }
         catch (Exception ex)
         {
@@ -481,6 +487,9 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         var issuesCreated = issues.Count;
         var issuesResolved = issues.Count(i => i.ClosedAt.HasValue);
+        
+        // For now, use resolved issues as proxy for issues worked on (since we don't have explicit assignment data)
+        var issuesWorkedOn = issuesResolved;
 
         var resolvedIssues = issues.Where(i => i.ClosedAt.HasValue).ToList();
         var averageIssueResolutionTime = resolvedIssues.Count > 0
@@ -493,6 +502,7 @@ public sealed class UserMetricsService : IUserMetricsService
         return new UserIssueManagementMetrics(
             issuesCreated,
             issuesResolved,
+            issuesWorkedOn,
             averageIssueResolutionTime,
             issueResolutionRate,
             reopenedIssues
