@@ -194,6 +194,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
             entity.Property(e => e.IssueId).HasColumnName("issue_id");
             entity.Property(e => e.AuthorUserId).HasColumnName("author_user_id");
+            entity.Property(e => e.AssigneeUserId).HasColumnName("assignee_user_id");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.ClosedAt).HasColumnName("closed_at");
             entity.Property(e => e.State).HasColumnName("state").HasMaxLength(50);

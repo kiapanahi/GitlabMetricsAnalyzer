@@ -126,6 +126,7 @@ public sealed record UserCodeReviewMetrics(
 /// </summary>
 public sealed record UserIssueManagementMetrics(
     int IssuesCreated,
+    int IssuesAssigned,
     int IssuesResolved,
     TimeSpan? AverageIssueResolutionTime,
     double IssueResolutionRate,

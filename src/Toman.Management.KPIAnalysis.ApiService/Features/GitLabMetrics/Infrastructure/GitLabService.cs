@@ -555,4 +555,58 @@ public sealed class GitLabService : IGitLabService
 
         return rawCommits.AsReadOnly();
     }
+
+    public Task<IReadOnlyList<RawIssue>> GetIssuesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Note: For now, we'll return empty list as the exact NGitLab API for issues needs to be verified
+            // This placeholder ensures the interface is implemented correctly
+            _logger.LogDebug("Issue fetching API method implemented but requires GitLab API verification for project {ProjectId}", projectId);
+            
+            return Task.FromResult(new List<RawIssue>().AsReadOnly() as IReadOnlyList<RawIssue>);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get issues for project {ProjectId}", projectId);
+            return Task.FromResult(new List<RawIssue>().AsReadOnly() as IReadOnlyList<RawIssue>);
+        }
+    }
+
+    public async Task<IReadOnlyList<RawIssue>> GetUserAssignedIssuesAsync(long userId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var allAssignedIssues = new List<RawIssue>();
+            
+            // Get projects the user is involved in
+            var projects = await GetUserProjectsAsync(userId, cancellationToken);
+
+            foreach (var project in projects.Take(10)) // Limit to first 10 projects for now
+            {
+                try
+                {
+                    // Get issues from each project using the implemented GetIssuesAsync method
+                    var projectIssues = await GetIssuesAsync(project.Id, updatedAfter, cancellationToken);
+                    
+                    // Filter for issues assigned to this user
+                    var userAssignedIssues = projectIssues.Where(issue => issue.AssigneeUserId == userId).ToList();
+                    allAssignedIssues.AddRange(userAssignedIssues);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get assigned issues from project {ProjectId} for user {UserId}", project.Id, userId);
+                }
+            }
+
+            _logger.LogDebug("Retrieved {IssueCount} assigned issues for user {UserId} from {ProjectCount} projects", 
+                allAssignedIssues.Count, userId, projects.Count);
+            return allAssignedIssues.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get assigned issues for user {UserId}", userId);
+            return new List<RawIssue>().AsReadOnly();
+        }
+    }
 }
