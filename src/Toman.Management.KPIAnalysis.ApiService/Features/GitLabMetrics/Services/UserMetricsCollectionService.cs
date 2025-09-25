@@ -79,11 +79,11 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             MergeRequestMergeRate = 1.0 - userMetrics.CodeReview.SelfMergeRate, // Inverse approximation
             
             // Quality Metrics
-            TotalPipelinesTriggered = userMetrics.Quality.PipelineFailures + (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation
-            SuccessfulPipelines = (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation
+            TotalPipelinesTriggered = userMetrics.Quality.TotalPipelinesTriggered,
+            SuccessfulPipelines = userMetrics.Quality.SuccessfulPipelines,
             FailedPipelines = userMetrics.Quality.PipelineFailures,
             PipelineSuccessRate = userMetrics.Quality.PipelineSuccessRate,
-            AveragePipelineDurationMinutes = 0, // Not available in current model
+            AveragePipelineDurationMinutes = userMetrics.Quality.AveragePipelineDurationMinutes,
             
             // Issue Management Metrics
             TotalIssuesCreated = userMetrics.IssueManagement.IssuesCreated,
@@ -106,6 +106,9 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             TotalDataPoints = userMetrics.Metadata.TotalDataPoints,
             DataQuality = DetermineDataQuality(userMetrics.Metadata.TotalDataPoints, (int)(to - from).TotalDays)
         };
+
+        // Validate pipeline metrics consistency to prevent calculation errors
+        ValidatePipelineMetricsConsistency(factUserMetrics);
 
         // Store in database
         _dbContext.FactUserMetrics.Add(factUserMetrics);
@@ -267,5 +270,47 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             >= 5.0 => "Medium",
             _ => "Low"
         };
+    }
+
+    /// <summary>
+    /// Validates pipeline metrics consistency to prevent calculation errors
+    /// </summary>
+    private static void ValidatePipelineMetricsConsistency(FactUserMetrics metrics)
+    {
+        // Validate that successful + failed pipelines = total pipelines
+        var calculatedTotal = metrics.SuccessfulPipelines + metrics.FailedPipelines;
+        if (metrics.TotalPipelinesTriggered != calculatedTotal)
+        {
+            throw new InvalidOperationException(
+                $"Pipeline metrics inconsistency detected for user {metrics.UserId}: " +
+                $"TotalPipelinesTriggered ({metrics.TotalPipelinesTriggered}) != " +
+                $"SuccessfulPipelines ({metrics.SuccessfulPipelines}) + FailedPipelines ({metrics.FailedPipelines}) = {calculatedTotal}");
+        }
+
+        // Validate pipeline success rate calculation
+        if (metrics.TotalPipelinesTriggered > 0)
+        {
+            var calculatedSuccessRate = (double)metrics.SuccessfulPipelines / metrics.TotalPipelinesTriggered;
+            var tolerance = 0.01; // Allow small floating point differences
+            if (Math.Abs(metrics.PipelineSuccessRate - calculatedSuccessRate) > tolerance)
+            {
+                throw new InvalidOperationException(
+                    $"Pipeline success rate inconsistency detected for user {metrics.UserId}: " +
+                    $"Stored rate ({metrics.PipelineSuccessRate:F4}) != " +
+                    $"Calculated rate ({calculatedSuccessRate:F4})");
+            }
+        }
+        else if (metrics.PipelineSuccessRate != 0.0)
+        {
+            throw new InvalidOperationException(
+                $"Pipeline success rate should be 0 when no pipelines exist for user {metrics.UserId}");
+        }
+
+        // Validate that duration is non-negative
+        if (metrics.AveragePipelineDurationMinutes < 0)
+        {
+            throw new InvalidOperationException(
+                $"Average pipeline duration cannot be negative for user {metrics.UserId}: {metrics.AveragePipelineDurationMinutes}");
+        }
     }
 }

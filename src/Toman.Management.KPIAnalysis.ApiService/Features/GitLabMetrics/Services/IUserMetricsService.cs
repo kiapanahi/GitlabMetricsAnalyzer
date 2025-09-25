@@ -149,6 +149,9 @@ public sealed record UserCollaborationMetrics(
 public sealed record UserQualityMetrics(
     double PipelineSuccessRate,
     int PipelineFailures,
+    int TotalPipelinesTriggered,
+    int SuccessfulPipelines,
+    double AveragePipelineDurationMinutes,
     double CodeRevertRate,
     double BugFixRatio,
     double TestCoverage,
