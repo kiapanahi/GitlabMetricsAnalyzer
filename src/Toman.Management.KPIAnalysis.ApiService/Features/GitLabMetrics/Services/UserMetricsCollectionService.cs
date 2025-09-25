@@ -69,7 +69,7 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             TotalLinesChanged = userMetrics.CodeContribution.TotalLinesChanged,
             AverageCommitsPerDay = userMetrics.CodeContribution.CommitsPerDay,
             AverageLinesChangedPerCommit = userMetrics.CodeContribution.AverageCommitSize,
-            ActiveProjects = userMetrics.CodeContribution.FilesModified, // Using FilesModified as proxy for ActiveProjects
+            ActiveProjects = userMetrics.CodeContribution.FilesModified, // Now represents actual distinct projects from commits
             
             // Code Review Metrics
             TotalMergeRequestsCreated = userMetrics.CodeReview.MergeRequestsCreated,

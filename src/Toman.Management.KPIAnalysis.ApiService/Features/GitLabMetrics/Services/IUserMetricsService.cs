@@ -99,7 +99,7 @@ public sealed record UserCodeContributionMetrics(
     int TotalLinesDeleted,
     int TotalLinesChanged,
     double AverageCommitSize,
-    int FilesModified,
+    int FilesModified, // Represents distinct active projects (count of unique ProjectIds from commits)
     List<string> TopLanguages,
     int WeekendCommits,
     int EveningCommits

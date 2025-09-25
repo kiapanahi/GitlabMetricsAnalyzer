@@ -253,7 +253,7 @@ The stored user metrics contain the following key fields:
 - `totalLinesChanged`: Total lines of code changed
 - `averageCommitsPerDay`: Average commits per day
 - `averageLinesChangedPerCommit`: Average lines changed per commit
-- `activeProjects`: Number of active projects
+- `activeProjects`: Number of distinct projects where the user has commits
 
 #### Code Review Metrics
 - `totalMergeRequestsCreated`: Total merge requests created
