@@ -41,24 +41,21 @@ public sealed class UserMetricsService : IUserMetricsService
         }
 
         // Fetch all user data in parallel for better performance
-        var (commits, mergeRequests, pipelines, issues, reviewedMRs) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
+        var (commits, mergeRequests, pipelines, reviewedMRs) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
 
         // Calculate different metric categories
         var codeContribution = CalculateCodeContributionMetrics(commits, fromDate, toDate);
         var codeReview = await CalculateCodeReviewMetricsAsync(mergeRequests, reviewedMRs, cancellationToken);
-        var issueManagement = CalculateIssueManagementMetrics(issues);
         var collaboration = await CalculateCollaborationMetricsAsync(mergeRequests, reviewedMRs, cancellationToken);
         var quality = CalculateQualityMetrics(pipelines, commits, mergeRequests);
-        var productivity = CalculateProductivityMetrics(commits, mergeRequests, pipelines, fromDate, toDate);
 
         var metadata = new MetricsMetadata(
             DateTimeOffset.UtcNow,
             "GitLab API",
-            commits.Count + mergeRequests.Count + pipelines.Count + issues.Count,
+            commits.Count + mergeRequests.Count + pipelines.Count,
             commits.Select(c => c.IngestedAt)
                    .Concat(mergeRequests.Select(mr => mr.IngestedAt))
                    .Concat(pipelines.Select(p => p.IngestedAt))
-                   .Concat(issues.Select(i => i.CreatedAt))
                    .DefaultIfEmpty()
                    .Max()
         );
@@ -71,10 +68,8 @@ public sealed class UserMetricsService : IUserMetricsService
             toDate,
             codeContribution,
             codeReview,
-            issueManagement,
             collaboration,
             quality,
-            productivity,
             metadata
         );
     }
@@ -91,7 +86,7 @@ public sealed class UserMetricsService : IUserMetricsService
             throw new ArgumentException($"User with ID {userId} not found", nameof(userId));
         }
 
-        var (commits, mergeRequests, pipelines, _, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
+        var (commits, mergeRequests, pipelines, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
 
         var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
         var totalCommits = commits.Count;
@@ -107,7 +102,6 @@ public sealed class UserMetricsService : IUserMetricsService
             : (TimeSpan?)null;
 
         var totalLinesChanged = commits.Sum(c => c.Additions + c.Deletions);
-        var productivityScore = CalculateProductivityScore(totalCommits, totalMergeRequests, pipelineSuccessRate, daysDiff);
 
         var metadata = new MetricsMetadata(
             DateTimeOffset.UtcNow,
@@ -127,169 +121,8 @@ public sealed class UserMetricsService : IUserMetricsService
             pipelineSuccessRate,
             averageMRCycleTime,
             totalLinesChanged,
-            productivityScore,
             metadata
         );
-    }
-
-    public async Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Calculating trend metrics for user {UserId} from {FromDate} to {ToDate} with period {Period}", userId, fromDate, toDate, period);
-
-        ValidateDateRange(fromDate, toDate);
-
-        var user = await GetUserInfoAsync(userId, cancellationToken);
-        if (user is null)
-        {
-            throw new ArgumentException($"User with ID {userId} not found", nameof(userId));
-        }
-
-        var trendPoints = new List<UserMetricsTrendPoint>();
-        var currentDate = fromDate;
-
-        while (currentDate < toDate)
-        {
-            var periodEnd = period switch
-            {
-                TrendPeriod.Daily => currentDate.AddDays(1),
-                TrendPeriod.Weekly => currentDate.AddDays(7),
-                TrendPeriod.Monthly => currentDate.AddMonths(1),
-                _ => currentDate.AddDays(7)
-            };
-
-            if (periodEnd > toDate)
-                periodEnd = toDate;
-
-            var (commits, mergeRequests, pipelines, _, _) = await FetchUserDataAsync(userId, currentDate, periodEnd, cancellationToken);
-
-            var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
-            var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0.0;
-            var linesChanged = commits.Sum(c => c.Additions + c.Deletions);
-            var productivityScore = CalculateNumericProductivityScore(commits.Count, mergeRequests.Count, pipelineSuccessRate, (periodEnd - currentDate).TotalDays);
-
-            trendPoints.Add(new UserMetricsTrendPoint(
-                currentDate,
-                commits.Count,
-                mergeRequests.Count,
-                pipelineSuccessRate,
-                linesChanged,
-                productivityScore
-            ));
-
-            currentDate = periodEnd;
-        }
-
-        var metadata = new MetricsMetadata(
-            DateTimeOffset.UtcNow,
-            "GitLab API",
-            trendPoints.Sum(tp => tp.Commits + tp.MergeRequests),
-            null
-        );
-
-        return new UserMetricsTrendsResponse(
-            userId,
-            user.Username ?? $"user_{userId}",
-            fromDate,
-            toDate,
-            period,
-            trendPoints,
-            metadata
-        );
-    }
-
-    public async Task<UserMetricsComparisonResponse> GetUserMetricsComparisonAsync(long userId, long[] comparisonUserIds, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Calculating comparison metrics for user {UserId} with {ComparisonCount} peers from {FromDate} to {ToDate}", userId, comparisonUserIds.Length, fromDate, toDate);
-
-        ValidateDateRange(fromDate, toDate);
-
-        var user = await GetUserInfoAsync(userId, cancellationToken);
-        if (user is null)
-        {
-            throw new ArgumentException($"User with ID {userId} not found", nameof(userId));
-        }
-
-        // Calculate metrics for the target user
-        var userMetrics = await CalculateComparisonMetricsForUserAsync(userId, fromDate, toDate, cancellationToken);
-
-        // Calculate metrics for comparison users
-        var peerMetrics = new List<UserMetricsComparisonData>();
-        foreach (var comparisonUserId in comparisonUserIds)
-        {
-            var peerMetric = await CalculateComparisonMetricsForUserAsync(comparisonUserId, fromDate, toDate, cancellationToken);
-            if (peerMetric is not null)
-            {
-                peerMetrics.Add(peerMetric);
-            }
-        }
-
-        // Calculate team average
-        var allMetrics = new[] { userMetrics }.Concat(peerMetrics).Where(m => m is not null).Cast<UserMetricsComparisonData>().ToList();
-        var teamAverage = CalculateTeamAverage(allMetrics);
-
-        var metadata = new MetricsMetadata(
-            DateTimeOffset.UtcNow,
-            "GitLab API",
-            allMetrics.Count,
-            null
-        );
-
-        return new UserMetricsComparisonResponse(
-            userId,
-            user.Username ?? $"user_{userId}",
-            fromDate,
-            toDate,
-            userMetrics!,
-            teamAverage,
-            peerMetrics,
-            metadata
-        );
-    }
-
-    #region Private Helper Methods
-
-    private static void ValidateDateRange(DateTimeOffset fromDate, DateTimeOffset toDate)
-    {
-        if (toDate <= fromDate)
-        {
-            throw new ArgumentException("ToDate must be after FromDate");
-        }
-
-        if ((toDate - fromDate).TotalDays > 365)
-        {
-            throw new ArgumentException("Date range cannot exceed 365 days");
-        }
-    }
-
-    private async Task<GitLabUser?> GetUserInfoAsync(long userId, CancellationToken cancellationToken)
-    {
-        // First try to get user info from GitLab API directly
-        var gitLabUser = await _gitLabService.GetUserByIdAsync(userId, cancellationToken);
-        if (gitLabUser is not null)
-        {
-            _logger.LogDebug("Retrieved user {UserId} directly from GitLab: {Username}", userId, gitLabUser.Username);
-            return gitLabUser;
-        }
-
-        // If not found in GitLab API, try to find in local database as fallback
-        var dbUser = await _dbContext.DimUsers
-            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
-
-        if (dbUser is not null)
-        {
-            _logger.LogDebug("Retrieved user {UserId} from local database: {Username}", userId, dbUser.Name);
-            // Convert DimUser to GitLabUser for consistency
-            return new GitLabUser
-            {
-                Id = dbUser.UserId,
-                Username = dbUser.Username,
-                Email = dbUser.Email,
-                Name = dbUser.Name
-            };
-        }
-
-        _logger.LogWarning("User {UserId} not found in GitLab API or local database", userId);
-        return null;
     }
 
     private async Task<(
@@ -496,7 +329,6 @@ public sealed class UserMetricsService : IUserMetricsService
 
         // Calculate actual comment counts from database
         var totalCommentsOnMergeRequests = await CalculateMergeRequestCommentsCountAsync(mergeRequests, cancellationToken);
-        var totalCommentsOnIssues = await CalculateIssueCommentsCountAsync(cancellationToken);
 
         // Calculate cross-team collaborations based on project diversity
         var crossTeamCollaborations = CalculateCrossTeamCollaborations(mergeRequests, reviewedMRs);
@@ -513,8 +345,7 @@ public sealed class UserMetricsService : IUserMetricsService
             crossTeamCollaborations,
             knowledgeSharingScore,
             mentorshipActivities,
-            totalCommentsOnMergeRequests,
-            totalCommentsOnIssues
+            totalCommentsOnMergeRequests
         );
     }
 
@@ -866,8 +697,6 @@ public sealed class UserMetricsService : IUserMetricsService
         
         return uniqueReviewees >= 4 ? 1 : 0; // Some mentorship if reviewing many people
     }
-
-    #endregion
 
     #endregion
 }
