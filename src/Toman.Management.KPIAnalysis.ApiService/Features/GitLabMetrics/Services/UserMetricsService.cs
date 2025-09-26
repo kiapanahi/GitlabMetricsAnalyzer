@@ -296,7 +296,6 @@ public sealed class UserMetricsService : IUserMetricsService
         List<Models.Raw.RawCommit> commits,
         List<Models.Raw.RawMergeRequest> mergeRequests,
         List<Models.Raw.RawPipeline> pipelines,
-        List<Models.Raw.RawIssue> issues,
         List<Models.Raw.RawMergeRequest> reviewedMRs
     )> FetchUserDataAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken)
     {
@@ -305,7 +304,7 @@ public sealed class UserMetricsService : IUserMetricsService
         if (user is null)
         {
             _logger.LogWarning("User {UserId} not found for data fetching", userId);
-            return (new(), new(), new(), new(), new());
+            return (new(), new(), new(), new());
         }
 
         _logger.LogInformation("Fetching on-demand data for user {UserId} ({UserEmail}) from {FromDate} to {ToDate}",
@@ -314,7 +313,6 @@ public sealed class UserMetricsService : IUserMetricsService
         var allCommits = new List<Models.Raw.RawCommit>();
         var allMergeRequests = new List<Models.Raw.RawMergeRequest>();
         var allPipelines = new List<Models.Raw.RawPipeline>();
-        var allIssues = new List<Models.Raw.RawIssue>();
 
         try
         {
@@ -353,24 +351,23 @@ public sealed class UserMetricsService : IUserMetricsService
                     return (commits: new List<Models.Raw.RawCommit>(),
                            mergeRequests: new List<Models.Raw.RawMergeRequest>(),
                            pipelines: new List<Models.Raw.RawPipeline>(),
-                           issues: new List<Models.Raw.RawIssue>());
+                           reviewedMRs: new List<Models.Raw.RawMergeRequest>());
                 }
             });
 
             var projectResults = await Task.WhenAll(projectTasks);
 
             // Aggregate results from all projects
-            foreach (var (commits, mergeRequests, pipelines, issues) in projectResults)
+            foreach (var (commits, mergeRequests, pipelines, reviewedMRs) in projectResults)
             {
                 allCommits.AddRange(commits.Where(c => c.CommittedAt >= fromDate && c.CommittedAt < toDate));
                 allMergeRequests.AddRange(mergeRequests.Where(mr => mr.CreatedAt >= fromDate && mr.CreatedAt < toDate));
                 allPipelines.AddRange(pipelines.Where(p => p.CreatedAt >= fromDate && p.CreatedAt < toDate));
-                allIssues.AddRange(issues.Where(i => i.CreatedAt >= fromDate && i.CreatedAt < toDate));
             }
 
-            // Issue fetching is now implemented in on-demand mode
-            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines, {IssueCount} issues",
-                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count, allIssues.Count);
+            // On-demand data fetching completed
+            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
+                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count);
         }
         catch (Exception ex)
         {
@@ -382,7 +379,7 @@ public sealed class UserMetricsService : IUserMetricsService
             .Where(mr => mr.ReviewerIds != null && mr.ReviewerIds.Contains(userId.ToString()))
             .ToList();
 
-        return (allCommits, allMergeRequests, allPipelines, allIssues, reviewedMRs);
+        return (allCommits, allMergeRequests, allPipelines, reviewedMRs);
     }
 
     private static UserCodeContributionMetrics CalculateCodeContributionMetrics(
@@ -476,30 +473,6 @@ public sealed class UserMetricsService : IUserMetricsService
             approvalsReceived,
             selfMergeRate,
             mergeRequestMergeRate
-        );
-    }
-
-    private static UserIssueManagementMetrics CalculateIssueManagementMetrics(List<Models.Raw.RawIssue> issues)
-    {
-        var issuesCreated = issues.Count;
-        var issuesAssigned = issues.Count(i => i.AssigneeUserId.HasValue);
-        var issuesResolved = issues.Count(i => i.ClosedAt.HasValue);
-
-        var resolvedIssues = issues.Where(i => i.ClosedAt.HasValue).ToList();
-        var averageIssueResolutionTime = resolvedIssues.Count > 0
-            ? TimeSpan.FromTicks((long)resolvedIssues.Average(i => (i.ClosedAt!.Value - i.CreatedAt).Ticks))
-            : (TimeSpan?)null;
-
-        var issueResolutionRate = issuesCreated > 0 ? (double)issuesResolved / issuesCreated : 0;
-        var reopenedIssues = issues.Sum(i => i.ReopenedCount);
-
-        return new UserIssueManagementMetrics(
-            issuesCreated,
-            issuesAssigned,
-            issuesResolved,
-            averageIssueResolutionTime,
-            issueResolutionRate,
-            reopenedIssues
         );
     }
 
