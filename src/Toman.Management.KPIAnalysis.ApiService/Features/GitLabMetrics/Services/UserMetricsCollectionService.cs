@@ -92,8 +92,8 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             AverageIssueResolutionTimeHours = userMetrics.IssueManagement.AverageIssueResolutionTime?.TotalHours ?? 0,
             
             // Collaboration Metrics
-            TotalCommentsOnMergeRequests = userMetrics.Collaboration.UniqueReviewers * 2, // Approximation
-            TotalCommentsOnIssues = userMetrics.Collaboration.MentorshipActivities, // Approximation
+            TotalCommentsOnMergeRequests = userMetrics.Collaboration.TotalCommentsOnMergeRequests,
+            TotalCommentsOnIssues = userMetrics.Collaboration.TotalCommentsOnIssues,
             CollaborationScore = userMetrics.Collaboration.KnowledgeSharingScore,
             
             // Productivity Metrics

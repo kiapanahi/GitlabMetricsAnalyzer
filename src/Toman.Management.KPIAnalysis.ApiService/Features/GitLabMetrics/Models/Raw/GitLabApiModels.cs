@@ -486,3 +486,155 @@ public class GitLabUserProjectContribution
     /// </summary>
     public DateTime? LastContribution { get; set; }
 }
+
+/// <summary>
+/// Represents a GitLab merge request note/discussion from the API.
+/// </summary>
+public class GitLabMergeRequestNote
+{
+    /// <summary>
+    /// The note ID.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The type of the noteable (e.g., "MergeRequest").
+    /// </summary>
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// The body of the note.
+    /// </summary>
+    public string? Body { get; set; }
+
+    /// <summary>
+    /// The attachment (if any).
+    /// </summary>
+    public string? Attachment { get; set; }
+
+    /// <summary>
+    /// The author of the note.
+    /// </summary>
+    public GitLabUser? Author { get; set; }
+
+    /// <summary>
+    /// When the note was created.
+    /// </summary>
+    public DateTime? CreatedAt { get; set; }
+
+    /// <summary>
+    /// When the note was updated.
+    /// </summary>
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Whether this is a system-generated note.
+    /// </summary>
+    public bool System { get; set; }
+
+    /// <summary>
+    /// The noteable ID (merge request IID).
+    /// </summary>
+    public long NoteableId { get; set; }
+
+    /// <summary>
+    /// The noteable IID.
+    /// </summary>
+    public long NoteableIid { get; set; }
+
+    /// <summary>
+    /// The noteable type.
+    /// </summary>
+    public string? NoteableType { get; set; }
+
+    /// <summary>
+    /// The position (for code review comments).
+    /// </summary>
+    public object? Position { get; set; }
+
+    /// <summary>
+    /// Whether the note is resolvable.
+    /// </summary>
+    public bool Resolvable { get; set; }
+
+    /// <summary>
+    /// Whether the note is resolved.
+    /// </summary>
+    public bool Resolved { get; set; }
+
+    /// <summary>
+    /// Who resolved the note.
+    /// </summary>
+    public GitLabUser? ResolvedBy { get; set; }
+
+    /// <summary>
+    /// The discussion ID.
+    /// </summary>
+    public string? DiscussionId { get; set; }
+
+    /// <summary>
+    /// Whether this is a note on a commit.
+    /// </summary>
+    public bool NoteOnCommit { get; set; }
+}
+
+/// <summary>
+/// Represents a GitLab issue note from the API.
+/// </summary>
+public class GitLabIssueNote
+{
+    /// <summary>
+    /// The note ID.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The type of the noteable (e.g., "Issue").
+    /// </summary>
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// The body of the note.
+    /// </summary>
+    public string? Body { get; set; }
+
+    /// <summary>
+    /// The attachment (if any).
+    /// </summary>
+    public string? Attachment { get; set; }
+
+    /// <summary>
+    /// The author of the note.
+    /// </summary>
+    public GitLabUser? Author { get; set; }
+
+    /// <summary>
+    /// When the note was created.
+    /// </summary>
+    public DateTime? CreatedAt { get; set; }
+
+    /// <summary>
+    /// When the note was updated.
+    /// </summary>
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Whether this is a system-generated note.
+    /// </summary>
+    public bool System { get; set; }
+
+    /// <summary>
+    /// The noteable ID (issue IID).
+    /// </summary>
+    public long NoteableId { get; set; }
+
+    /// <summary>
+    /// The noteable IID.
+    /// </summary>
+    public long NoteableIid { get; set; }
+
+    /// <summary>
+    /// The noteable type.
+    /// </summary>
+    public string? NoteableType { get; set; }
+}

@@ -556,6 +556,106 @@ public sealed class GitLabService : IGitLabService
         return rawCommits.AsReadOnly();
     }
 
+    public async Task<IReadOnlyList<RawMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching merge request notes for project {ProjectId}, MR {MergeRequestIid}", projectId, mergeRequestIid);
+
+            var notes = await _gitLabHttpClient.GetMergeRequestNotesAsync(projectId, mergeRequestIid, cancellationToken);
+
+            var rawNotes = new List<RawMergeRequestNote>();
+
+            foreach (var note in notes)
+            {
+                try
+                {
+                    var rawNote = new RawMergeRequestNote
+                    {
+                        ProjectId = projectId,
+                        ProjectName = $"Project {projectId}", // Mock project name - could be enhanced to fetch actual name
+                        MergeRequestIid = mergeRequestIid,
+                        NoteId = note.Id,
+                        AuthorId = note.Author?.Id ?? 0,
+                        AuthorName = note.Author?.Name ?? "Unknown",
+                        Body = note.Body ?? "",
+                        CreatedAt = note.CreatedAt ?? DateTimeOffset.UtcNow,
+                        UpdatedAt = note.UpdatedAt,
+                        System = note.System,
+                        Resolvable = note.Resolvable,
+                        Resolved = note.Resolved,
+                        ResolvedById = note.ResolvedBy?.Id,
+                        ResolvedBy = note.ResolvedBy?.Name,
+                        NoteableType = note.NoteableType,
+                        IngestedAt = DateTimeOffset.UtcNow
+                    };
+
+                    rawNotes.Add(rawNote);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to process merge request note {NoteId} for project {ProjectId}, MR {MergeRequestIid}", note.Id, projectId, mergeRequestIid);
+                }
+            }
+
+            _logger.LogDebug("Retrieved {NoteCount} merge request notes for project {ProjectId}, MR {MergeRequestIid}", rawNotes.Count, projectId, mergeRequestIid);
+            return rawNotes.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get merge request notes for project {ProjectId}, MR {MergeRequestIid}", projectId, mergeRequestIid);
+            return new List<RawMergeRequestNote>().AsReadOnly();
+        }
+    }
+
+    public async Task<IReadOnlyList<RawIssueNote>> GetIssueNotesAsync(long projectId, long issueIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching issue notes for project {ProjectId}, issue {IssueIid}", projectId, issueIid);
+
+            var notes = await _gitLabHttpClient.GetIssueNotesAsync(projectId, issueIid, cancellationToken);
+
+            var rawNotes = new List<RawIssueNote>();
+
+            foreach (var note in notes)
+            {
+                try
+                {
+                    var rawNote = new RawIssueNote
+                    {
+                        ProjectId = projectId,
+                        ProjectName = $"Project {projectId}", // Mock project name - could be enhanced to fetch actual name
+                        IssueIid = issueIid,
+                        NoteId = note.Id,
+                        AuthorId = note.Author?.Id ?? 0,
+                        AuthorName = note.Author?.Name ?? "Unknown",
+                        Body = note.Body ?? "",
+                        CreatedAt = note.CreatedAt ?? DateTimeOffset.UtcNow,
+                        UpdatedAt = note.UpdatedAt,
+                        System = note.System,
+                        NoteableType = note.NoteableType,
+                        IngestedAt = DateTimeOffset.UtcNow
+                    };
+
+                    rawNotes.Add(rawNote);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to process issue note {NoteId} for project {ProjectId}, issue {IssueIid}", note.Id, projectId, issueIid);
+                }
+            }
+
+            _logger.LogDebug("Retrieved {NoteCount} issue notes for project {ProjectId}, issue {IssueIid}", rawNotes.Count, projectId, issueIid);
+            return rawNotes.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get issue notes for project {ProjectId}, issue {IssueIid}", projectId, issueIid);
+            return new List<RawIssueNote>().AsReadOnly();
+        }
+    }
+
     public Task<IReadOnlyList<RawIssue>> GetIssuesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
     {
         try

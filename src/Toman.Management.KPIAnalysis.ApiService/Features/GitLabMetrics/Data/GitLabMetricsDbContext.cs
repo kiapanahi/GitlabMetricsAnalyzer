@@ -1,3 +1,6 @@
+using System;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
@@ -18,6 +21,8 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     // Raw Snapshots
     public DbSet<RawCommit> RawCommits => Set<RawCommit>();
     public DbSet<RawMergeRequest> RawMergeRequests => Set<RawMergeRequest>();
+    public DbSet<RawMergeRequestNote> RawMergeRequestNotes => Set<RawMergeRequestNote>();
+    public DbSet<RawIssueNote> RawIssueNotes => Set<RawIssueNote>();
     public DbSet<RawPipeline> RawPipelines => Set<RawPipeline>();
     public DbSet<RawJob> RawJobs => Set<RawJob>();
     public DbSet<RawIssue> RawIssues => Set<RawIssue>();
@@ -78,6 +83,11 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
     private static void ConfigureRawTables(ModelBuilder modelBuilder)
     {
+        var jsonDocumentComparer = new ValueComparer<JsonDocument?>(
+            (left, right) => JsonDocumentConverters.AreEqual(left, right),
+            value => JsonDocumentConverters.GetHashCode(value),
+            value => JsonDocumentConverters.Clone(value));
+
         modelBuilder.Entity<RawCommit>(entity =>
         {
             entity.ToTable("raw_commit");
@@ -201,10 +211,68 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.ReopenedCount).HasColumnName("reopened_count");
             entity.Property(e => e.Labels)
                 .HasColumnName("labels")
-                .HasColumnType("jsonb");
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    value => JsonDocumentConverters.ToString(value),
+                    value => JsonDocumentConverters.FromString(value))
+                .Metadata.SetValueComparer(jsonDocumentComparer);
 
             // Unique constraint on project + issue id
             entity.HasIndex(e => new { e.ProjectId, e.IssueId }).HasDatabaseName("idx_raw_issue_project_issue").IsUnique();
+        });
+
+        modelBuilder.Entity<RawMergeRequestNote>(entity =>
+        {
+            entity.ToTable("raw_merge_request_note");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
+            entity.Property(e => e.MergeRequestIid).HasColumnName("merge_request_iid");
+            entity.Property(e => e.NoteId).HasColumnName("note_id");
+            entity.Property(e => e.AuthorId).HasColumnName("author_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.Body).HasColumnName("body").HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.System).HasColumnName("system");
+            entity.Property(e => e.Resolvable).HasColumnName("resolvable");
+            entity.Property(e => e.Resolved).HasColumnName("resolved");
+            entity.Property(e => e.ResolvedById).HasColumnName("resolved_by_id");
+            entity.Property(e => e.ResolvedBy).HasColumnName("resolved_by").HasMaxLength(255);
+            entity.Property(e => e.NoteableType).HasColumnName("noteable_type").HasMaxLength(50);
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+            
+            // Indexes
+            entity.HasIndex(e => new { e.ProjectId, e.MergeRequestIid }).HasDatabaseName("idx_raw_mr_note_project_mr");
+            entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_mr_note_author");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_mr_note_created_at");
+            entity.HasIndex(e => new { e.ProjectId, e.NoteId }).HasDatabaseName("idx_raw_mr_note_project_note").IsUnique();
+        });
+
+        modelBuilder.Entity<RawIssueNote>(entity =>
+        {
+            entity.ToTable("raw_issue_note");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
+            entity.Property(e => e.IssueIid).HasColumnName("issue_iid");
+            entity.Property(e => e.NoteId).HasColumnName("note_id");
+            entity.Property(e => e.AuthorId).HasColumnName("author_id");
+            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
+            entity.Property(e => e.Body).HasColumnName("body").HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.System).HasColumnName("system");
+            entity.Property(e => e.NoteableType).HasColumnName("noteable_type").HasMaxLength(50);
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+            
+            // Indexes
+            entity.HasIndex(e => new { e.ProjectId, e.IssueIid }).HasDatabaseName("idx_raw_issue_note_project_issue");
+            entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_issue_note_author");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_issue_note_created_at");
+            entity.HasIndex(e => new { e.ProjectId, e.NoteId }).HasDatabaseName("idx_raw_issue_note_project_note").IsUnique();
         });
     }
 
@@ -332,5 +400,35 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.LastSeenUpdatedAt).HasColumnName("last_seen_updated_at");
             entity.Property(e => e.LastRunAt).HasColumnName("last_run_at");
         });
+    }
+
+    private static class JsonDocumentConverters
+    {
+        public static bool AreEqual(JsonDocument? left, JsonDocument? right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+
+            if (left is null || right is null)
+                return false;
+
+            return left.RootElement.GetRawText() == right.RootElement.GetRawText();
+        }
+
+        public static int GetHashCode(JsonDocument? value)
+            => value is null
+                ? 0
+                : HashCode.Combine(value.RootElement.GetRawText());
+
+        public static JsonDocument? Clone(JsonDocument? value)
+            => value is null
+                ? null
+                : JsonDocument.Parse(value.RootElement.GetRawText());
+
+        public static string? ToString(JsonDocument? value)
+            => value is null ? null : value.RootElement.GetRawText();
+
+        public static JsonDocument? FromString(string? value)
+            => string.IsNullOrWhiteSpace(value) ? null : JsonDocument.Parse(value);
     }
 }
