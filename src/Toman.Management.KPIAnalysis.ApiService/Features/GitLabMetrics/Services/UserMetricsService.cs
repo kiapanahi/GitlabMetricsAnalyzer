@@ -338,36 +338,39 @@ public sealed class UserMetricsService : IUserMetricsService
                     var pipelines = await _gitLabService.GetPipelinesAsync(project.Id, fromDate, cancellationToken);
                     var userPipelines = pipelines.Where(p => p.AuthorUserId == userId).ToList();
 
-                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
-                        project.Id, commits.Count, userMRs.Count, userPipelines.Count);
+                    // Get issues for this project
+                    var issues = await _gitLabService.GetIssuesAsync(project.Id, fromDate, cancellationToken);
+                    var userIssues = issues.Where(issue => issue.AuthorUserId == userId || issue.AssigneeUserId == userId).ToList();
 
-                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines);
+                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines, {IssueCount} issues",
+                        project.Id, commits.Count, userMRs.Count, userPipelines.Count, userIssues.Count);
+
+                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines, issues: userIssues);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to fetch data from project {ProjectId} for user {UserId}", project.Id, userId);
                     return (commits: new List<Models.Raw.RawCommit>(),
                            mergeRequests: new List<Models.Raw.RawMergeRequest>(),
-                           pipelines: new List<Models.Raw.RawPipeline>());
+                           pipelines: new List<Models.Raw.RawPipeline>(),
+                           issues: new List<Models.Raw.RawIssue>());
                 }
             });
 
             var projectResults = await Task.WhenAll(projectTasks);
 
             // Aggregate results from all projects
-            foreach (var (commits, mergeRequests, pipelines) in projectResults)
+            foreach (var (commits, mergeRequests, pipelines, issues) in projectResults)
             {
                 allCommits.AddRange(commits.Where(c => c.CommittedAt >= fromDate && c.CommittedAt < toDate));
                 allMergeRequests.AddRange(mergeRequests.Where(mr => mr.CreatedAt >= fromDate && mr.CreatedAt < toDate));
                 allPipelines.AddRange(pipelines.Where(p => p.CreatedAt >= fromDate && p.CreatedAt < toDate));
+                allIssues.AddRange(issues.Where(i => i.CreatedAt >= fromDate && i.CreatedAt < toDate));
             }
 
-            // Note: Issues are typically project-scoped and would need additional API calls
-            // For now, returning empty list - this could be enhanced later
-            _logger.LogDebug("Issue fetching not implemented in on-demand mode yet");
-
-            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
-                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count);
+            // Issue fetching is now implemented in on-demand mode
+            _logger.LogInformation("Fetched on-demand data for user {UserId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines, {IssueCount} issues",
+                userId, allCommits.Count, allMergeRequests.Count, allPipelines.Count, allIssues.Count);
         }
         catch (Exception ex)
         {
@@ -479,6 +482,7 @@ public sealed class UserMetricsService : IUserMetricsService
     private static UserIssueManagementMetrics CalculateIssueManagementMetrics(List<Models.Raw.RawIssue> issues)
     {
         var issuesCreated = issues.Count;
+        var issuesAssigned = issues.Count(i => i.AssigneeUserId.HasValue);
         var issuesResolved = issues.Count(i => i.ClosedAt.HasValue);
 
         var resolvedIssues = issues.Where(i => i.ClosedAt.HasValue).ToList();
@@ -491,6 +495,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserIssueManagementMetrics(
             issuesCreated,
+            issuesAssigned,
             issuesResolved,
             averageIssueResolutionTime,
             issueResolutionRate,

@@ -87,7 +87,7 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             
             // Issue Management Metrics
             TotalIssuesCreated = userMetrics.IssueManagement.IssuesCreated,
-            TotalIssuesAssigned = userMetrics.IssueManagement.IssuesCreated, // Approximation
+            TotalIssuesAssigned = userMetrics.IssueManagement.IssuesAssigned, // Now uses actual assigned issues data
             TotalIssuesClosed = userMetrics.IssueManagement.IssuesResolved,
             AverageIssueResolutionTimeHours = userMetrics.IssueManagement.AverageIssueResolutionTime?.TotalHours ?? 0,
             
