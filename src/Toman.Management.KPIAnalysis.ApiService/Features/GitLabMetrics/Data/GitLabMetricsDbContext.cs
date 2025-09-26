@@ -26,7 +26,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     // Legacy Tables (to be phased out)
     public DbSet<DimUser> DimUsers => Set<DimUser>();
     public DbSet<DimBranch> DimBranches => Set<DimBranch>();
-    public DbSet<DimRelease> DimReleases => Set<DimRelease>();
 
     // Raw Snapshots
     public DbSet<RawCommit> RawCommits => Set<RawCommit>();
@@ -38,8 +37,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     // Legacy Facts (to be phased out or refactored)
     public DbSet<FactMergeRequest> FactMergeRequests => Set<FactMergeRequest>();
     public DbSet<FactPipeline> FactPipelines => Set<FactPipeline>();
-    public DbSet<FactGitHygiene> FactGitHygiene => Set<FactGitHygiene>();
-    public DbSet<FactRelease> FactReleases => Set<FactRelease>();
     public DbSet<FactUserMetrics> FactUserMetrics => Set<FactUserMetrics>();
 
     // Operational
@@ -289,16 +286,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.Branch).HasColumnName("branch").HasMaxLength(255);
             entity.Property(e => e.ProtectedFlag).HasColumnName("protected_flag");
         });
-
-        modelBuilder.Entity<DimRelease>(entity =>
-        {
-            entity.ToTable("dim_release");
-            entity.HasKey(e => new { e.ProjectId, e.TagName });
-            entity.Property(e => e.ProjectId).HasColumnName("project_id");
-            entity.Property(e => e.TagName).HasColumnName("tag_name").HasMaxLength(255);
-            entity.Property(e => e.ReleasedAt).HasColumnName("released_at");
-            entity.Property(e => e.SemverValid).HasColumnName("semver_valid");
-        });
     }
 
     private static void ConfigureRawTables(ModelBuilder modelBuilder)
@@ -472,27 +459,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.IsRollback).HasColumnName("is_rollback");
             entity.Property(e => e.IsFlakyCandidate).HasColumnName("is_flaky_candidate");
             entity.Property(e => e.DurationSec).HasColumnName("duration_sec");
-        });
-
-        modelBuilder.Entity<FactGitHygiene>(entity =>
-        {
-            entity.ToTable("fact_git_hygiene");
-            entity.HasKey(e => new { e.ProjectId, e.Day });
-            entity.Property(e => e.ProjectId).HasColumnName("project_id");
-            entity.Property(e => e.Day).HasColumnName("day");
-            entity.Property(e => e.DirectPushesDefault).HasColumnName("direct_pushes_default");
-            entity.Property(e => e.ForcePushesProtected).HasColumnName("force_pushes_protected");
-            entity.Property(e => e.UnsignedCommitCount).HasColumnName("unsigned_commit_count");
-        });
-
-        modelBuilder.Entity<FactRelease>(entity =>
-        {
-            entity.ToTable("fact_release");
-            entity.HasKey(e => new { e.TagName, e.ProjectId });
-            entity.Property(e => e.TagName).HasColumnName("tag_name").HasMaxLength(255);
-            entity.Property(e => e.ProjectId).HasColumnName("project_id");
-            entity.Property(e => e.IsSemver).HasColumnName("is_semver");
-            entity.Property(e => e.CadenceBucket).HasColumnName("cadence_bucket").HasMaxLength(50);
         });
 
         modelBuilder.Entity<FactUserMetrics>(entity =>
