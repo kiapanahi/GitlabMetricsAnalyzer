@@ -73,10 +73,10 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             
             // Code Review Metrics
             TotalMergeRequestsCreated = userMetrics.CodeReview.MergeRequestsCreated,
-            TotalMergeRequestsMerged = userMetrics.CodeReview.ApprovalsReceived, // Approximation
+            TotalMergeRequestsMerged = userMetrics.CodeReview.MergeRequestsMerged,
             TotalMergeRequestsReviewed = userMetrics.CodeReview.MergeRequestsReviewed,
             AverageMergeRequestCycleTimeHours = userMetrics.CodeReview.AverageMRCycleTime?.TotalHours ?? 0,
-            MergeRequestMergeRate = 1.0 - userMetrics.CodeReview.SelfMergeRate, // Inverse approximation
+            MergeRequestMergeRate = userMetrics.CodeReview.MergeRequestMergeRate,
             
             // Quality Metrics
             TotalPipelinesTriggered = userMetrics.Quality.PipelineFailures + (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation

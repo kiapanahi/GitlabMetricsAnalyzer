@@ -429,6 +429,8 @@ public sealed class UserMetricsService : IUserMetricsService
         var averageMRSize = mergeRequests.Count > 0 ? mergeRequests.Average(mr => mr.ChangesCount) : 0;
 
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
+        var mergeRequestsMerged = mergedMRs.Count;
+        var mergeRequestMergeRate = mergeRequestsCreated > 0 ? (double)mergeRequestsMerged / mergeRequestsCreated : 0;
         var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
@@ -451,7 +453,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         var reviewParticipationRate = totalPossibleReviews > 0 ? (double)mergeRequestsReviewed / totalPossibleReviews : 0;
 
-        var approvalsGiven = reviewedMRs.Sum(mr => mr.ApprovalsGiven); // This would need more detailed tracking
+        var approvalsGiven = reviewedMRs.Sum(mr => mr.ApprovalsGiven);
         var approvalsReceived = mergeRequests.Sum(mr => mr.ApprovalsGiven);
 
         // Self-merge rate (MRs merged without external review)
@@ -460,6 +462,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         return new UserCodeReviewMetrics(
             mergeRequestsCreated,
+            mergeRequestsMerged,
             mergeRequestsReviewed,
             averageMRSize,
             averageMRCycleTime,
@@ -468,7 +471,8 @@ public sealed class UserMetricsService : IUserMetricsService
             reviewParticipationRate,
             approvalsGiven,
             approvalsReceived,
-            selfMergeRate
+            selfMergeRate,
+            mergeRequestMergeRate
         );
     }
 
