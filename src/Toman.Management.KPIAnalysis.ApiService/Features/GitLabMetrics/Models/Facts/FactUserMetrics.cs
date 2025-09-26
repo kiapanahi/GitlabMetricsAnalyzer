@@ -69,6 +69,12 @@ public sealed class FactUserMetrics
     public int TotalCommentsOnMergeRequests { get; init; }
     public double CollaborationScore { get; init; }
     
+    // Productivity Metrics
+    public double ProductivityScore { get; init; }
+    public string? ProductivityLevel { get; init; } // High, Medium, Low
+    public double CodeChurnRate { get; init; }
+    public double ReviewThroughput { get; init; }
+    
     // Metadata
     public int TotalDataPoints { get; init; }
     public string? DataQuality { get; init; } // Excellent, Good, Fair, Poor

@@ -313,6 +313,12 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.TotalCommentsOnMergeRequests).HasColumnName("total_comments_on_merge_requests");
             entity.Property(e => e.CollaborationScore).HasColumnName("collaboration_score").HasPrecision(5, 2);
             
+            // Productivity Metrics
+            entity.Property(e => e.ProductivityScore).HasColumnName("productivity_score").HasPrecision(5, 2);
+            entity.Property(e => e.ProductivityLevel).HasColumnName("productivity_level").HasMaxLength(50);
+            entity.Property(e => e.CodeChurnRate).HasColumnName("code_churn_rate").HasPrecision(5, 4);
+            entity.Property(e => e.ReviewThroughput).HasColumnName("review_throughput").HasPrecision(10, 2);
+            
             // Metadata
             entity.Property(e => e.TotalDataPoints).HasColumnName("total_data_points");
             entity.Property(e => e.DataQuality).HasColumnName("data_quality").HasMaxLength(50);

@@ -169,14 +169,10 @@ public sealed class UserMetricsService : IUserMetricsService
                     var pipelines = await _gitLabService.GetPipelinesAsync(project.Id, fromDate, cancellationToken);
                     var userPipelines = pipelines.Where(p => p.AuthorUserId == userId).ToList();
 
-                    // Get issues for this project
-                    var issues = await _gitLabService.GetIssuesAsync(project.Id, fromDate, cancellationToken);
-                    var userIssues = issues.Where(issue => issue.AuthorUserId == userId || issue.AssigneeUserId == userId).ToList();
+                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
+                        project.Id, commits.Count, userMRs.Count, userPipelines.Count);
 
-                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines, {IssueCount} issues",
-                        project.Id, commits.Count, userMRs.Count, userPipelines.Count, userIssues.Count);
-
-                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines, issues: userIssues);
+                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines, reviewedMRs: new List<Models.Raw.RawMergeRequest>());
                 }
                 catch (Exception ex)
                 {
@@ -578,6 +574,26 @@ public sealed class UserMetricsService : IUserMetricsService
         return uniqueReviewees >= 4 ? 1 : 0; // Some mentorship if reviewing many people
     }
 
+    /// <summary>
+    /// Calculate numeric productivity score based on key metrics
+    /// </summary>
+    private static double CalculateNumericProductivityScore(int commitsCount, int mergeRequestsCount, double pipelineSuccessRate, double daysDiff)
+    {
+        // Normalize metrics per day
+        var commitsPerDay = commitsCount / daysDiff;
+        var mrsPerDay = mergeRequestsCount / daysDiff;
+        
+        // Weight different components
+        var commitScore = Math.Min(commitsPerDay * 2, 3.0); // Cap commits contribution at 3 points
+        var mrScore = Math.Min(mrsPerDay * 3, 4.0); // Cap MR contribution at 4 points  
+        var qualityScore = pipelineSuccessRate * 3.0; // Quality contributes up to 3 points
+        
+        var totalScore = commitScore + mrScore + qualityScore;
+        
+        // Normalize to 0-10 scale
+        return Math.Min(totalScore, 10.0);
+    }
+
     private static void ValidateDateRange(DateTimeOffset fromDate, DateTimeOffset toDate)
     {
         if (toDate <= fromDate)
@@ -621,6 +637,67 @@ public sealed class UserMetricsService : IUserMetricsService
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Get user metrics trends over time
+    /// </summary>
+    public async Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default)
+    {
+        // TODO: Implement trends functionality as part of PRD refactoring
+        // This is a placeholder implementation
+        var user = await GetUserInfoAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User with ID {userId} not found");
+        }
+
+        return new UserMetricsTrendsResponse(
+            userId,
+            user.Username ?? $"user_{userId}",
+            fromDate,
+            toDate,
+            period,
+            new List<UserMetricsTrendPoint>(), // Empty for now
+            new MetricsMetadata(
+                DateTimeOffset.UtcNow,
+                "GitLab API",
+                0,
+                null
+            )
+        );
+    }
+
+    /// <summary>
+    /// Get user metrics comparison with peers
+    /// </summary>
+    public async Task<UserMetricsComparisonResponse> GetUserMetricsComparisonAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, List<long>? compareWith = null, CancellationToken cancellationToken = default)
+    {
+        // TODO: Implement comparison functionality as part of PRD refactoring
+        // This is a placeholder implementation
+        var user = await GetUserInfoAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User with ID {userId} not found");
+        }
+
+        var userMetrics = await GetSingleUserMetricsForComparison(userId, fromDate, toDate, user, cancellationToken);
+
+        return new UserMetricsComparisonResponse(
+            userId,
+            user.Username ?? $"user_{userId}",
+            fromDate,
+            toDate,
+            userMetrics,
+            new UserMetricsComparisonData(null, "Team Average", 0, 0, 0, null, 0, 0),
+            new List<UserMetricsComparisonData>(), // Empty for now
+            new MetricsMetadata(
+                DateTimeOffset.UtcNow,
+                "GitLab API",
+                1,
+                null
+            )
+        );
     }
 
     #endregion

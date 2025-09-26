@@ -14,6 +14,16 @@ public interface IUserMetricsService
     /// Get a summary of key metrics for a user
     /// </summary>
     Task<UserMetricsSummaryResponse> GetUserMetricsSummaryAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Get user metrics trends over time
+    /// </summary>
+    Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Get user metrics comparison with peers
+    /// </summary>
+    Task<UserMetricsComparisonResponse> GetUserMetricsComparisonAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, List<long>? compareWith = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -155,7 +165,8 @@ public sealed record UserMetricsComparisonData(
     int TotalMergeRequests,
     double PipelineSuccessRate,
     TimeSpan? AverageMRCycleTime,
-    int TotalLinesChanged
+    int TotalLinesChanged,
+    double ProductivityScore
 );
 
 /// <summary>
