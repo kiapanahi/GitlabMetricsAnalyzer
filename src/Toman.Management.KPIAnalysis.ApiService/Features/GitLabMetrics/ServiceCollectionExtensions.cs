@@ -7,6 +7,7 @@ using Polly.CircuitBreaker;
 
 using Quartz;
 
+using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
@@ -25,6 +26,7 @@ internal static class ServiceCollectionExtensions
 
         // Add configurations
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
+        builder.Services.Configure<MetricsConfiguration>(builder.Configuration.GetSection(MetricsConfiguration.SectionName));
 
         // Add database
         builder.AddNpgsqlDbContext<GitLabMetricsDbContext>(Constants.Keys.PostgresDatabase, configureDbContextOptions: options =>
@@ -42,6 +44,7 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IUserMetricsService, UserMetricsService>();
         builder.Services.AddScoped<IUserMetricsCollectionService, UserMetricsCollectionService>();
         builder.Services.AddScoped<IUserSyncService, UserSyncService>();
+        builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
 
         // Add HTTP client for GitLab API calls (mock in development, real in production)
         if (builder.Environment.IsDevelopment())
