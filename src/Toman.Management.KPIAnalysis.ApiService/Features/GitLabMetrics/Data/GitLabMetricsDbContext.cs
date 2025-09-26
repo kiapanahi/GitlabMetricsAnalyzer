@@ -311,7 +311,14 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             
             // Collaboration Metrics
             entity.Property(e => e.TotalCommentsOnMergeRequests).HasColumnName("total_comments_on_merge_requests");
+            entity.Property(e => e.TotalCommentsOnIssues).HasColumnName("total_comments_on_issues");
             entity.Property(e => e.CollaborationScore).HasColumnName("collaboration_score").HasPrecision(5, 2);
+            
+            // Issue Management Metrics (to be removed in PRD refactoring)
+            entity.Property(e => e.TotalIssuesCreated).HasColumnName("total_issues_created");
+            entity.Property(e => e.TotalIssuesAssigned).HasColumnName("total_issues_assigned");
+            entity.Property(e => e.TotalIssuesClosed).HasColumnName("total_issues_closed");
+            entity.Property(e => e.AverageIssueResolutionTimeHours).HasColumnName("average_issue_resolution_time_hours").HasPrecision(10, 2);
             
             // Productivity Metrics
             entity.Property(e => e.ProductivityScore).HasColumnName("productivity_score").HasPrecision(5, 2);

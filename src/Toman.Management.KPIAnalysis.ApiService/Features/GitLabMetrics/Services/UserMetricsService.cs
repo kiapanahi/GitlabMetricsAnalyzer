@@ -60,6 +60,25 @@ public sealed class UserMetricsService : IUserMetricsService
                    .Max()
         );
 
+        // Create placeholder issue management metrics (to be removed in PRD refactoring)
+        var issueManagement = new UserIssueManagementMetrics(
+            IssuesCreated: 0,
+            IssuesAssigned: 0,
+            IssuesResolved: 0,
+            AverageIssueResolutionTime: null,
+            IssueResolutionRate: 0.0,
+            ReopenedIssues: 0
+        );
+
+        // Create placeholder productivity metrics (to be removed in PRD refactoring)
+        var productivity = new UserProductivityMetrics(
+            VelocityScore: 0.0,
+            EfficiencyScore: 0.0,
+            ImpactScore: 0.0,
+            ProductivityTrend: "Stable",
+            FocusTimeHours: 0.0
+        );
+
         return new UserMetricsResponse(
             userId,
             user.Username ?? $"user_{userId}",
@@ -68,8 +87,10 @@ public sealed class UserMetricsService : IUserMetricsService
             toDate,
             codeContribution,
             codeReview,
+            issueManagement,
             collaboration,
             quality,
+            productivity,
             metadata
         );
     }
@@ -187,7 +208,7 @@ public sealed class UserMetricsService : IUserMetricsService
             var projectResults = await Task.WhenAll(projectTasks);
 
             // Aggregate results from all projects
-            foreach (var (commits, mergeRequests, pipelines, reviewedMRs) in projectResults)
+            foreach (var (commits, mergeRequests, pipelines, projectReviewedMRs) in projectResults)
             {
                 allCommits.AddRange(commits.Where(c => c.CommittedAt >= fromDate && c.CommittedAt < toDate));
                 allMergeRequests.AddRange(mergeRequests.Where(mr => mr.CreatedAt >= fromDate && mr.CreatedAt < toDate));
@@ -341,7 +362,8 @@ public sealed class UserMetricsService : IUserMetricsService
             crossTeamCollaborations,
             knowledgeSharingScore,
             mentorshipActivities,
-            totalCommentsOnMergeRequests
+            totalCommentsOnMergeRequests,
+            0 // TotalCommentsOnIssues - placeholder for PRD refactoring
         );
     }
 
@@ -387,7 +409,7 @@ public sealed class UserMetricsService : IUserMetricsService
         var user = await GetUserInfoAsync(userId, cancellationToken);
         if (user is null) return null;
 
-        var (commits, mergeRequests, pipelines, _, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
+        var (commits, mergeRequests, pipelines, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
 
         var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
         var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
@@ -697,6 +719,37 @@ public sealed class UserMetricsService : IUserMetricsService
                 1,
                 null
             )
+        );
+    }
+
+    /// <summary>
+    /// Get single user metrics for comparison purposes
+    /// </summary>
+    private async Task<UserMetricsComparisonData> GetSingleUserMetricsForComparison(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, GitLabUser user, CancellationToken cancellationToken)
+    {
+        var (commits, mergeRequests, pipelines, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
+
+        var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
+        var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
+
+        var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
+        var averageMRCycleTime = mergedMRs.Count > 0
+            ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
+            : (TimeSpan?)null;
+
+        var totalLinesChanged = commits.Sum(c => c.Additions + c.Deletions);
+        var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
+        var productivityScore = CalculateNumericProductivityScore(commits.Count, mergeRequests.Count, pipelineSuccessRate, daysDiff);
+
+        return new UserMetricsComparisonData(
+            userId,
+            user.Username ?? $"user_{userId}",
+            commits.Count,
+            mergeRequests.Count,
+            pipelineSuccessRate,
+            averageMRCycleTime,
+            totalLinesChanged,
+            productivityScore
         );
     }
 

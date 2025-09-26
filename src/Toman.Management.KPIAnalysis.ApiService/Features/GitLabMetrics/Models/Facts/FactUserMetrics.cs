@@ -67,7 +67,14 @@ public sealed class FactUserMetrics
     
     // Collaboration Metrics
     public int TotalCommentsOnMergeRequests { get; init; }
+    public int TotalCommentsOnIssues { get; init; }
     public double CollaborationScore { get; init; }
+    
+    // Issue Management Metrics (to be removed in PRD refactoring)
+    public int TotalIssuesCreated { get; init; }
+    public int TotalIssuesAssigned { get; init; }
+    public int TotalIssuesClosed { get; init; }
+    public double AverageIssueResolutionTimeHours { get; init; }
     
     // Productivity Metrics
     public double ProductivityScore { get; init; }

@@ -37,8 +37,10 @@ public sealed record UserMetricsResponse(
     DateTimeOffset ToDate,
     UserCodeContributionMetrics CodeContribution,
     UserCodeReviewMetrics CodeReview,
+    UserIssueManagementMetrics IssueManagement, // To be removed in PRD refactoring
     UserCollaborationMetrics Collaboration,
     UserQualityMetrics Quality,
+    UserProductivityMetrics Productivity, // To be removed in PRD refactoring
     MetricsMetadata Metadata
 );
 
@@ -129,7 +131,31 @@ public sealed record UserCollaborationMetrics(
     int CrossTeamCollaborations,
     double KnowledgeSharingScore,
     int MentorshipActivities,
-    int TotalCommentsOnMergeRequests
+    int TotalCommentsOnMergeRequests,
+    int TotalCommentsOnIssues // To be removed in PRD refactoring
+);
+
+/// <summary>
+/// Issue management metrics (to be removed in PRD refactoring)
+/// </summary>
+public sealed record UserIssueManagementMetrics(
+    int IssuesCreated,
+    int IssuesAssigned,
+    int IssuesResolved,
+    TimeSpan? AverageIssueResolutionTime,
+    double IssueResolutionRate,
+    int ReopenedIssues
+);
+
+/// <summary>
+/// Productivity metrics (to be removed in PRD refactoring)  
+/// </summary>
+public sealed record UserProductivityMetrics(
+    double VelocityScore,
+    double EfficiencyScore,
+    double ImpactScore,
+    string ProductivityTrend,
+    double FocusTimeHours
 );
 
 /// <summary>
