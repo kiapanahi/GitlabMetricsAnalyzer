@@ -34,37 +34,11 @@ public static class UserMetricsEndpoints
             .Produces(404)
             .Produces(500);
 
-        group.MapGet("/{userId}/metrics/trends", GetUserMetricsTrends)
-            .WithName("GetUserMetricsTrends")
-            .WithSummary("Get trend data for user metrics over time")
-            .WithDescription("Returns time-series data showing how the user's metrics have changed over the specified period.")
-            .Produces<UserMetricsTrendsResponse>(200)
-            .Produces(400)
-            .Produces(404)
-            .Produces(500);
-
-        group.MapGet("/{userId}/metrics/comparison", GetUserMetricsComparison)
-            .WithName("GetUserMetricsComparison")
-            .WithSummary("Compare user metrics with team/organization averages")
-            .WithDescription("Returns comparative analysis showing how the user's performance compares to their peers and team averages.")
-            .Produces<UserMetricsComparisonResponse>(200)
-            .Produces(400)
-            .Produces(404)
-            .Produces(500);
-
         group.MapPost("/sync", SyncUsers)
             .WithName("SyncUsers")
             .WithSummary("Synchronize users from GitLab to the system")
             .WithDescription("Manually trigger user synchronization from GitLab API to populate the DimUsers table.")
             .Produces<SyncUsersResponse>(200)
-            .Produces(500);
-
-        group.MapGet("/debug/{userId}/commits", GetUserCommitsByEmail)
-            .WithName("GetUserCommitsByEmail")
-            .WithSummary("Debug endpoint to test on-demand commit fetching")
-            .WithDescription("Fetches user info and commits directly from GitLab API using the user's GitLab ID, bypassing the need for pre-synced data.")
-            .Produces<UserCommitsDebugResponse>(200)
-            .Produces(404)
             .Produces(500);
 
         return app;

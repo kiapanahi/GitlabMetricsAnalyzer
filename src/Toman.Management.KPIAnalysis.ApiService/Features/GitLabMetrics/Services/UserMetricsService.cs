@@ -380,38 +380,7 @@ public sealed class UserMetricsService : IUserMetricsService
         );
     }
 
-    private static UserProductivityMetrics CalculateProductivityMetrics(
-        List<Models.Raw.RawCommit> commits,
-        List<Models.Raw.RawMergeRequest> mergeRequests,
-        List<Models.Raw.RawPipeline> pipelines,
-        DateTimeOffset fromDate,
-        DateTimeOffset toDate)
-    {
-        var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
 
-        // Velocity score based on commits and MRs
-        var velocityScore = CalculateVelocityScore(commits.Count, mergeRequests.Count, daysDiff);
-
-        // Efficiency score based on pipeline success rate and MR cycle time
-        var efficiencyScore = CalculateEfficiencyScore(pipelines, mergeRequests);
-
-        // Impact score based on lines changed and MR complexity
-        var impactScore = CalculateImpactScore(commits, mergeRequests);
-
-        // Productivity trend would need historical comparison
-        var productivityTrend = "Stable"; // Placeholder
-
-        // Focus time estimation based on commit patterns
-        var focusTimeHours = EstimateFocusTime(commits, daysDiff);
-
-        return new UserProductivityMetrics(
-            velocityScore,
-            efficiencyScore,
-            impactScore,
-            productivityTrend,
-            focusTimeHours
-        );
-    }
 
     private async Task<UserMetricsComparisonData?> CalculateComparisonMetricsForUserAsync(
         long userId,
@@ -481,28 +450,9 @@ public sealed class UserMetricsService : IUserMetricsService
 
     #region Calculation Helpers
 
-    private static string CalculateProductivityScore(int commits, int mergeRequests, double pipelineSuccessRate, double days)
-    {
-        var score = CalculateNumericProductivityScore(commits, mergeRequests, pipelineSuccessRate, days);
 
-        return score switch
-        {
-            >= 7.5 => "High",
-            >= 5.0 => "Medium",
-            _ => "Low"
-        };
-    }
 
-    private static double CalculateNumericProductivityScore(int commits, int mergeRequests, double pipelineSuccessRate, double days)
-    {
-        var commitsPerDay = commits / Math.Max(1, days);
-        var mrsPerWeek = mergeRequests / Math.Max(1, days / 7);
 
-        // Weighted scoring algorithm
-        var score = (commitsPerDay * 2) + (mrsPerWeek * 3) + (pipelineSuccessRate * 5);
-
-        return Math.Min(10, Math.Max(0, score));
-    }
 
     private static List<long> ParseReviewerIds(string reviewerIds)
     {
@@ -541,60 +491,15 @@ public sealed class UserMetricsService : IUserMetricsService
         return Math.Min(10, (diversityScore + activityScore) / 2);
     }
 
-    private static double CalculateVelocityScore(int commits, int mergeRequests, double days)
-    {
-        var commitsPerDay = commits / Math.Max(1, days);
-        var mrsPerWeek = mergeRequests / Math.Max(1, days / 7);
 
-        return Math.Min(10, (commitsPerDay * 2) + (mrsPerWeek * 3));
-    }
 
-    private static double CalculateEfficiencyScore(List<Models.Raw.RawPipeline> pipelines, List<Models.Raw.RawMergeRequest> mergeRequests)
-    {
-        var pipelineSuccessRate = pipelines.Count > 0 ? pipelines.Count(p => p.IsSuccessful) / (double)pipelines.Count : 0;
 
-        var quickMRs = mergeRequests.Count(mr => mr.CycleTime?.TotalDays <= 2);
-        var quickMRRate = mergeRequests.Count > 0 ? quickMRs / (double)mergeRequests.Count : 0;
 
-        return Math.Min(10, (pipelineSuccessRate * 5) + (quickMRRate * 5));
-    }
 
-    private static double CalculateImpactScore(List<Models.Raw.RawCommit> commits, List<Models.Raw.RawMergeRequest> mergeRequests)
-    {
-        var totalLinesChanged = commits.Sum(c => c.Additions + c.Deletions);
-        var averageCommitSize = commits.Count > 0 ? totalLinesChanged / (double)commits.Count : 0;
-        var averageMRSize = mergeRequests.Count > 0 ? mergeRequests.Average(mr => mr.ChangesCount) : 0;
 
-        // Score based on reasonable change sizes (not too small, not too large)
-        var commitSizeScore = CalculateOptimalSizeScore(averageCommitSize, 50, 200);
-        var mrSizeScore = CalculateOptimalSizeScore(averageMRSize, 100, 500);
 
-        return Math.Min(10, (commitSizeScore + mrSizeScore) / 2);
-    }
 
-    private static double CalculateOptimalSizeScore(double size, double optimalMin, double optimalMax)
-    {
-        if (size >= optimalMin && size <= optimalMax)
-            return 10;
 
-        if (size < optimalMin)
-            return Math.Max(0, 10 * (size / optimalMin));
-
-        return Math.Max(0, 10 * (optimalMax / size));
-    }
-
-    private static int EstimateFocusTime(List<Models.Raw.RawCommit> commits, double days)
-    {
-        // Estimate focus time based on commit patterns
-        // Commits close together in time suggest focused work sessions
-        var commitDays = commits.GroupBy(c => c.CommittedAt.Date).Count();
-        var avgCommitsPerActiveDay = commitDays > 0 ? commits.Count / (double)commitDays : 0;
-
-        // Estimate 2-4 hours of focus time per day with commits
-        var estimatedHoursPerDay = Math.Min(8, Math.Max(1, avgCommitsPerActiveDay * 0.5));
-
-        return (int)(commitDays * estimatedHoursPerDay);
-    }
 
     /// <summary>
     /// Calculate actual merge request comments count for the user
@@ -629,32 +534,7 @@ public sealed class UserMetricsService : IUserMetricsService
     /// <summary>
     /// Calculate actual issue comments count for the user
     /// </summary>
-    private Task<int> CalculateIssueCommentsCountAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Calculate estimate based on issue activity patterns  
-            // This replaces the previous approximation using MentorshipActivities as a proxy
-            var userIssues = _dbContext.RawIssues
-                .Where(issue => issue.AuthorUserId == 0) // TODO: Add proper user filtering when we have user context
-                .Count();
-            
-            // Evidence-based estimation: issue creators typically engage in follow-up discussion
-            var estimatedComments = userIssues * 2; // Average 2-3 comments per issue created
-            
-            // TODO: Replace with actual database query when comment ingestion is implemented:
-            // var actualComments = await _dbContext.RawIssueNotes
-            //     .Where(note => !note.System && note.AuthorId == userId)
-            //     .CountAsync(cancellationToken);
-            
-            return Task.FromResult(estimatedComments);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to calculate issue comments count");
-            return Task.FromResult(0);
-        }
-    }
+
 
     /// <summary>
     /// Calculate cross-team collaborations based on project diversity
