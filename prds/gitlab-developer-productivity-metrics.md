@@ -4,7 +4,7 @@
 **Tech Leads:** Platform (Data/Observability), DevEx
 **Date:** 2025‑09‑26
 **Status:** Draft for build
-**Target stack:** C#/.NET (ASP.NET Core) services orchestrated with **.NET Aspire**; background Worker Services; TS/React dashboard; **storage: Postgres only (v1)** (no object storage).
+**Target stack:** C#/.NET (ASP.NET Core) services orchestrated with **.NET Aspire**; background Worker Services *(automated scheduling deferred to vNext)*; TS/React dashboard; **storage: Postgres only (v1)** (no object storage).
 
 ---
 
@@ -342,34 +342,41 @@ We need a reliable, low‑friction way to quantify developer flow, collaboration
 
 ## 8) Configuration
 
-YAML (checked into repo):
+JSON (checked into repo as `config.json`):
 
-```yaml
-windows:
-  default_days: 28
-  alt_days: [14, 90]
-project_scope:
-  include: ["group/backend/**", "group/frontend/**"]
-  exclude: ["group/archived/**"]
-file_excludes:
-  - "**/package-lock.json"
-  - "**/yarn.lock"
-  - "**/dist/**"
-  - "**/vendor/**"
-  - "**/*.min.js"
-identity:
-  bot_regex:
-    - ".*bot.*"
-    - ".*ci.*"
-  overrides:
-    - { alias: "john.d@toman.ir", canonical: "john@toman.ir" }
-metrics:
-  small_mr_loc_threshold: 400
-  flaky_window_hours: 2
-  hotfix_labels: ["hotfix", "hot-fix"]
-auth:
-  gitlab_base_url: "https://gitlab.qcluster.org"
-  token_env: "GITLAB_TOKEN"
+```json
+{
+  "windows": {
+    "default_days": 28,
+    "alt_days": [14, 90]
+  },
+  "project_scope": {
+    "include": ["group/backend/**", "group/frontend/**"],
+    "exclude": ["group/archived/**"]
+  },
+  "file_excludes": [
+    "**/package-lock.json",
+    "**/yarn.lock",
+    "**/dist/**",
+    "**/vendor/**",
+    "**/*.min.js"
+  ],
+  "identity": {
+    "bot_regex": [".*bot.*", ".*ci.*"],
+    "overrides": [
+      { "alias": "john.d@toman.ir", "canonical": "john@toman.ir" }
+    ]
+  },
+  "metrics": {
+    "small_mr_loc_threshold": 400,
+    "flaky_window_hours": 2,
+    "hotfix_labels": ["hotfix", "hot-fix"]
+  },
+  "auth": {
+    "gitlab_base_url": "https://gitlab.qcluster.org",
+    "token_env": "GITLAB_TOKEN"
+  }
+}
 ```
 
 ---
@@ -382,6 +389,7 @@ Schema:
 
 ```json
 {
+  "schema_version": "developer_metrics.v1",
   "developer_id": "string",
   "canonical_email": "string",
   "window_start": "ISO-8601",
@@ -432,9 +440,16 @@ One file `metric_catalog.json` with entries like:
 
 ### 9.3 REST API (Internal)
 
-* `GET /v1/metrics/developers?window_days=28&from=2025-09-01&to=2025-09-28&project=group/backend/*`
-* `GET /v1/metrics/developers/{developer_id}` returns latest aggregate + history sparkline.
-* `GET /v1/catalog` returns metric catalog.
+#### Versioning strategy
+
+* Base path: `/api/v{major}` (e.g., `/api/v1`). Clients must include `Accept: application/vnd.toman.dev-metrics+json; version=1` (or `X-Api-Version: 1`) for forward compatibility.
+* Breaking changes increment the path segment; additive changes reuse the same major and bump the catalog `schema_version` field.
+
+#### Endpoints (v1)
+
+* `GET /api/v1/metrics/developers?window_days=28&from=2025-09-01&to=2025-09-28&project=group/backend/*`
+* `GET /api/v1/metrics/developers/{developer_id}` returns latest aggregate + history sparkline.
+* `GET /api/v1/catalog` returns metric catalog (includes `schema_version`).
 
 ---
 
@@ -508,21 +523,11 @@ Optional composite index in `composites.json`:
 
 ---
 
-## 14) API & Worker Contracts
+## 14) API Contracts & Worker Scheduling
 
-### 14.1 Worker CLI
+Automated job orchestration with Hangfire or Aspire background workers is deferred to the next version. For v1, ingestion and aggregation runs are triggered exclusively via the versioned REST APIs (Section 9.3) by automation pipelines or manual operators.
 
-```
-metrics-worker run \
-  --from 2025-09-01 --to 2025-09-28 \
-  --window 28d \
-  --projects-config config.yaml \
-  --sink postgres \
-  --connection-string "Host=pg;Database=dev_metrics;Username=metrics;Password=***" \
-  --export-dir /var/lib/dev-metrics/exports   # optional CSV/JSON dump
-```
-
-### 14.2 C#/.NET Interfaces (for implementers)
+### 14.1 C#/.NET Interfaces (for implementers)
 
 > Provided for Copilot context — not mandatory to implement here.
 
@@ -570,6 +575,7 @@ public interface IMetricComputer
 
 ## 17) Roadmap (Optional Phases)
 
+* **vNext**: Introduce Hangfire/Aspire background scheduling for automated ingestion and processing triggers.
 * **Phase 2**: Add issue linkage, on‑call context, per‑team roll‑ups, and optional warehouse/lake integrations if scale requires.
 * **Phase 3**: IDE telemetry (opt‑in), ML/NLP for review quality classification.
 
@@ -583,6 +589,7 @@ public interface IMetricComputer
   "title": "DeveloperMetricsAggregate",
   "type": "object",
   "properties": {
+    "schema_version": {"type": "string"},
     "developer_id": {"type": "string"},
     "window_start": {"type": "string", "format": "date-time"},
     "window_end": {"type": "string", "format": "date-time"},
@@ -599,7 +606,7 @@ public interface IMetricComputer
       "required": ["n_merged_mrs", "n_mrs", "n_commits"]
     }
   },
-  "required": ["developer_id", "window_start", "window_end", "metrics"]
+    "required": ["schema_version", "developer_id", "window_start", "window_end", "metrics"]
 }
 ```
 
@@ -607,7 +614,7 @@ public interface IMetricComputer
 
 ## 19) Appendix — Example End‑to‑End Pseudocode (LLM‑friendly)
 
-```
+```text
 FOR each project IN scope:
   mrs = fetch_mrs(project, updated_after=W.start-7d, updated_before=W.end)
   FOR each mr IN mrs:
