@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
@@ -11,9 +12,11 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 namespace Toman.Management.KPIAnalysis.ApiService.Migrations
 {
     [DbContext(typeof(GitLabMetricsDbContext))]
-    partial class GitLabMetricsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250926185325_AddPrdEntities")]
+    partial class AddPrdEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,6 +43,30 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                     b.HasKey("ProjectId", "Branch");
 
                     b.ToTable("dim_branch", (string)null);
+                });
+
+            modelBuilder.Entity("Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions.DimRelease", b =>
+                {
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("TagName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("tag_name");
+
+                    b.Property<DateTimeOffset>("ReleasedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("released_at");
+
+                    b.Property<bool>("SemverValid")
+                        .HasColumnType("boolean")
+                        .HasColumnName("semver_valid");
+
+                    b.HasKey("ProjectId", "TagName");
+
+                    b.ToTable("dim_release", (string)null);
                 });
 
             modelBuilder.Entity("Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions.DimUser", b =>
@@ -687,6 +714,33 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                     b.ToTable("review_events", (string)null);
                 });
 
+            modelBuilder.Entity("Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts.FactGitHygiene", b =>
+                {
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("DirectPushesDefault")
+                        .HasColumnType("integer")
+                        .HasColumnName("direct_pushes_default");
+
+                    b.Property<int>("ForcePushesProtected")
+                        .HasColumnType("integer")
+                        .HasColumnName("force_pushes_protected");
+
+                    b.Property<int>("UnsignedCommitCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("unsigned_commit_count");
+
+                    b.HasKey("ProjectId", "Day");
+
+                    b.ToTable("fact_git_hygiene", (string)null);
+                });
+
             modelBuilder.Entity("Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts.FactMergeRequest", b =>
                 {
                     b.Property<long>("MrId")
@@ -763,6 +817,32 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                     b.HasKey("PipelineId");
 
                     b.ToTable("fact_pipeline", (string)null);
+                });
+
+            modelBuilder.Entity("Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts.FactRelease", b =>
+                {
+                    b.Property<string>("TagName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("tag_name");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("CadenceBucket")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("cadence_bucket");
+
+                    b.Property<bool>("IsSemver")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_semver");
+
+                    b.HasKey("TagName", "ProjectId");
+
+                    b.ToTable("fact_release", (string)null);
                 });
 
             modelBuilder.Entity("Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts.FactUserMetrics", b =>

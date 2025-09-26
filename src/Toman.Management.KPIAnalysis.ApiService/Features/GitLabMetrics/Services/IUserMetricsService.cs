@@ -14,6 +14,16 @@ public interface IUserMetricsService
     /// Get a summary of key metrics for a user
     /// </summary>
     Task<UserMetricsSummaryResponse> GetUserMetricsSummaryAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Get user metrics trends over time
+    /// </summary>
+    Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Get user metrics comparison with peers
+    /// </summary>
+    Task<UserMetricsComparisonResponse> GetUserMetricsComparisonAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, List<long>? compareWith = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -27,8 +37,10 @@ public sealed record UserMetricsResponse(
     DateTimeOffset ToDate,
     UserCodeContributionMetrics CodeContribution,
     UserCodeReviewMetrics CodeReview,
+    UserIssueManagementMetrics IssueManagement, // To be removed in PRD refactoring
     UserCollaborationMetrics Collaboration,
     UserQualityMetrics Quality,
+    UserProductivityMetrics Productivity, // To be removed in PRD refactoring
     MetricsMetadata Metadata
 );
 
@@ -119,7 +131,31 @@ public sealed record UserCollaborationMetrics(
     int CrossTeamCollaborations,
     double KnowledgeSharingScore,
     int MentorshipActivities,
-    int TotalCommentsOnMergeRequests
+    int TotalCommentsOnMergeRequests,
+    int TotalCommentsOnIssues // To be removed in PRD refactoring
+);
+
+/// <summary>
+/// Issue management metrics (to be removed in PRD refactoring)
+/// </summary>
+public sealed record UserIssueManagementMetrics(
+    int IssuesCreated,
+    int IssuesAssigned,
+    int IssuesResolved,
+    TimeSpan? AverageIssueResolutionTime,
+    double IssueResolutionRate,
+    int ReopenedIssues
+);
+
+/// <summary>
+/// Productivity metrics (to be removed in PRD refactoring)  
+/// </summary>
+public sealed record UserProductivityMetrics(
+    double VelocityScore,
+    double EfficiencyScore,
+    double ImpactScore,
+    string ProductivityTrend,
+    double FocusTimeHours
 );
 
 /// <summary>
@@ -155,7 +191,8 @@ public sealed record UserMetricsComparisonData(
     int TotalMergeRequests,
     double PipelineSuccessRate,
     TimeSpan? AverageMRCycleTime,
-    int TotalLinesChanged
+    int TotalLinesChanged,
+    double ProductivityScore
 );
 
 /// <summary>

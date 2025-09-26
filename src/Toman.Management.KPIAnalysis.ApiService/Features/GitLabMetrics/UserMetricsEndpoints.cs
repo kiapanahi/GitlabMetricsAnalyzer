@@ -312,9 +312,9 @@ public static class UserMetricsEndpoints
 
             var comparison = await userMetricsService.GetUserMetricsComparisonAsync(
                 userId,
-                comparisonUserIds,
                 from,
                 to,
+                comparisonUserIds?.ToList(),
                 cancellationToken);
 
             return Results.Ok(comparison);

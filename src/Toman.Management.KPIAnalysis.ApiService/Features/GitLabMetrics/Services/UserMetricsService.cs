@@ -60,6 +60,25 @@ public sealed class UserMetricsService : IUserMetricsService
                    .Max()
         );
 
+        // Create placeholder issue management metrics (to be removed in PRD refactoring)
+        var issueManagement = new UserIssueManagementMetrics(
+            IssuesCreated: 0,
+            IssuesAssigned: 0,
+            IssuesResolved: 0,
+            AverageIssueResolutionTime: null,
+            IssueResolutionRate: 0.0,
+            ReopenedIssues: 0
+        );
+
+        // Create placeholder productivity metrics (to be removed in PRD refactoring)
+        var productivity = new UserProductivityMetrics(
+            VelocityScore: 0.0,
+            EfficiencyScore: 0.0,
+            ImpactScore: 0.0,
+            ProductivityTrend: "Stable",
+            FocusTimeHours: 0.0
+        );
+
         return new UserMetricsResponse(
             userId,
             user.Username ?? $"user_{userId}",
@@ -68,8 +87,10 @@ public sealed class UserMetricsService : IUserMetricsService
             toDate,
             codeContribution,
             codeReview,
+            issueManagement,
             collaboration,
             quality,
+            productivity,
             metadata
         );
     }
@@ -169,14 +190,10 @@ public sealed class UserMetricsService : IUserMetricsService
                     var pipelines = await _gitLabService.GetPipelinesAsync(project.Id, fromDate, cancellationToken);
                     var userPipelines = pipelines.Where(p => p.AuthorUserId == userId).ToList();
 
-                    // Get issues for this project
-                    var issues = await _gitLabService.GetIssuesAsync(project.Id, fromDate, cancellationToken);
-                    var userIssues = issues.Where(issue => issue.AuthorUserId == userId || issue.AssigneeUserId == userId).ToList();
+                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines",
+                        project.Id, commits.Count, userMRs.Count, userPipelines.Count);
 
-                    _logger.LogDebug("Project {ProjectId}: {CommitCount} commits, {MRCount} MRs, {PipelineCount} pipelines, {IssueCount} issues",
-                        project.Id, commits.Count, userMRs.Count, userPipelines.Count, userIssues.Count);
-
-                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines, issues: userIssues);
+                    return (commits: commits.ToList(), mergeRequests: userMRs, pipelines: userPipelines, reviewedMRs: new List<Models.Raw.RawMergeRequest>());
                 }
                 catch (Exception ex)
                 {
@@ -191,7 +208,7 @@ public sealed class UserMetricsService : IUserMetricsService
             var projectResults = await Task.WhenAll(projectTasks);
 
             // Aggregate results from all projects
-            foreach (var (commits, mergeRequests, pipelines, reviewedMRs) in projectResults)
+            foreach (var (commits, mergeRequests, pipelines, projectReviewedMRs) in projectResults)
             {
                 allCommits.AddRange(commits.Where(c => c.CommittedAt >= fromDate && c.CommittedAt < toDate));
                 allMergeRequests.AddRange(mergeRequests.Where(mr => mr.CreatedAt >= fromDate && mr.CreatedAt < toDate));
@@ -345,7 +362,8 @@ public sealed class UserMetricsService : IUserMetricsService
             crossTeamCollaborations,
             knowledgeSharingScore,
             mentorshipActivities,
-            totalCommentsOnMergeRequests
+            totalCommentsOnMergeRequests,
+            0 // TotalCommentsOnIssues - placeholder for PRD refactoring
         );
     }
 
@@ -391,7 +409,7 @@ public sealed class UserMetricsService : IUserMetricsService
         var user = await GetUserInfoAsync(userId, cancellationToken);
         if (user is null) return null;
 
-        var (commits, mergeRequests, pipelines, _, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
+        var (commits, mergeRequests, pipelines, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
 
         var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
         var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
@@ -578,6 +596,26 @@ public sealed class UserMetricsService : IUserMetricsService
         return uniqueReviewees >= 4 ? 1 : 0; // Some mentorship if reviewing many people
     }
 
+    /// <summary>
+    /// Calculate numeric productivity score based on key metrics
+    /// </summary>
+    private static double CalculateNumericProductivityScore(int commitsCount, int mergeRequestsCount, double pipelineSuccessRate, double daysDiff)
+    {
+        // Normalize metrics per day
+        var commitsPerDay = commitsCount / daysDiff;
+        var mrsPerDay = mergeRequestsCount / daysDiff;
+        
+        // Weight different components
+        var commitScore = Math.Min(commitsPerDay * 2, 3.0); // Cap commits contribution at 3 points
+        var mrScore = Math.Min(mrsPerDay * 3, 4.0); // Cap MR contribution at 4 points  
+        var qualityScore = pipelineSuccessRate * 3.0; // Quality contributes up to 3 points
+        
+        var totalScore = commitScore + mrScore + qualityScore;
+        
+        // Normalize to 0-10 scale
+        return Math.Min(totalScore, 10.0);
+    }
+
     private static void ValidateDateRange(DateTimeOffset fromDate, DateTimeOffset toDate)
     {
         if (toDate <= fromDate)
@@ -621,6 +659,98 @@ public sealed class UserMetricsService : IUserMetricsService
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Get user metrics trends over time
+    /// </summary>
+    public async Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default)
+    {
+        // TODO: Implement trends functionality as part of PRD refactoring
+        // This is a placeholder implementation
+        var user = await GetUserInfoAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User with ID {userId} not found");
+        }
+
+        return new UserMetricsTrendsResponse(
+            userId,
+            user.Username ?? $"user_{userId}",
+            fromDate,
+            toDate,
+            period,
+            new List<UserMetricsTrendPoint>(), // Empty for now
+            new MetricsMetadata(
+                DateTimeOffset.UtcNow,
+                "GitLab API",
+                0,
+                null
+            )
+        );
+    }
+
+    /// <summary>
+    /// Get user metrics comparison with peers
+    /// </summary>
+    public async Task<UserMetricsComparisonResponse> GetUserMetricsComparisonAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, List<long>? compareWith = null, CancellationToken cancellationToken = default)
+    {
+        // TODO: Implement comparison functionality as part of PRD refactoring
+        // This is a placeholder implementation
+        var user = await GetUserInfoAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User with ID {userId} not found");
+        }
+
+        var userMetrics = await GetSingleUserMetricsForComparison(userId, fromDate, toDate, user, cancellationToken);
+
+        return new UserMetricsComparisonResponse(
+            userId,
+            user.Username ?? $"user_{userId}",
+            fromDate,
+            toDate,
+            userMetrics,
+            new UserMetricsComparisonData(null, "Team Average", 0, 0, 0, null, 0, 0),
+            new List<UserMetricsComparisonData>(), // Empty for now
+            new MetricsMetadata(
+                DateTimeOffset.UtcNow,
+                "GitLab API",
+                1,
+                null
+            )
+        );
+    }
+
+    /// <summary>
+    /// Get single user metrics for comparison purposes
+    /// </summary>
+    private async Task<UserMetricsComparisonData> GetSingleUserMetricsForComparison(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, GitLabUser user, CancellationToken cancellationToken)
+    {
+        var (commits, mergeRequests, pipelines, _) = await FetchUserDataAsync(userId, fromDate, toDate, cancellationToken);
+
+        var successfulPipelines = pipelines.Count(p => p.IsSuccessful);
+        var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0;
+
+        var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
+        var averageMRCycleTime = mergedMRs.Count > 0
+            ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
+            : (TimeSpan?)null;
+
+        var totalLinesChanged = commits.Sum(c => c.Additions + c.Deletions);
+        var daysDiff = Math.Max(1, (toDate - fromDate).TotalDays);
+        var productivityScore = CalculateNumericProductivityScore(commits.Count, mergeRequests.Count, pipelineSuccessRate, daysDiff);
+
+        return new UserMetricsComparisonData(
+            userId,
+            user.Username ?? $"user_{userId}",
+            commits.Count,
+            mergeRequests.Count,
+            pipelineSuccessRate,
+            averageMRCycleTime,
+            totalLinesChanged,
+            productivityScore
+        );
     }
 
     #endregion
