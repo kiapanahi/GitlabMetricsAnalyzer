@@ -7,13 +7,23 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dime
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Entities;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 
 public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbContext> options) : DbContext(options)
 {
+    // PRD Entities
+    public DbSet<Developer> Developers => Set<Developer>();
+    public DbSet<DeveloperAlias> DeveloperAliases => Set<DeveloperAlias>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<CommitFact> CommitFacts => Set<CommitFact>();
+    public DbSet<MergeRequestFact> MergeRequestFacts => Set<MergeRequestFact>();
+    public DbSet<PipelineFact> PipelineFacts => Set<PipelineFact>();
+    public DbSet<ReviewEvent> ReviewEvents => Set<ReviewEvent>();
+    public DbSet<DeveloperMetricsAggregate> DeveloperMetricsAggregates => Set<DeveloperMetricsAggregate>();
 
-    // Dimensions
+    // Legacy Tables (to be phased out)
     public DbSet<DimUser> DimUsers => Set<DimUser>();
     public DbSet<DimBranch> DimBranches => Set<DimBranch>();
     public DbSet<DimRelease> DimReleases => Set<DimRelease>();
@@ -25,7 +35,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     public DbSet<RawPipeline> RawPipelines => Set<RawPipeline>();
     public DbSet<RawJob> RawJobs => Set<RawJob>();
 
-    // Derived Facts
+    // Legacy Facts (to be phased out or refactored)
     public DbSet<FactMergeRequest> FactMergeRequests => Set<FactMergeRequest>();
     public DbSet<FactPipeline> FactPipelines => Set<FactPipeline>();
     public DbSet<FactGitHygiene> FactGitHygiene => Set<FactGitHygiene>();
@@ -39,10 +49,222 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     {
         base.OnModelCreating(modelBuilder);
 
+        ConfigurePrdEntities(modelBuilder);
         ConfigureDimensions(modelBuilder);
         ConfigureRawTables(modelBuilder);
         ConfigureFactTables(modelBuilder);
         ConfigureOperationalTables(modelBuilder);
+    }
+
+    private static void ConfigurePrdEntities(ModelBuilder modelBuilder)
+    {
+        // Developer entity
+        modelBuilder.Entity<Developer>(entity =>
+        {
+            entity.ToTable("developers");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.GitLabUserId).HasColumnName("gitlab_user_id");
+            entity.Property(e => e.PrimaryEmail).HasColumnName("primary_email").HasMaxLength(255);
+            entity.Property(e => e.PrimaryUsername).HasColumnName("primary_username").HasMaxLength(255);
+            entity.Property(e => e.DisplayName).HasColumnName("display_name").HasMaxLength(255);
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasIndex(e => e.GitLabUserId).HasDatabaseName("idx_developers_gitlab_user_id").IsUnique();
+            entity.HasIndex(e => e.PrimaryEmail).HasDatabaseName("idx_developers_primary_email").IsUnique();
+        });
+
+        // DeveloperAlias entity
+        modelBuilder.Entity<DeveloperAlias>(entity =>
+        {
+            entity.ToTable("developer_aliases");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.DeveloperId).HasColumnName("developer_id");
+            entity.Property(e => e.AliasType).HasColumnName("alias_type").HasMaxLength(50);
+            entity.Property(e => e.AliasValue).HasColumnName("alias_value").HasMaxLength(255);
+            entity.Property(e => e.VerifiedAt).HasColumnName("verified_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
+            entity.HasOne(e => e.Developer).WithMany(d => d.Aliases).HasForeignKey(e => e.DeveloperId);
+            entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_developer_aliases_developer_id");
+            entity.HasIndex(e => e.AliasValue).HasDatabaseName("idx_developer_aliases_value");
+            entity.HasIndex(e => new { e.AliasValue, e.AliasType }).HasDatabaseName("idx_developer_aliases_value_type").IsUnique();
+        });
+
+        // Project entity
+        modelBuilder.Entity<Project>(entity =>
+        {
+            entity.ToTable("projects");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(255);
+            entity.Property(e => e.PathWithNamespace).HasColumnName("path_with_namespace").HasMaxLength(500);
+            entity.Property(e => e.WebUrl).HasColumnName("web_url").HasMaxLength(1000);
+            entity.Property(e => e.DefaultBranch).HasColumnName("default_branch").HasMaxLength(255);
+            entity.Property(e => e.VisibilityLevel).HasColumnName("visibility_level").HasMaxLength(50);
+            entity.Property(e => e.Archived).HasColumnName("archived");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+
+            entity.HasIndex(e => e.Name).HasDatabaseName("idx_projects_name");
+            entity.HasIndex(e => e.Archived).HasDatabaseName("idx_projects_archived");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_projects_created_at");
+            entity.HasIndex(e => e.PathWithNamespace).HasDatabaseName("idx_projects_path").IsUnique();
+        });
+
+        // CommitFact entity with partitioning
+        modelBuilder.Entity<CommitFact>(entity =>
+        {
+            entity.ToTable("commit_facts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.DeveloperId).HasColumnName("developer_id");
+            entity.Property(e => e.Sha).HasColumnName("sha").HasMaxLength(40);
+            entity.Property(e => e.CommittedAt).HasColumnName("committed_at");
+            entity.Property(e => e.LinesAdded).HasColumnName("lines_added");
+            entity.Property(e => e.LinesDeleted).HasColumnName("lines_deleted");
+            entity.Property(e => e.FilesChanged).HasColumnName("files_changed");
+            entity.Property(e => e.IsSigned).HasColumnName("is_signed");
+            entity.Property(e => e.IsMergeCommit).HasColumnName("is_merge_commit");
+            entity.Property(e => e.ParentCount).HasColumnName("parent_count");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
+            entity.HasOne(e => e.Project).WithMany(p => p.Commits).HasForeignKey(e => e.ProjectId);
+            entity.HasOne(e => e.Developer).WithMany(d => d.Commits).HasForeignKey(e => e.DeveloperId);
+            
+            entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_commit_facts_developer_id");
+            entity.HasIndex(e => e.CommittedAt).HasDatabaseName("idx_commit_facts_committed_at");
+            entity.HasIndex(e => e.ProjectId).HasDatabaseName("idx_commit_facts_project_id");
+            entity.HasIndex(e => new { e.ProjectId, e.Sha }).HasDatabaseName("idx_commit_facts_project_sha").IsUnique();
+            
+            // TODO: Add partitioning configuration once EF Core supports it better
+        });
+
+        // MergeRequestFact entity with partitioning
+        modelBuilder.Entity<MergeRequestFact>(entity =>
+        {
+            entity.ToTable("merge_request_facts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.MrIid).HasColumnName("mr_iid");
+            entity.Property(e => e.AuthorDeveloperId).HasColumnName("author_developer_id");
+            entity.Property(e => e.TargetBranch).HasColumnName("target_branch").HasMaxLength(255);
+            entity.Property(e => e.SourceBranch).HasColumnName("source_branch").HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.MergedAt).HasColumnName("merged_at");
+            entity.Property(e => e.ClosedAt).HasColumnName("closed_at");
+            entity.Property(e => e.FirstReviewAt).HasColumnName("first_review_at");
+            entity.Property(e => e.State).HasColumnName("state").HasMaxLength(50);
+            entity.Property(e => e.LinesAdded).HasColumnName("lines_added");
+            entity.Property(e => e.LinesDeleted).HasColumnName("lines_deleted");
+            entity.Property(e => e.CommitsCount).HasColumnName("commits_count");
+            entity.Property(e => e.FilesChanged).HasColumnName("files_changed");
+            entity.Property(e => e.CycleTimeHours).HasColumnName("cycle_time_hours").HasPrecision(10, 2);
+            entity.Property(e => e.ReviewTimeHours).HasColumnName("review_time_hours").HasPrecision(10, 2);
+            entity.Property(e => e.HasPipeline).HasColumnName("has_pipeline");
+            entity.Property(e => e.IsDraft).HasColumnName("is_draft");
+            entity.Property(e => e.IsWip).HasColumnName("is_wip");
+            entity.Property(e => e.HasConflicts).HasColumnName("has_conflicts");
+            entity.Property(e => e.CreatedAtFact).HasColumnName("created_at_fact");
+
+            entity.HasOne(e => e.Project).WithMany(p => p.MergeRequests).HasForeignKey(e => e.ProjectId);
+            entity.HasOne(e => e.AuthorDeveloper).WithMany(d => d.MergeRequests).HasForeignKey(e => e.AuthorDeveloperId);
+            
+            entity.HasIndex(e => e.AuthorDeveloperId).HasDatabaseName("idx_merge_request_facts_author");
+            entity.HasIndex(e => e.State).HasDatabaseName("idx_merge_request_facts_state");
+            entity.HasIndex(e => e.MergedAt).HasDatabaseName("idx_merge_request_facts_merged_at");
+            entity.HasIndex(e => new { e.ProjectId, e.MrIid }).HasDatabaseName("idx_merge_request_facts_project_iid").IsUnique();
+        });
+
+        // PipelineFact entity with partitioning
+        modelBuilder.Entity<PipelineFact>(entity =>
+        {
+            entity.ToTable("pipeline_facts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.PipelineId).HasColumnName("pipeline_id");
+            entity.Property(e => e.MergeRequestFactId).HasColumnName("merge_request_fact_id");
+            entity.Property(e => e.DeveloperId).HasColumnName("developer_id");
+            entity.Property(e => e.RefName).HasColumnName("ref_name").HasMaxLength(255);
+            entity.Property(e => e.Sha).HasColumnName("sha").HasMaxLength(40);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
+            entity.Property(e => e.Source).HasColumnName("source").HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.StartedAt).HasColumnName("started_at");
+            entity.Property(e => e.FinishedAt).HasColumnName("finished_at");
+            entity.Property(e => e.DurationSeconds).HasColumnName("duration_seconds");
+            entity.Property(e => e.CreatedAtFact).HasColumnName("created_at_fact");
+
+            entity.HasOne(e => e.Project).WithMany(p => p.Pipelines).HasForeignKey(e => e.ProjectId);
+            entity.HasOne(e => e.MergeRequestFact).WithMany(mr => mr.Pipelines).HasForeignKey(e => e.MergeRequestFactId);
+            entity.HasOne(e => e.Developer).WithMany(d => d.Pipelines).HasForeignKey(e => e.DeveloperId);
+            
+            entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_pipeline_facts_developer_id");
+            entity.HasIndex(e => e.MergeRequestFactId).HasDatabaseName("idx_pipeline_facts_merge_request");
+            entity.HasIndex(e => e.Status).HasDatabaseName("idx_pipeline_facts_status");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_pipeline_facts_created_at");
+            entity.HasIndex(e => new { e.ProjectId, e.PipelineId }).HasDatabaseName("idx_pipeline_facts_project_pipeline").IsUnique();
+        });
+
+        // ReviewEvent entity with partitioning
+        modelBuilder.Entity<ReviewEvent>(entity =>
+        {
+            entity.ToTable("review_events");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.MergeRequestFactId).HasColumnName("merge_request_fact_id");
+            entity.Property(e => e.ReviewerDeveloperId).HasColumnName("reviewer_developer_id");
+            entity.Property(e => e.EventType).HasColumnName("event_type").HasMaxLength(50);
+            entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
+            entity.HasOne(e => e.MergeRequestFact).WithMany(mr => mr.ReviewEvents).HasForeignKey(e => e.MergeRequestFactId);
+            entity.HasOne(e => e.ReviewerDeveloper).WithMany(d => d.ReviewsGiven).HasForeignKey(e => e.ReviewerDeveloperId);
+            
+            entity.HasIndex(e => e.MergeRequestFactId).HasDatabaseName("idx_review_events_merge_request");
+            entity.HasIndex(e => e.ReviewerDeveloperId).HasDatabaseName("idx_review_events_reviewer");
+            entity.HasIndex(e => e.EventType).HasDatabaseName("idx_review_events_type");
+            entity.HasIndex(e => e.OccurredAt).HasDatabaseName("idx_review_events_occurred_at");
+        });
+
+        // DeveloperMetricsAggregate entity with partitioning
+        modelBuilder.Entity<DeveloperMetricsAggregate>(entity =>
+        {
+            entity.ToTable("developer_metrics_aggregates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.DeveloperId).HasColumnName("developer_id");
+            entity.Property(e => e.PeriodType).HasColumnName("period_type").HasMaxLength(20);
+            entity.Property(e => e.PeriodStart).HasColumnName("period_start");
+            entity.Property(e => e.PeriodEnd).HasColumnName("period_end");
+            entity.Property(e => e.CommitsCount).HasColumnName("commits_count");
+            entity.Property(e => e.LinesAdded).HasColumnName("lines_added");
+            entity.Property(e => e.LinesDeleted).HasColumnName("lines_deleted");
+            entity.Property(e => e.FilesChanged).HasColumnName("files_changed");
+            entity.Property(e => e.MrsCreated).HasColumnName("mrs_created");
+            entity.Property(e => e.MrsMerged).HasColumnName("mrs_merged");
+            entity.Property(e => e.MrsReviewed).HasColumnName("mrs_reviewed");
+            entity.Property(e => e.AvgCycleTimeHours).HasColumnName("avg_cycle_time_hours").HasPrecision(10, 2);
+            entity.Property(e => e.PipelinesTriggered).HasColumnName("pipelines_triggered");
+            entity.Property(e => e.SuccessfulPipelines).HasColumnName("successful_pipelines");
+            entity.Property(e => e.PipelineSuccessRate).HasColumnName("pipeline_success_rate").HasPrecision(5, 4);
+            entity.Property(e => e.ReviewsGiven).HasColumnName("reviews_given");
+            entity.Property(e => e.UniqueCollaborators).HasColumnName("unique_collaborators");
+            entity.Property(e => e.CalculatedAt).HasColumnName("calculated_at");
+
+            entity.HasOne(e => e.Developer).WithMany(d => d.MetricsAggregates).HasForeignKey(e => e.DeveloperId);
+            
+            entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_dev_metrics_agg_developer");
+            entity.HasIndex(e => new { e.PeriodType, e.PeriodStart }).HasDatabaseName("idx_dev_metrics_agg_period");
+            entity.HasIndex(e => new { e.DeveloperId, e.PeriodType, e.PeriodStart }).HasDatabaseName("idx_dev_metrics_agg_developer_period").IsUnique();
+        });
     }
 
     private static void ConfigureDimensions(ModelBuilder modelBuilder)
