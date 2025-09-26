@@ -8,9 +8,9 @@ public sealed class MetricsConfiguration
     public const string SectionName = "Metrics";
 
     /// <summary>
-    /// Project filtering and scoping configuration
+    /// Optional project filtering and scoping configuration. If not provided, all projects accessible by the GitLab PAT will be included.
     /// </summary>
-    public required ProjectScopeConfiguration ProjectScope { get; init; }
+    public ProjectScopeConfiguration? ProjectScope { get; init; }
 
     /// <summary>
     /// Identity mapping and filtering configuration
@@ -24,12 +24,12 @@ public sealed class MetricsConfiguration
 }
 
 /// <summary>
-/// Configuration for project scoping and filtering
+/// Configuration for project scoping and filtering. Optional - if not provided, all projects accessible by the GitLab PAT will be included.
 /// </summary>
 public sealed class ProjectScopeConfiguration
 {
     /// <summary>
-    /// List of project IDs to include (null/empty = include all)
+    /// List of project IDs to include (null/empty = include all accessible projects)
     /// </summary>
     public List<long> IncludeProjects { get; init; } = [];
 
@@ -58,42 +58,6 @@ public sealed class IdentityConfiguration
     /// Regex patterns to identify bot accounts
     /// </summary>
     public List<string> BotRegexPatterns { get; init; } = [];
-
-    /// <summary>
-    /// Manual identity overrides mapping multiple usernames/emails to canonical developer
-    /// </summary>
-    public Dictionary<string, CanonicalDeveloperConfiguration> IdentityOverrides { get; init; } = [];
-}
-
-/// <summary>
-/// Configuration for a canonical developer identity
-/// </summary>
-public sealed class CanonicalDeveloperConfiguration
-{
-    /// <summary>
-    /// Canonical display name
-    /// </summary>
-    public required string DisplayName { get; init; }
-
-    /// <summary>
-    /// Primary email address
-    /// </summary>
-    public required string PrimaryEmail { get; init; }
-
-    /// <summary>
-    /// Primary username
-    /// </summary>
-    public required string PrimaryUsername { get; init; }
-
-    /// <summary>
-    /// List of alias emails that should map to this developer
-    /// </summary>
-    public List<string> AliasEmails { get; init; } = [];
-
-    /// <summary>
-    /// List of alias usernames that should map to this developer
-    /// </summary>
-    public List<string> AliasUsernames { get; init; } = [];
 }
 
 /// <summary>

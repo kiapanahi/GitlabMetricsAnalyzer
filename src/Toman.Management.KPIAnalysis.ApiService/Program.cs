@@ -3,9 +3,6 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add config.json support with environment variable expansion
-builder.Configuration.AddConfigJson();
-
 // Add service defaults & Aspire components.
 builder.AddServiceDefaults();
 
