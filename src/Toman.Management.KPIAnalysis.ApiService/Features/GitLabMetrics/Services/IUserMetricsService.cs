@@ -14,16 +14,6 @@ public interface IUserMetricsService
     /// Get a summary of key metrics for a user
     /// </summary>
     Task<UserMetricsSummaryResponse> GetUserMetricsSummaryAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
-    
-    /// <summary>
-    /// Get trend data for user metrics over time
-    /// </summary>
-    Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default);
-    
-    /// <summary>
-    /// Compare user metrics with team/organization averages
-    /// </summary>
-    Task<UserMetricsComparisonResponse> GetUserMetricsComparisonAsync(long userId, long[] comparisonUserIds, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -37,10 +27,8 @@ public sealed record UserMetricsResponse(
     DateTimeOffset ToDate,
     UserCodeContributionMetrics CodeContribution,
     UserCodeReviewMetrics CodeReview,
-    UserIssueManagementMetrics IssueManagement,
     UserCollaborationMetrics Collaboration,
     UserQualityMetrics Quality,
-    UserProductivityMetrics Productivity,
     MetricsMetadata Metadata
 );
 
@@ -58,7 +46,6 @@ public sealed record UserMetricsSummaryResponse(
     double PipelineSuccessRate,
     TimeSpan? AverageMRCycleTime,
     int TotalLinesChanged,
-    string ProductivityScore, // High, Medium, Low
     MetricsMetadata Metadata
 );
 
@@ -124,18 +111,6 @@ public sealed record UserCodeReviewMetrics(
 );
 
 /// <summary>
-/// Issue management metrics
-/// </summary>
-public sealed record UserIssueManagementMetrics(
-    int IssuesCreated,
-    int IssuesAssigned,
-    int IssuesResolved,
-    TimeSpan? AverageIssueResolutionTime,
-    double IssueResolutionRate,
-    int ReopenedIssues
-);
-
-/// <summary>
 /// Collaboration metrics
 /// </summary>
 public sealed record UserCollaborationMetrics(
@@ -144,8 +119,7 @@ public sealed record UserCollaborationMetrics(
     int CrossTeamCollaborations,
     double KnowledgeSharingScore,
     int MentorshipActivities,
-    int TotalCommentsOnMergeRequests,
-    int TotalCommentsOnIssues
+    int TotalCommentsOnMergeRequests
 );
 
 /// <summary>
@@ -161,17 +135,6 @@ public sealed record UserQualityMetrics(
 );
 
 /// <summary>
-/// Productivity metrics
-/// </summary>
-public sealed record UserProductivityMetrics(
-    double VelocityScore,
-    double EfficiencyScore,
-    double ImpactScore,
-    string ProductivityTrend, // Increasing, Stable, Decreasing
-    int FocusTimeHours
-);
-
-/// <summary>
 /// Single trend point in time series
 /// </summary>
 public sealed record UserMetricsTrendPoint(
@@ -179,8 +142,7 @@ public sealed record UserMetricsTrendPoint(
     int Commits,
     int MergeRequests,
     double PipelineSuccessRate,
-    int LinesChanged,
-    double ProductivityScore
+    int LinesChanged
 );
 
 /// <summary>
@@ -193,8 +155,7 @@ public sealed record UserMetricsComparisonData(
     int TotalMergeRequests,
     double PipelineSuccessRate,
     TimeSpan? AverageMRCycleTime,
-    int TotalLinesChanged,
-    double ProductivityScore
+    int TotalLinesChanged
 );
 
 /// <summary>

@@ -205,16 +205,6 @@ public sealed class MockGitLabHttpClient : IGitLabHttpClient
         return Task.FromResult(new List<GitLabMergeRequestNote>().AsReadOnly() as IReadOnlyList<GitLabMergeRequestNote>);
     }
 
-    /// <summary>
-    /// Gets issue notes for a specific project and issue.
-    /// </summary>
-    public Task<IReadOnlyList<GitLabIssueNote>> GetIssueNotesAsync(long projectId, long issueIid, CancellationToken cancellationToken = default)
-    {
-        // Mock implementation - return empty list for now
-        // In a real implementation, this would return mock notes
-        return Task.FromResult(new List<GitLabIssueNote>().AsReadOnly() as IReadOnlyList<GitLabIssueNote>);
-    }
-
     #region Mock Data Creation
 
     private List<GitLabUser> CreateMockUsers()

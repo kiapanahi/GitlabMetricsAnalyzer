@@ -22,10 +22,8 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
     public DbSet<RawCommit> RawCommits => Set<RawCommit>();
     public DbSet<RawMergeRequest> RawMergeRequests => Set<RawMergeRequest>();
     public DbSet<RawMergeRequestNote> RawMergeRequestNotes => Set<RawMergeRequestNote>();
-    public DbSet<RawIssueNote> RawIssueNotes => Set<RawIssueNote>();
     public DbSet<RawPipeline> RawPipelines => Set<RawPipeline>();
     public DbSet<RawJob> RawJobs => Set<RawJob>();
-    public DbSet<RawIssue> RawIssues => Set<RawIssue>();
 
     // Derived Facts
     public DbSet<FactMergeRequest> FactMergeRequests => Set<FactMergeRequest>();
@@ -196,31 +194,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.HasIndex(e => new { e.ProjectId, e.JobId }).HasDatabaseName("idx_raw_job_project_job").IsUnique();
         });
 
-        modelBuilder.Entity<RawIssue>(entity =>
-        {
-            entity.ToTable("raw_issue");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-            entity.Property(e => e.ProjectId).HasColumnName("project_id");
-            entity.Property(e => e.IssueId).HasColumnName("issue_id");
-            entity.Property(e => e.AuthorUserId).HasColumnName("author_user_id");
-            entity.Property(e => e.AssigneeUserId).HasColumnName("assignee_user_id");
-            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
-            entity.Property(e => e.ClosedAt).HasColumnName("closed_at");
-            entity.Property(e => e.State).HasColumnName("state").HasMaxLength(50);
-            entity.Property(e => e.ReopenedCount).HasColumnName("reopened_count");
-            entity.Property(e => e.Labels)
-                .HasColumnName("labels")
-                .HasColumnType("jsonb")
-                .HasConversion(
-                    value => JsonDocumentConverters.ToString(value),
-                    value => JsonDocumentConverters.FromString(value))
-                .Metadata.SetValueComparer(jsonDocumentComparer);
-
-            // Unique constraint on project + issue id
-            entity.HasIndex(e => new { e.ProjectId, e.IssueId }).HasDatabaseName("idx_raw_issue_project_issue").IsUnique();
-        });
-
         modelBuilder.Entity<RawMergeRequestNote>(entity =>
         {
             entity.ToTable("raw_merge_request_note");
@@ -248,31 +221,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_mr_note_author");
             entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_mr_note_created_at");
             entity.HasIndex(e => new { e.ProjectId, e.NoteId }).HasDatabaseName("idx_raw_mr_note_project_note").IsUnique();
-        });
-
-        modelBuilder.Entity<RawIssueNote>(entity =>
-        {
-            entity.ToTable("raw_issue_note");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-            entity.Property(e => e.ProjectId).HasColumnName("project_id");
-            entity.Property(e => e.ProjectName).HasColumnName("project_name").HasMaxLength(255);
-            entity.Property(e => e.IssueIid).HasColumnName("issue_iid");
-            entity.Property(e => e.NoteId).HasColumnName("note_id");
-            entity.Property(e => e.AuthorId).HasColumnName("author_id");
-            entity.Property(e => e.AuthorName).HasColumnName("author_name").HasMaxLength(255);
-            entity.Property(e => e.Body).HasColumnName("body").HasColumnType("text");
-            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
-            entity.Property(e => e.System).HasColumnName("system");
-            entity.Property(e => e.NoteableType).HasColumnName("noteable_type").HasMaxLength(50);
-            entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
-            
-            // Indexes
-            entity.HasIndex(e => new { e.ProjectId, e.IssueIid }).HasDatabaseName("idx_raw_issue_note_project_issue");
-            entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_issue_note_author");
-            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_issue_note_created_at");
-            entity.HasIndex(e => new { e.ProjectId, e.NoteId }).HasDatabaseName("idx_raw_issue_note_project_note").IsUnique();
         });
     }
 
@@ -361,22 +309,9 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.PipelineSuccessRate).HasColumnName("pipeline_success_rate").HasPrecision(5, 4);
             entity.Property(e => e.AveragePipelineDurationMinutes).HasColumnName("average_pipeline_duration_minutes").HasPrecision(10, 2);
             
-            // Issue Management Metrics
-            entity.Property(e => e.TotalIssuesCreated).HasColumnName("total_issues_created");
-            entity.Property(e => e.TotalIssuesAssigned).HasColumnName("total_issues_assigned");
-            entity.Property(e => e.TotalIssuesClosed).HasColumnName("total_issues_closed");
-            entity.Property(e => e.AverageIssueResolutionTimeHours).HasColumnName("average_issue_resolution_time_hours").HasPrecision(10, 2);
-            
             // Collaboration Metrics
             entity.Property(e => e.TotalCommentsOnMergeRequests).HasColumnName("total_comments_on_merge_requests");
-            entity.Property(e => e.TotalCommentsOnIssues).HasColumnName("total_comments_on_issues");
             entity.Property(e => e.CollaborationScore).HasColumnName("collaboration_score").HasPrecision(5, 2);
-            
-            // Productivity Metrics
-            entity.Property(e => e.ProductivityScore).HasColumnName("productivity_score").HasPrecision(5, 2);
-            entity.Property(e => e.ProductivityLevel).HasColumnName("productivity_level").HasMaxLength(50);
-            entity.Property(e => e.CodeChurnRate).HasColumnName("code_churn_rate").HasPrecision(5, 4);
-            entity.Property(e => e.ReviewThroughput).HasColumnName("review_throughput").HasPrecision(10, 2);
             
             // Metadata
             entity.Property(e => e.TotalDataPoints).HasColumnName("total_data_points");
