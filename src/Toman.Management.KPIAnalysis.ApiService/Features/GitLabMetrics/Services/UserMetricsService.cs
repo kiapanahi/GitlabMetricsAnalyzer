@@ -578,5 +578,50 @@ public sealed class UserMetricsService : IUserMetricsService
         return uniqueReviewees >= 4 ? 1 : 0; // Some mentorship if reviewing many people
     }
 
+    private static void ValidateDateRange(DateTimeOffset fromDate, DateTimeOffset toDate)
+    {
+        if (toDate <= fromDate)
+        {
+            throw new ArgumentException("ToDate must be after FromDate");
+        }
+
+        if ((toDate - fromDate).TotalDays > 365)
+        {
+            throw new ArgumentException("Date range cannot exceed 365 days");
+        }
+    }
+
+    private async Task<GitLabUser?> GetUserInfoAsync(long userId, CancellationToken cancellationToken)
+    {
+        // First try to get user info from GitLab API directly
+        var gitLabUser = await _gitLabService.GetUserByIdAsync(userId, cancellationToken);
+        if (gitLabUser is not null)
+        {
+            _logger.LogDebug("Retrieved user {UserId} directly from GitLab: {Username}", userId, gitLabUser.Username);
+            return gitLabUser;
+        }
+
+        // If not found in GitLab API, try to find in local database as fallback
+        _logger.LogWarning("User {UserId} not found in GitLab API, trying database fallback", userId);
+        
+        var dbUser = await _dbContext.DimUsers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+
+        if (dbUser is not null)
+        {
+            return new GitLabUser
+            {
+                Id = dbUser.UserId,
+                Username = dbUser.Username,
+                Name = dbUser.Name,
+                Email = dbUser.Email,
+                State = dbUser.State
+            };
+        }
+
+        return null;
+    }
+
     #endregion
 }
