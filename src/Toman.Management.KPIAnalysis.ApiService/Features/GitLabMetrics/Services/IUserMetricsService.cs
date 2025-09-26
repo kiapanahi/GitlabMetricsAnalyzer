@@ -110,6 +110,7 @@ public sealed record UserCodeContributionMetrics(
 /// </summary>
 public sealed record UserCodeReviewMetrics(
     int MergeRequestsCreated,
+    int MergeRequestsMerged,
     int MergeRequestsReviewed,
     double AverageMRSize,
     TimeSpan? AverageMRCycleTime,
@@ -118,7 +119,8 @@ public sealed record UserCodeReviewMetrics(
     double ReviewParticipationRate,
     int ApprovalsGiven,
     int ApprovalsReceived,
-    double SelfMergeRate
+    double SelfMergeRate,
+    double MergeRequestMergeRate
 );
 
 /// <summary>
@@ -126,6 +128,7 @@ public sealed record UserCodeReviewMetrics(
 /// </summary>
 public sealed record UserIssueManagementMetrics(
     int IssuesCreated,
+    int IssuesAssigned,
     int IssuesResolved,
     TimeSpan? AverageIssueResolutionTime,
     double IssueResolutionRate,

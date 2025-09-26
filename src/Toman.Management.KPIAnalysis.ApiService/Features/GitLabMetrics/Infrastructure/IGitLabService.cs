@@ -16,6 +16,10 @@ public interface IGitLabService
     Task<IReadOnlyList<RawMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RawIssueNote>> GetIssueNotesAsync(long projectId, long issueIid, CancellationToken cancellationToken = default);
     
+    // Issue management methods
+    Task<IReadOnlyList<RawIssue>> GetIssuesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RawIssue>> GetUserAssignedIssuesAsync(long userId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default);
+    
     // User management methods
     Task<IReadOnlyList<GitLabUser>> GetUsersAsync(CancellationToken cancellationToken = default);
     Task<GitLabUser?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default);
