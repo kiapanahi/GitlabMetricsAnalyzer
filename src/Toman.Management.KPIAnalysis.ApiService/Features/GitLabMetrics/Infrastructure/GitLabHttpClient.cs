@@ -120,6 +120,24 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of commits by the user</returns>
     Task<IReadOnlyList<GitLabCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets merge request notes/discussions for a specific project and merge request.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="mergeRequestIid">The merge request IID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of merge request notes</returns>
+    Task<IReadOnlyList<GitLabMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets issue notes for a specific project and issue.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="issueIid">The issue IID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of issue notes</returns>
+    Task<IReadOnlyList<GitLabIssueNote>> GetIssueNotesAsync(long projectId, long issueIid, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -240,4 +258,50 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
 
     public Task<IReadOnlyList<GitLabCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
         => throw new NotImplementedException("Real GitLab API client not yet implemented");
+
+    public async Task<IReadOnlyList<GitLabMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching merge request notes for project {ProjectId}, MR {MergeRequestIid}", projectId, mergeRequestIid);
+
+            var url = $"projects/{projectId}/merge_requests/{mergeRequestIid}/notes";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var notes = JsonSerializer.Deserialize<List<GitLabMergeRequestNote>>(content, JsonOptions) ?? new List<GitLabMergeRequestNote>();
+
+            _logger.LogDebug("Retrieved {NoteCount} merge request notes for project {ProjectId}, MR {MergeRequestIid}", notes.Count, projectId, mergeRequestIid);
+            return notes.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get merge request notes for project {ProjectId}, MR {MergeRequestIid}", projectId, mergeRequestIid);
+            return new List<GitLabMergeRequestNote>().AsReadOnly();
+        }
+    }
+
+    public async Task<IReadOnlyList<GitLabIssueNote>> GetIssueNotesAsync(long projectId, long issueIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching issue notes for project {ProjectId}, issue {IssueIid}", projectId, issueIid);
+
+            var url = $"projects/{projectId}/issues/{issueIid}/notes";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var notes = JsonSerializer.Deserialize<List<GitLabIssueNote>>(content, JsonOptions) ?? new List<GitLabIssueNote>();
+
+            _logger.LogDebug("Retrieved {NoteCount} issue notes for project {ProjectId}, issue {IssueIid}", notes.Count, projectId, issueIid);
+            return notes.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get issue notes for project {ProjectId}, issue {IssueIid}", projectId, issueIid);
+            return new List<GitLabIssueNote>().AsReadOnly();
+        }
+    }
 }

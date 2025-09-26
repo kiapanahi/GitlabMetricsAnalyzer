@@ -1,3 +1,6 @@
+using System;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
@@ -80,6 +83,11 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
     private static void ConfigureRawTables(ModelBuilder modelBuilder)
     {
+        var jsonDocumentComparer = new ValueComparer<JsonDocument?>(
+            (left, right) => JsonDocumentConverters.AreEqual(left, right),
+            value => JsonDocumentConverters.GetHashCode(value),
+            value => JsonDocumentConverters.Clone(value));
+
         modelBuilder.Entity<RawCommit>(entity =>
         {
             entity.ToTable("raw_commit");
@@ -203,7 +211,11 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.ReopenedCount).HasColumnName("reopened_count");
             entity.Property(e => e.Labels)
                 .HasColumnName("labels")
-                .HasColumnType("jsonb");
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    value => JsonDocumentConverters.ToString(value),
+                    value => JsonDocumentConverters.FromString(value))
+                .Metadata.SetValueComparer(jsonDocumentComparer);
 
             // Unique constraint on project + issue id
             entity.HasIndex(e => new { e.ProjectId, e.IssueId }).HasDatabaseName("idx_raw_issue_project_issue").IsUnique();
@@ -388,5 +400,35 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.LastSeenUpdatedAt).HasColumnName("last_seen_updated_at");
             entity.Property(e => e.LastRunAt).HasColumnName("last_run_at");
         });
+    }
+
+    private static class JsonDocumentConverters
+    {
+        public static bool AreEqual(JsonDocument? left, JsonDocument? right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+
+            if (left is null || right is null)
+                return false;
+
+            return left.RootElement.GetRawText() == right.RootElement.GetRawText();
+        }
+
+        public static int GetHashCode(JsonDocument? value)
+            => value is null
+                ? 0
+                : HashCode.Combine(value.RootElement.GetRawText());
+
+        public static JsonDocument? Clone(JsonDocument? value)
+            => value is null
+                ? null
+                : JsonDocument.Parse(value.RootElement.GetRawText());
+
+        public static string? ToString(JsonDocument? value)
+            => value is null ? null : value.RootElement.GetRawText();
+
+        public static JsonDocument? FromString(string? value)
+            => string.IsNullOrWhiteSpace(value) ? null : JsonDocument.Parse(value);
     }
 }
