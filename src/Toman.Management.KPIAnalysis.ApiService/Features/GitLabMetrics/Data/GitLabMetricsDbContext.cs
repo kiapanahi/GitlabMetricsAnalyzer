@@ -239,29 +239,65 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.DeveloperId).HasColumnName("developer_id");
-            entity.Property(e => e.PeriodType).HasColumnName("period_type").HasMaxLength(20);
-            entity.Property(e => e.PeriodStart).HasColumnName("period_start");
-            entity.Property(e => e.PeriodEnd).HasColumnName("period_end");
-            entity.Property(e => e.CommitsCount).HasColumnName("commits_count");
-            entity.Property(e => e.LinesAdded).HasColumnName("lines_added");
-            entity.Property(e => e.LinesDeleted).HasColumnName("lines_deleted");
-            entity.Property(e => e.FilesChanged).HasColumnName("files_changed");
-            entity.Property(e => e.MrsCreated).HasColumnName("mrs_created");
-            entity.Property(e => e.MrsMerged).HasColumnName("mrs_merged");
-            entity.Property(e => e.MrsReviewed).HasColumnName("mrs_reviewed");
-            entity.Property(e => e.AvgCycleTimeHours).HasColumnName("avg_cycle_time_hours").HasPrecision(10, 2);
-            entity.Property(e => e.PipelinesTriggered).HasColumnName("pipelines_triggered");
-            entity.Property(e => e.SuccessfulPipelines).HasColumnName("successful_pipelines");
+            
+            // Window information
+            entity.Property(e => e.WindowStart).HasColumnName("window_start");
+            entity.Property(e => e.WindowEnd).HasColumnName("window_end");
+            entity.Property(e => e.WindowDays).HasColumnName("window_days");
+            
+            // Schema versioning
+            entity.Property(e => e.SchemaVersion).HasColumnName("schema_version").HasMaxLength(20);
+            
+            // PRD Metrics
+            entity.Property(e => e.MrCycleTimeP50H).HasColumnName("mr_cycle_time_p50h").HasPrecision(10, 2);
+            entity.Property(e => e.TimeToFirstReviewP50H).HasColumnName("time_to_first_review_p50h").HasPrecision(10, 2);
+            entity.Property(e => e.TimeInReviewP50H).HasColumnName("time_in_review_p50h").HasPrecision(10, 2);
+            entity.Property(e => e.WipAgeP50H).HasColumnName("wip_age_p50h").HasPrecision(10, 2);
+            entity.Property(e => e.WipAgeP90H).HasColumnName("wip_age_p90h").HasPrecision(10, 2);
+            entity.Property(e => e.BranchTtlP50H).HasColumnName("branch_ttl_p50h").HasPrecision(10, 2);
+            entity.Property(e => e.BranchTtlP90H).HasColumnName("branch_ttl_p90h").HasPrecision(10, 2);
+            
             entity.Property(e => e.PipelineSuccessRate).HasColumnName("pipeline_success_rate").HasPrecision(5, 4);
-            entity.Property(e => e.ReviewsGiven).HasColumnName("reviews_given");
-            entity.Property(e => e.UniqueCollaborators).HasColumnName("unique_collaborators");
+            entity.Property(e => e.ApprovalBypassRatio).HasColumnName("approval_bypass_ratio").HasPrecision(5, 4);
+            entity.Property(e => e.ReworkRate).HasColumnName("rework_rate").HasPrecision(5, 4);
+            entity.Property(e => e.FlakyJobRate).HasColumnName("flaky_job_rate").HasPrecision(5, 4);
+            entity.Property(e => e.SignedCommitRatio).HasColumnName("signed_commit_ratio").HasPrecision(5, 4);
+            entity.Property(e => e.IssueSlaBreachRate).HasColumnName("issue_sla_breach_rate").HasPrecision(5, 4);
+            entity.Property(e => e.ReopenedIssueRate).HasColumnName("reopened_issue_rate").HasPrecision(5, 4);
+            entity.Property(e => e.DefectEscapeRate).HasColumnName("defect_escape_rate").HasPrecision(5, 4);
+            
+            entity.Property(e => e.DeploymentFrequencyWk).HasColumnName("deployment_frequency_wk");
+            entity.Property(e => e.MrThroughputWk).HasColumnName("mr_throughput_wk");
+            entity.Property(e => e.WipMrCount).HasColumnName("wip_mr_count");
+            entity.Property(e => e.ReleasesCadenceWk).HasColumnName("releases_cadence_wk");
+            entity.Property(e => e.RollbackIncidence).HasColumnName("rollback_incidence");
+            entity.Property(e => e.DirectPushesDefault).HasColumnName("direct_pushes_default");
+            entity.Property(e => e.ForcePushesProtected).HasColumnName("force_pushes_protected");
+            
+            entity.Property(e => e.MeanTimeToGreenSec).HasColumnName("mean_time_to_green_sec").HasPrecision(12, 2);
+            entity.Property(e => e.AvgPipelineDurationSec).HasColumnName("avg_pipeline_duration_sec").HasPrecision(12, 2);
+            
+            // JSON columns for audit metadata and null reasons
+            entity.Property(e => e.AuditMetadata).HasColumnName("audit_metadata")
+                .HasConversion(
+                    v => v == null ? (string?)null : v.RootElement.GetRawText(),
+                    v => string.IsNullOrEmpty(v) ? (JsonDocument?)null : JsonDocument.Parse(v, default(JsonDocumentOptions)))
+                .HasColumnType("jsonb");
+                
+            entity.Property(e => e.NullReasons).HasColumnName("null_reasons")
+                .HasConversion(
+                    v => v == null ? (string?)null : v.RootElement.GetRawText(),
+                    v => string.IsNullOrEmpty(v) ? (JsonDocument?)null : JsonDocument.Parse(v, default(JsonDocumentOptions)))
+                .HasColumnType("jsonb");
+            
             entity.Property(e => e.CalculatedAt).HasColumnName("calculated_at");
 
             entity.HasOne(e => e.Developer).WithMany(d => d.MetricsAggregates).HasForeignKey(e => e.DeveloperId);
 
             entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_dev_metrics_agg_developer");
-            entity.HasIndex(e => new { e.PeriodType, e.PeriodStart }).HasDatabaseName("idx_dev_metrics_agg_period");
-            entity.HasIndex(e => new { e.DeveloperId, e.PeriodType, e.PeriodStart }).HasDatabaseName("idx_dev_metrics_agg_developer_period").IsUnique();
+            entity.HasIndex(e => new { e.WindowStart, e.WindowEnd }).HasDatabaseName("idx_dev_metrics_agg_window");
+            entity.HasIndex(e => new { e.DeveloperId, e.WindowStart, e.WindowDays }).HasDatabaseName("idx_dev_metrics_agg_developer_window").IsUnique();
+            entity.HasIndex(e => e.SchemaVersion).HasDatabaseName("idx_dev_metrics_agg_schema_version");
         });
     }
 
