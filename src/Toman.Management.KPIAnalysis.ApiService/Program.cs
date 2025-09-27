@@ -1,5 +1,6 @@
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,9 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
+// Add API versioning middleware before endpoints
+app.UseApiVersioning();
+
 // Configure Swagger UI (only in development)
 if (app.Environment.IsDevelopment())
 {
@@ -37,6 +41,10 @@ if (app.Environment.IsDevelopment())
 // Map endpoints
 app.MapDefaultEndpoints();
 
+// Map v1 API endpoints first
+app.MapApiV1Endpoints();
+
+// Map legacy endpoints (to be removed later)
 app.MapGitlabCollectorEndpoints();
 
 app.Run();
