@@ -2,28 +2,11 @@
 
 ## Overview
 
-The v1 API provides versioned, stable endpoints for accessing developer metrics with enhanced filtering, pagination, and schema versioning support.
+The v1 API provides versioned, stable endpoints for accessing developer metrics with enhanced filtering, pagination, and schema versioning support through URI-based versioning.
 
-## Authentication & Versioning
+## Versioning
 
-All v1 API endpoints require proper versioning headers:
-
-### Required Headers
-
-- `X-Api-Version: 1.0.0` (preferred)
-- OR `Accept: application/json;version=1.0.0`
-
-### Error Responses
-
-Missing or invalid version headers will return:
-
-```json
-{
-  "error": "API_VERSION_REQUIRED",
-  "message": "API version must be specified for v1 endpoints",
-  "supportedVersions": ["1.0.0"]
-}
-```
+API versioning is handled through the URI path using `/api/v1/` prefix. No special headers are required.
 
 ## Endpoints
 
@@ -153,37 +136,32 @@ All endpoints follow consistent error response format:
 ```
 
 Common error codes:
-- `API_VERSION_REQUIRED`: Missing version header
-- `INVALID_API_VERSION`: Unsupported version
 - `DEVELOPER_NOT_FOUND`: Developer ID not found
 - `VALIDATION_ERROR`: Invalid query parameters
 
 ## Migration from Legacy APIs
 
 **From `/gitlab-metrics/metrics/developer/{userId}`:**
-- Use `/api/v1/metrics/developers/{developer_id}` with required version header
+- Use `/api/v1/metrics/developers/{developer_id}` 
 - Add `includeSparkline=false` if sparkline data not needed
 
 **From `/api/users/{userId}/metrics`:**
-- Use `/api/v1/metrics/developers/{developer_id}` with required version header
+- Use `/api/v1/metrics/developers/{developer_id}`
 - Similar response structure but with enhanced schema versioning
 
 ## Examples
 
 ### Get all developers with pagination
 ```bash
-curl -H "X-Api-Version: 1.0.0" \
-     "http://localhost:5000/api/v1/metrics/developers?page=1&pageSize=10"
+curl "http://localhost:5000/api/v1/metrics/developers?page=1&pageSize=10"
 ```
 
 ### Get specific developer with project filtering
 ```bash
-curl -H "X-Api-Version: 1.0.0" \
-     "http://localhost:5000/api/v1/metrics/developers/123?projectIds=1,2,3&windowDays=60"
+curl "http://localhost:5000/api/v1/metrics/developers/123?projectIds=1,2,3&windowDays=60"
 ```
 
 ### Get metric catalog
 ```bash
-curl -H "X-Api-Version: 1.0.0" \
-     "http://localhost:5000/api/v1/catalog"
+curl "http://localhost:5000/api/v1/catalog"
 ```

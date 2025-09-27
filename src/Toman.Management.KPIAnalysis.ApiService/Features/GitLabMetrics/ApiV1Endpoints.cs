@@ -54,7 +54,6 @@ public static class ApiV1Endpoints
         [FromQuery] long[]? projectIds = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        HttpContext httpContext = default!,
         CancellationToken cancellationToken = default)
     {
         try
@@ -81,11 +80,9 @@ public static class ApiV1Endpoints
                 windowEnd,
                 cancellationToken);
 
-            var apiVersion = httpContext.Items["ApiVersion"]?.ToString() ?? SchemaVersion.Current;
-
             var response = new ApiV1DevelopersResponse
             {
-                SchemaVersion = apiVersion,
+                SchemaVersion = SchemaVersion.Current,
                 Data = exports,
                 Pagination = new ApiV1Pagination
                 {
@@ -121,7 +118,6 @@ public static class ApiV1Endpoints
         [FromQuery] int? windowDays = null,
         [FromQuery] long[]? projectIds = null,
         [FromQuery] bool includeSparkline = true,
-        HttpContext httpContext = default!,
         CancellationToken cancellationToken = default)
     {
         try
@@ -147,8 +143,6 @@ public static class ApiV1Endpoints
                 });
             }
 
-            var apiVersion = httpContext.Items["ApiVersion"]?.ToString() ?? SchemaVersion.Current;
-
             // Generate sparkline data if requested (simplified version - in production this would query historical data)
             List<ApiV1SparklinePoint>? sparklineData = null;
             if (includeSparkline)
@@ -158,7 +152,7 @@ public static class ApiV1Endpoints
 
             var response = new ApiV1DeveloperResponse
             {
-                SchemaVersion = apiVersion,
+                SchemaVersion = SchemaVersion.Current,
                 Data = latestAggregate,
                 SparklineData = sparklineData,
                 FilterApplied = new ApiV1Filter
@@ -183,17 +177,15 @@ public static class ApiV1Endpoints
 
     private static async Task<IResult> GetCatalog(
         [FromServices] IMetricCatalogService catalogService,
-        HttpContext httpContext,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var catalog = await catalogService.GenerateCatalogAsync();
-            var apiVersion = httpContext.Items["ApiVersion"]?.ToString() ?? SchemaVersion.Current;
 
             var response = new ApiV1CatalogResponse
             {
-                SchemaVersion = apiVersion,
+                SchemaVersion = SchemaVersion.Current,
                 Data = catalog
             };
 
