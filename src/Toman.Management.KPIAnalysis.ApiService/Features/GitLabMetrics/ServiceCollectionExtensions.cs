@@ -29,6 +29,7 @@ internal static class ServiceCollectionExtensions
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
         builder.Services.Configure<MetricsConfiguration>(builder.Configuration.GetSection(MetricsConfiguration.SectionName));
         builder.Services.Configure<CollectionConfiguration>(builder.Configuration.GetSection(CollectionConfiguration.SectionName));
+        builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
 
         // Add database
         builder.AddNpgsqlDbContext<GitLabMetricsDbContext>(Constants.Keys.PostgresDatabase, configureDbContextOptions: options =>
@@ -49,6 +50,11 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
         builder.Services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
         builder.Services.AddScoped<IPerDeveloperMetricsComputationService, PerDeveloperMetricsComputationService>();
+        
+        // Add new metrics persistence and export services
+        builder.Services.AddScoped<IMetricsAggregatesPersistenceService, MetricsAggregatesPersistenceService>();
+        builder.Services.AddScoped<IMetricCatalogService, MetricCatalogService>();
+        builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
 
         // Add HTTP client for GitLab API calls (mock in development, real in production)
         if (builder.Environment.IsDevelopment())
