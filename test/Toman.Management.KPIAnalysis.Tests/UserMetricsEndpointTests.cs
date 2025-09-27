@@ -66,7 +66,7 @@ public class UserMetricsEndpointTests
             "UserId", "UserName", "FromDate", "ToDate",
             "TotalCommits", "TotalMergeRequests", "AverageCommitsPerDay",
             "PipelineSuccessRate", "AverageMRCycleTime", "TotalLinesChanged",
-            "ProductivityScore", "Metadata"
+            "Metadata"
         };
 
         foreach (var propName in requiredProperties)
@@ -276,6 +276,6 @@ public class UserMetricsEndpointTests
         var getComparisonMethod = serviceType.GetMethod("GetUserMetricsComparisonAsync");
         var getComparisonParams = getComparisonMethod!.GetParameters();
         Assert.Equal(5, getComparisonParams.Length);
-        Assert.Equal(typeof(long[]), getComparisonParams[1].ParameterType); // comparisonUserIds
+        Assert.Equal(typeof(List<long>), getComparisonParams[3].ParameterType); // compareWith parameter
     }
 }
