@@ -32,6 +32,24 @@ public static class UserMetricsEndpoints
             .Produces(404)
             .Produces(500);
 
+        group.MapGet("/{userId}/metrics/trends", GetUserMetricsTrends)
+            .WithName("GetUserMetricsTrends")
+            .WithSummary("Get user metrics trends over time")
+            .WithDescription("Fetches trend data for user metrics over specified time period.")
+            .Produces<UserMetricsTrendsResponse>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(500);
+
+        group.MapGet("/{userId}/metrics/comparison", GetUserMetricsComparison)
+            .WithName("GetUserMetricsComparison")
+            .WithSummary("Get user metrics comparison with peers")
+            .WithDescription("Compare user metrics with peer developers.")
+            .Produces<UserMetricsComparisonResponse>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(500);
+
         group.MapPost("/sync", SyncUsers)
             .WithName("SyncUsers")
             .WithSummary("Synchronize users from GitLab to the system")
