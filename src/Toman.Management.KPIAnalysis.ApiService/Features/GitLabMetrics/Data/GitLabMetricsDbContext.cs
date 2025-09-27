@@ -1,13 +1,13 @@
-using System;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
+
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Entities;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Entities;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 
@@ -133,12 +133,12 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
             entity.HasOne(e => e.Project).WithMany(p => p.Commits).HasForeignKey(e => e.ProjectId);
             entity.HasOne(e => e.Developer).WithMany(d => d.Commits).HasForeignKey(e => e.DeveloperId);
-            
+
             entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_commit_facts_developer_id");
             entity.HasIndex(e => e.CommittedAt).HasDatabaseName("idx_commit_facts_committed_at");
             entity.HasIndex(e => e.ProjectId).HasDatabaseName("idx_commit_facts_project_id");
             entity.HasIndex(e => new { e.ProjectId, e.Sha }).HasDatabaseName("idx_commit_facts_project_sha").IsUnique();
-            
+
             // TODO: Add partitioning configuration once EF Core supports it better
         });
 
@@ -172,7 +172,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
             entity.HasOne(e => e.Project).WithMany(p => p.MergeRequests).HasForeignKey(e => e.ProjectId);
             entity.HasOne(e => e.AuthorDeveloper).WithMany(d => d.MergeRequests).HasForeignKey(e => e.AuthorDeveloperId);
-            
+
             entity.HasIndex(e => e.AuthorDeveloperId).HasDatabaseName("idx_merge_request_facts_author");
             entity.HasIndex(e => e.State).HasDatabaseName("idx_merge_request_facts_state");
             entity.HasIndex(e => e.MergedAt).HasDatabaseName("idx_merge_request_facts_merged_at");
@@ -202,7 +202,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.HasOne(e => e.Project).WithMany(p => p.Pipelines).HasForeignKey(e => e.ProjectId);
             entity.HasOne(e => e.MergeRequestFact).WithMany(mr => mr.Pipelines).HasForeignKey(e => e.MergeRequestFactId);
             entity.HasOne(e => e.Developer).WithMany(d => d.Pipelines).HasForeignKey(e => e.DeveloperId);
-            
+
             entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_pipeline_facts_developer_id");
             entity.HasIndex(e => e.MergeRequestFactId).HasDatabaseName("idx_pipeline_facts_merge_request");
             entity.HasIndex(e => e.Status).HasDatabaseName("idx_pipeline_facts_status");
@@ -224,7 +224,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
             entity.HasOne(e => e.MergeRequestFact).WithMany(mr => mr.ReviewEvents).HasForeignKey(e => e.MergeRequestFactId);
             entity.HasOne(e => e.ReviewerDeveloper).WithMany(d => d.ReviewsGiven).HasForeignKey(e => e.ReviewerDeveloperId);
-            
+
             entity.HasIndex(e => e.MergeRequestFactId).HasDatabaseName("idx_review_events_merge_request");
             entity.HasIndex(e => e.ReviewerDeveloperId).HasDatabaseName("idx_review_events_reviewer");
             entity.HasIndex(e => e.EventType).HasDatabaseName("idx_review_events_type");
@@ -257,7 +257,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.CalculatedAt).HasColumnName("calculated_at");
 
             entity.HasOne(e => e.Developer).WithMany(d => d.MetricsAggregates).HasForeignKey(e => e.DeveloperId);
-            
+
             entity.HasIndex(e => e.DeveloperId).HasDatabaseName("idx_dev_metrics_agg_developer");
             entity.HasIndex(e => new { e.PeriodType, e.PeriodStart }).HasDatabaseName("idx_dev_metrics_agg_period");
             entity.HasIndex(e => new { e.DeveloperId, e.PeriodType, e.PeriodStart }).HasDatabaseName("idx_dev_metrics_agg_developer_period").IsUnique();
@@ -424,7 +424,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.ResolvedBy).HasColumnName("resolved_by").HasMaxLength(255);
             entity.Property(e => e.NoteableType).HasColumnName("noteable_type").HasMaxLength(50);
             entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
-            
+
             // Indexes
             entity.HasIndex(e => new { e.ProjectId, e.MergeRequestIid }).HasDatabaseName("idx_raw_mr_note_project_mr");
             entity.HasIndex(e => e.AuthorId).HasDatabaseName("idx_raw_mr_note_author");
@@ -473,7 +473,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.FromDate).HasColumnName("from_date");
             entity.Property(e => e.ToDate).HasColumnName("to_date");
             entity.Property(e => e.PeriodDays).HasColumnName("period_days");
-            
+
             // Code Contribution Metrics
             entity.Property(e => e.TotalCommits).HasColumnName("total_commits");
             entity.Property(e => e.TotalLinesAdded).HasColumnName("total_lines_added");
@@ -482,42 +482,42 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.AverageCommitsPerDay).HasColumnName("average_commits_per_day").HasPrecision(10, 2);
             entity.Property(e => e.AverageLinesChangedPerCommit).HasColumnName("average_lines_changed_per_commit").HasPrecision(10, 2);
             entity.Property(e => e.ActiveProjects).HasColumnName("active_projects");
-            
+
             // Code Review Metrics
             entity.Property(e => e.TotalMergeRequestsCreated).HasColumnName("total_merge_requests_created");
             entity.Property(e => e.TotalMergeRequestsMerged).HasColumnName("total_merge_requests_merged");
             entity.Property(e => e.TotalMergeRequestsReviewed).HasColumnName("total_merge_requests_reviewed");
             entity.Property(e => e.AverageMergeRequestCycleTimeHours).HasColumnName("average_merge_request_cycle_time_hours").HasPrecision(10, 2);
             entity.Property(e => e.MergeRequestMergeRate).HasColumnName("merge_request_merge_rate").HasPrecision(5, 4);
-            
+
             // Quality Metrics
             entity.Property(e => e.TotalPipelinesTriggered).HasColumnName("total_pipelines_triggered");
             entity.Property(e => e.SuccessfulPipelines).HasColumnName("successful_pipelines");
             entity.Property(e => e.FailedPipelines).HasColumnName("failed_pipelines");
             entity.Property(e => e.PipelineSuccessRate).HasColumnName("pipeline_success_rate").HasPrecision(5, 4);
             entity.Property(e => e.AveragePipelineDurationMinutes).HasColumnName("average_pipeline_duration_minutes").HasPrecision(10, 2);
-            
+
             // Collaboration Metrics
             entity.Property(e => e.TotalCommentsOnMergeRequests).HasColumnName("total_comments_on_merge_requests");
             entity.Property(e => e.TotalCommentsOnIssues).HasColumnName("total_comments_on_issues");
             entity.Property(e => e.CollaborationScore).HasColumnName("collaboration_score").HasPrecision(5, 2);
-            
+
             // Issue Management Metrics (to be removed in PRD refactoring)
             entity.Property(e => e.TotalIssuesCreated).HasColumnName("total_issues_created");
             entity.Property(e => e.TotalIssuesAssigned).HasColumnName("total_issues_assigned");
             entity.Property(e => e.TotalIssuesClosed).HasColumnName("total_issues_closed");
             entity.Property(e => e.AverageIssueResolutionTimeHours).HasColumnName("average_issue_resolution_time_hours").HasPrecision(10, 2);
-            
+
             // Productivity Metrics
             entity.Property(e => e.ProductivityScore).HasColumnName("productivity_score").HasPrecision(5, 2);
             entity.Property(e => e.ProductivityLevel).HasColumnName("productivity_level").HasMaxLength(50);
             entity.Property(e => e.CodeChurnRate).HasColumnName("code_churn_rate").HasPrecision(5, 4);
             entity.Property(e => e.ReviewThroughput).HasColumnName("review_throughput").HasPrecision(10, 2);
-            
+
             // Metadata
             entity.Property(e => e.TotalDataPoints).HasColumnName("total_data_points");
             entity.Property(e => e.DataQuality).HasColumnName("data_quality").HasMaxLength(50);
-            
+
             // Indexes for performance
             entity.HasIndex(e => e.UserId).HasDatabaseName("idx_fact_user_metrics_user_id");
             entity.HasIndex(e => e.CollectedAt).HasDatabaseName("idx_fact_user_metrics_collected_at");

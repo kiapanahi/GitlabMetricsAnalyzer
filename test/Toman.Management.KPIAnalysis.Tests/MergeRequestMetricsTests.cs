@@ -1,7 +1,10 @@
 using System.Reflection;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using Moq;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
@@ -120,25 +123,25 @@ public class MergeRequestMetricsTests
         var options = new DbContextOptionsBuilder<GitLabMetricsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-            
+
         using var context = new GitLabMetricsDbContext(options);
-        
+
         var gitLabService = new Mock<IGitLabService>().Object;
         var logger = new Mock<ILogger<UserMetricsService>>().Object;
         var service = new UserMetricsService(context, gitLabService, logger);
 
         // Act - Use reflection to call the private async method
-        var method = typeof(UserMetricsService).GetMethod("CalculateCodeReviewMetricsAsync", 
+        var method = typeof(UserMetricsService).GetMethod("CalculateCodeReviewMetricsAsync",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        var result = await (Task<UserCodeReviewMetrics>)method!.Invoke(service, new object[] 
+
+        var result = await (Task<UserCodeReviewMetrics>)method!.Invoke(service, new object[]
             { mergeRequests, reviewedMRs, CancellationToken.None })!;
 
         // Assert
         Assert.Equal(4, result.MergeRequestsCreated); // 4 total MRs created
         Assert.Equal(2, result.MergeRequestsMerged); // 2 MRs merged (ID 1 and 2)
         Assert.Equal(0.5, result.MergeRequestMergeRate); // 2 merged / 4 created = 0.5 (50%)
-        
+
         // Additional assertions
         Assert.Equal(0, result.MergeRequestsReviewed); // No reviewed MRs in this test
         Assert.Equal(3, result.ApprovalsReceived); // 1 + 2 + 0 + 0 from the 4 MRs
@@ -154,17 +157,17 @@ public class MergeRequestMetricsTests
         var options = new DbContextOptionsBuilder<GitLabMetricsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-            
+
         using var context = new GitLabMetricsDbContext(options);
         var gitLabService = new Mock<IGitLabService>().Object;
         var logger = new Mock<ILogger<UserMetricsService>>().Object;
         var service = new UserMetricsService(context, gitLabService, logger);
 
         // Act
-        var method = typeof(UserMetricsService).GetMethod("CalculateCodeReviewMetricsAsync", 
+        var method = typeof(UserMetricsService).GetMethod("CalculateCodeReviewMetricsAsync",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        var result = await (Task<UserCodeReviewMetrics>)method!.Invoke(service, new object[] 
+
+        var result = await (Task<UserCodeReviewMetrics>)method!.Invoke(service, new object[]
             { mergeRequests, reviewedMRs, CancellationToken.None })!;
 
         // Assert
@@ -226,21 +229,21 @@ public class MergeRequestMetricsTests
         };
 
         var reviewedMRs = new List<RawMergeRequest>();
-        
+
         var options = new DbContextOptionsBuilder<GitLabMetricsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-            
+
         using var context = new GitLabMetricsDbContext(options);
         var gitLabService = new Mock<IGitLabService>().Object;
         var logger = new Mock<ILogger<UserMetricsService>>().Object;
         var service = new UserMetricsService(context, gitLabService, logger);
 
         // Act
-        var method = typeof(UserMetricsService).GetMethod("CalculateCodeReviewMetricsAsync", 
+        var method = typeof(UserMetricsService).GetMethod("CalculateCodeReviewMetricsAsync",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        var result = await (Task<UserCodeReviewMetrics>)method!.Invoke(service, new object[] 
+
+        var result = await (Task<UserCodeReviewMetrics>)method!.Invoke(service, new object[]
             { mergeRequests, reviewedMRs, CancellationToken.None })!;
 
         // Assert

@@ -1,6 +1,7 @@
-﻿using System;
-using System.Text.Json;
+﻿using System.Text.Json;
+
 using Microsoft.EntityFrameworkCore.Migrations;
+
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable

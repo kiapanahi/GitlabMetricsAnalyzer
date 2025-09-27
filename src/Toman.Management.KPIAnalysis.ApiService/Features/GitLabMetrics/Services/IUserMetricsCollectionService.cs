@@ -16,7 +16,7 @@ public interface IUserMetricsCollectionService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The stored user metrics snapshot</returns>
     Task<FactUserMetrics> CollectAndStoreUserMetricsAsync(long userId, DateTimeOffset? fromDate = null, DateTimeOffset? toDate = null, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Get historical user metrics snapshots for comparison
     /// </summary>
@@ -25,7 +25,7 @@ public interface IUserMetricsCollectionService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of user metrics snapshots ordered by collection date (newest first)</returns>
     Task<List<FactUserMetrics>> GetUserMetricsHistoryAsync(long userId, int limit = 10, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Get user metrics snapshots within a specific time range
     /// </summary>
@@ -35,7 +35,7 @@ public interface IUserMetricsCollectionService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of user metrics snapshots within the specified range</returns>
     Task<List<FactUserMetrics>> GetUserMetricsInRangeAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Compare user metrics between two time periods
     /// </summary>
@@ -99,7 +99,7 @@ public sealed record UserMetricsChanges
     public double LinesChangedChangePercent { get; init; }
     public double CommitsPerDayChange { get; init; }
     public double CommitsPerDayChangePercent { get; init; }
-    
+
     // Code Review Changes
     public int MergeRequestsCreatedChange { get; init; }
     public double MergeRequestsCreatedChangePercent { get; init; }
@@ -107,18 +107,18 @@ public sealed record UserMetricsChanges
     public double CycleTimeChangePercent { get; init; }
     public double MergeRateChange { get; init; }
     public double MergeRateChangePercent { get; init; }
-    
+
     // Quality Changes
     public double PipelineSuccessRateChange { get; init; }
     public double PipelineSuccessRateChangePercent { get; init; }
     public int PipelinesTriggeredChange { get; init; }
     public double PipelinesTriggeredChangePercent { get; init; }
-    
+
     // Productivity Changes
     public double ProductivityScoreChange { get; init; }
     public double ProductivityScoreChangePercent { get; init; }
     public string? ProductivityLevelChange { get; init; } // e.g., "Low → High", "High → Medium"
-    
+
     // Overall assessment
     public string OverallTrend { get; init; } = string.Empty; // Improving, Declining, Stable
     public List<string> KeyImprovements { get; init; } = [];

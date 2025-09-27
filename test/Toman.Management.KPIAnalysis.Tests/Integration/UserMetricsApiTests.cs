@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.Tests.Integration;
@@ -13,10 +12,10 @@ public sealed class UserMetricsApiTests
     {
         // This is a basic test to ensure our service compiles and can be instantiated
         // In a real scenario, we would use a test database context
-        
+
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-        
+
         // Act & Assert
         // For now, we just verify that the types exist and compile correctly
         Assert.NotNull(typeof(IUserMetricsService));
@@ -25,7 +24,7 @@ public sealed class UserMetricsApiTests
         Assert.NotNull(typeof(UserMetricsSummaryResponse));
         Assert.NotNull(typeof(UserMetricsTrendsResponse));
         Assert.NotNull(typeof(UserMetricsComparisonResponse));
-        
+
         await Task.CompletedTask; // Avoid async warning
     }
 
@@ -38,7 +37,7 @@ public sealed class UserMetricsApiTests
         Assert.True(Enum.IsDefined(typeof(TrendPeriod), TrendPeriod.Daily));
         Assert.True(Enum.IsDefined(typeof(TrendPeriod), TrendPeriod.Weekly));
         Assert.True(Enum.IsDefined(typeof(TrendPeriod), TrendPeriod.Monthly));
-        
+
         await Task.CompletedTask; // Avoid async warning
     }
 }

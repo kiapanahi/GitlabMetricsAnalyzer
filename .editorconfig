@@ -26,6 +26,8 @@ insert_final_newline = true
 # Organize usings
 dotnet_separate_import_directive_groups = true
 dotnet_sort_system_directives_first = true
+dotnet_remove_unnecessary_imports = true
+dotnet_diagnostic.IDE0005.severity = warning
 file_header_template = unset
 
 # this. and Me. preferences
@@ -375,4 +377,13 @@ dotnet_naming_style.s_camelcase.required_prefix = s_
 dotnet_naming_style.s_camelcase.required_suffix = 
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
+
+[src/**/Migrations/**/*.cs]
+dotnet_remove_unnecessary_imports = false
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.IDE0055.severity = none
+dotnet_analyzer_diagnostic.severity = none
+dotnet_analyzer_diagnostic.category-Formatting.severity = none
+dotnet_analyzer_diagnostic.category-Style.severity = none
+dotnet_analyzer_diagnostic.category-Simplification.severity = none
 

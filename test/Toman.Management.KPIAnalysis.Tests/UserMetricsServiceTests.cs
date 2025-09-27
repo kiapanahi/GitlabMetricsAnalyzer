@@ -1,4 +1,5 @@
 using System.Reflection;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -85,9 +86,9 @@ public class UserMetricsServiceTests
         var toDate = DateTimeOffset.Now;
 
         // Act - Use reflection to call the private static method
-        var method = typeof(UserMetricsService).GetMethod("CalculateCodeContributionMetrics", 
+        var method = typeof(UserMetricsService).GetMethod("CalculateCodeContributionMetrics",
             BindingFlags.NonPublic | BindingFlags.Static);
-        
+
         var result = (UserCodeContributionMetrics)method!.Invoke(null, new object[] { commits, fromDate, toDate })!;
 
         // Assert - Verify the fix: distinct project count instead of commit count
@@ -107,9 +108,9 @@ public class UserMetricsServiceTests
         var toDate = DateTimeOffset.Now;
 
         // Act - Use reflection to call the private static method
-        var method = typeof(UserMetricsService).GetMethod("CalculateCodeContributionMetrics", 
+        var method = typeof(UserMetricsService).GetMethod("CalculateCodeContributionMetrics",
             BindingFlags.NonPublic | BindingFlags.Static);
-        
+
         var result = (UserCodeContributionMetrics)method!.Invoke(null, new object[] { commits, fromDate, toDate })!;
 
         // Assert
@@ -164,9 +165,9 @@ public class UserMetricsServiceTests
         var toDate = DateTimeOffset.Now;
 
         // Act - Use reflection to call the private static method
-        var method = typeof(UserMetricsService).GetMethod("CalculateCodeContributionMetrics", 
+        var method = typeof(UserMetricsService).GetMethod("CalculateCodeContributionMetrics",
             BindingFlags.NonPublic | BindingFlags.Static);
-        
+
         var result = (UserCodeContributionMetrics)method!.Invoke(null, new object[] { commits, fromDate, toDate })!;
 
         // Assert - Before fix this would be 2 (commit count), now should be 1 (distinct projects)

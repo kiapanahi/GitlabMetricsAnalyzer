@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
@@ -47,7 +48,7 @@ public sealed class MetricsCalculationService : IMetricsCalculationService
 
         var mrCount = mergeRequests.Count;
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
-        var averageMRCycleTime = mergedMRs.Count > 0 
+        var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
 
@@ -105,21 +106,21 @@ public sealed class MetricsCalculationService : IMetricsCalculationService
         var pipelineSuccessRate = totalPipelines > 0 ? (double)successfulPipelines / totalPipelines : 0.0;
 
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
-        var averageMRCycleTime = mergedMRs.Count > 0 
+        var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
 
         var activeDevelopers = commits.Select(c => c.AuthorUserId).Distinct().Count();
 
         // Calculate deployment frequency (successful pipelines to main/master)
-        var deploymentPipelines = pipelines.Where(p => 
-            p.IsSuccessful && 
+        var deploymentPipelines = pipelines.Where(p =>
+            p.IsSuccessful &&
             (p.Ref.EndsWith("/main") || p.Ref.EndsWith("/master") || p.Ref == "main" || p.Ref == "master")).Count();
         var deploymentFrequency = deploymentPipelines / (toDate - fromDate).TotalDays;
 
-        var projectName = commits.FirstOrDefault()?.ProjectName ?? 
-                         mergeRequests.FirstOrDefault()?.ProjectName ?? 
-                         pipelines.FirstOrDefault()?.ProjectName ?? 
+        var projectName = commits.FirstOrDefault()?.ProjectName ??
+                         mergeRequests.FirstOrDefault()?.ProjectName ??
+                         pipelines.FirstOrDefault()?.ProjectName ??
                          "Unknown";
 
         return new ProjectMetrics(
@@ -139,7 +140,7 @@ public sealed class MetricsCalculationService : IMetricsCalculationService
 
     public async Task<TeamMetrics> CalculateTeamMetricsAsync(long[] projectIds, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Calculating team metrics for projects [{ProjectIds}] from {FromDate} to {ToDate}", 
+        _logger.LogDebug("Calculating team metrics for projects [{ProjectIds}] from {FromDate} to {ToDate}",
             string.Join(", ", projectIds), fromDate, toDate);
 
         // Get all data across projects
@@ -163,7 +164,7 @@ public sealed class MetricsCalculationService : IMetricsCalculationService
         var pipelineSuccessRate = pipelines.Count > 0 ? (double)successfulPipelines / pipelines.Count : 0.0;
 
         var mergedMRs = mergeRequests.Where(mr => mr.MergedAt.HasValue).ToList();
-        var averageMRCycleTime = mergedMRs.Count > 0 
+        var averageMRCycleTime = mergedMRs.Count > 0
             ? TimeSpan.FromTicks((long)mergedMRs.Average(mr => (mr.MergedAt!.Value - mr.CreatedAt).Ticks))
             : (TimeSpan?)null;
 
@@ -233,7 +234,7 @@ public sealed class MetricsCalculationService : IMetricsCalculationService
         if (allActiveProjects.Length > 0)
         {
             var teamMetrics = await CalculateTeamMetricsAsync(allActiveProjects, fromDate, toDate, cancellationToken);
-            
+
             _logger.LogInformation("Daily metrics processed for {TargetDate}: {CommitCount} commits, {MRCount} MRs, {PipelineSuccessRate:P1} pipeline success rate",
                 targetDate.Date, teamMetrics.TotalCommits, teamMetrics.TotalMergeRequests, teamMetrics.PipelineSuccessRate);
 
