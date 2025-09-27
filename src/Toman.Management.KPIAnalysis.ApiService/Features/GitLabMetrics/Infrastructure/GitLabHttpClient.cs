@@ -178,12 +178,24 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
 
             var response = await _httpClient.GetAsync(url, cancellationToken);
             
+            // Check for rate limiting
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(60);
+                _logger.LogWarning("GitLab API rate limit hit. Waiting {RetryAfter} seconds", retryAfter.TotalSeconds);
+                await Task.Delay(retryAfter, cancellationToken);
+                continue; // Retry the same page
+            }
+            
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("GitLab API request failed with status {StatusCode}: {ErrorContent}", response.StatusCode, errorContent);
                 throw new HttpRequestException($"GitLab API request failed with status {response.StatusCode}: {errorContent}");
             }
+
+            // Log rate limit headers for monitoring
+            LogRateLimitHeaders(response);
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             var items = JsonSerializer.Deserialize<List<T>>(content, JsonOptions) ?? new List<T>();
@@ -199,10 +211,37 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             }
 
             page++;
+            
+            // Add a small delay between requests to be respectful of GitLab API
+            await Task.Delay(50, cancellationToken);
         }
 
         _logger.LogDebug("Retrieved total of {TotalCount} items from {TotalPages} pages", allItems.Count, page);
         return allItems;
+    }
+
+    /// <summary>
+    /// Logs GitLab API rate limit headers for monitoring
+    /// </summary>
+    private void LogRateLimitHeaders(HttpResponseMessage response)
+    {
+        if (response.Headers.TryGetValues("RateLimit-Limit", out var limitValues) &&
+            response.Headers.TryGetValues("RateLimit-Remaining", out var remainingValues) &&
+            response.Headers.TryGetValues("RateLimit-Reset", out var resetValues))
+        {
+            var limit = limitValues.FirstOrDefault();
+            var remaining = remainingValues.FirstOrDefault();
+            var reset = resetValues.FirstOrDefault();
+            
+            _logger.LogDebug("GitLab API Rate Limit: {Remaining}/{Limit} requests remaining, resets at {Reset}",
+                remaining, limit, reset);
+                
+            // Warn when getting close to rate limit
+            if (int.TryParse(remaining, out var remainingInt) && remainingInt < 10)
+            {
+                _logger.LogWarning("GitLab API rate limit nearly exhausted: {Remaining} requests remaining", remaining);
+            }
+        }
     }
 
     /// <summary>
@@ -600,6 +639,17 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
 
             var response = await _httpClient.GetAsync($"users/{userId}", cancellationToken);
             
+            // Handle rate limiting
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(60);
+                _logger.LogWarning("GitLab API rate limit hit for user {UserId}. Waiting {RetryAfter} seconds", userId, retryAfter.TotalSeconds);
+                await Task.Delay(retryAfter, cancellationToken);
+                
+                // Retry the request
+                response = await _httpClient.GetAsync($"users/{userId}", cancellationToken);
+            }
+            
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 _logger.LogWarning("User {UserId} not found", userId);
@@ -607,6 +657,9 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             }
 
             response.EnsureSuccessStatusCode();
+            
+            // Log rate limit headers
+            LogRateLimitHeaders(response);
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             var userDto = JsonSerializer.Deserialize<DTOs.GitLabUser>(content, JsonOptions);
