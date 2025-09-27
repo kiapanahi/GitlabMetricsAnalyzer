@@ -28,6 +28,7 @@ internal static class ServiceCollectionExtensions
         // Add configurations
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
         builder.Services.Configure<MetricsConfiguration>(builder.Configuration.GetSection(MetricsConfiguration.SectionName));
+        builder.Services.Configure<CollectionConfiguration>(builder.Configuration.GetSection(CollectionConfiguration.SectionName));
 
         // Add database
         builder.AddNpgsqlDbContext<GitLabMetricsDbContext>(Constants.Keys.PostgresDatabase, configureDbContextOptions: options =>
@@ -46,6 +47,7 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IUserMetricsCollectionService, UserMetricsCollectionService>();
         builder.Services.AddScoped<IUserSyncService, UserSyncService>();
         builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
+        builder.Services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
 
         // Add HTTP client for GitLab API calls (mock in development, real in production)
         if (builder.Environment.IsDevelopment())

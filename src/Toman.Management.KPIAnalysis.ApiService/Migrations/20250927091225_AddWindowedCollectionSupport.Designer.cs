@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
@@ -11,9 +12,11 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 namespace Toman.Management.KPIAnalysis.ApiService.Migrations
 {
     [DbContext(typeof(GitLabMetricsDbContext))]
-    partial class GitLabMetricsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250927091225_AddWindowedCollectionSupport")]
+    partial class AddWindowedCollectionSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1102,10 +1105,6 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("additions");
 
-                    b.Property<int>("AdditionsExcluded")
-                        .HasColumnType("integer")
-                        .HasColumnName("additions_excluded");
-
                     b.Property<string>("AuthorEmail")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1136,25 +1135,9 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("deletions");
 
-                    b.Property<int>("DeletionsExcluded")
-                        .HasColumnType("integer")
-                        .HasColumnName("deletions_excluded");
-
-                    b.Property<int>("FilesChanged")
-                        .HasColumnType("integer")
-                        .HasColumnName("files_changed");
-
-                    b.Property<int>("FilesChangedExcluded")
-                        .HasColumnType("integer")
-                        .HasColumnName("files_changed_excluded");
-
                     b.Property<DateTimeOffset>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
-
-                    b.Property<bool>("IsMergeCommit")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_merge_commit");
 
                     b.Property<bool>("IsSigned")
                         .HasColumnType("boolean")
@@ -1165,14 +1148,6 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("text")
                         .HasColumnName("message");
 
-                    b.Property<int>("ParentCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("parent_count");
-
-                    b.Property<string>("ParentShas")
-                        .HasColumnType("text")
-                        .HasColumnName("parent_shas");
-
                     b.Property<long>("ProjectId")
                         .HasColumnType("bigint")
                         .HasColumnName("project_id");
@@ -1182,16 +1157,6 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("project_name");
-
-                    b.Property<string>("ShortSha")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasColumnName("short_sha");
-
-                    b.Property<string>("WebUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("web_url");
 
                     b.HasKey("Id");
 
@@ -1304,62 +1269,17 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("closed_at");
 
-                    b.Property<int>("CommitsCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("commits_count");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
-
-                    b.Property<DateTimeOffset?>("FirstCommitAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("first_commit_at");
-
-                    b.Property<string>("FirstCommitMessage")
-                        .HasColumnType("text")
-                        .HasColumnName("first_commit_message");
-
-                    b.Property<string>("FirstCommitSha")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("first_commit_sha");
 
                     b.Property<DateTimeOffset?>("FirstReviewAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("first_review_at");
 
-                    b.Property<bool>("HasConflicts")
-                        .HasColumnType("boolean")
-                        .HasColumnName("has_conflicts");
-
                     b.Property<DateTimeOffset>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
-
-                    b.Property<bool>("IsDraft")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_draft");
-
-                    b.Property<bool>("IsHotfix")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_hotfix");
-
-                    b.Property<bool>("IsRevert")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_revert");
-
-                    b.Property<string>("Labels")
-                        .HasColumnType("text")
-                        .HasColumnName("labels");
-
-                    b.Property<int>("LinesAdded")
-                        .HasColumnType("integer")
-                        .HasColumnName("lines_added");
-
-                    b.Property<int>("LinesDeleted")
-                        .HasColumnType("integer")
-                        .HasColumnName("lines_deleted");
 
                     b.Property<DateTimeOffset?>("MergedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1406,11 +1326,6 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("title");
-
-                    b.Property<string>("WebUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("web_url");
 
                     b.HasKey("Id");
 

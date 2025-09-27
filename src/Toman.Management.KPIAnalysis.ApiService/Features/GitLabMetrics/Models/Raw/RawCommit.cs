@@ -15,4 +15,15 @@ public sealed class RawCommit
     public int Deletions { get; init; }
     public bool IsSigned { get; init; }
     public DateTimeOffset IngestedAt { get; init; }
+    
+    // Enhanced fields for commit analysis
+    public int FilesChanged { get; init; }
+    public int AdditionsExcluded { get; init; } // Lines added excluding filtered files
+    public int DeletionsExcluded { get; init; } // Lines deleted excluding filtered files
+    public int FilesChangedExcluded { get; init; } // Files changed excluding filtered files
+    public bool IsMergeCommit { get; init; }
+    public int ParentCount { get; init; }
+    public string? ParentShas { get; init; } // JSON array of parent commit SHAs
+    public string? WebUrl { get; init; }
+    public string? ShortSha { get; init; }
 }
