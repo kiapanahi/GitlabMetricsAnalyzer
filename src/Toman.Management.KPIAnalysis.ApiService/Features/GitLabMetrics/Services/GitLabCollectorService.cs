@@ -16,6 +16,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private readonly IUserSyncService _userSyncService;
     private readonly IDataEnrichmentService _dataEnrichmentService;
     private readonly CollectionConfiguration _collectionConfig;
+    private readonly IObservabilityMetricsService _metricsService;
+    private readonly IDataQualityService _dataQualityService;
     private readonly ILogger<GitLabCollectorService> _logger;
 
     public GitLabCollectorService(
@@ -24,6 +26,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         IUserSyncService userSyncService,
         IDataEnrichmentService dataEnrichmentService,
         IOptions<CollectionConfiguration> collectionConfig,
+        IObservabilityMetricsService metricsService,
+        IDataQualityService dataQualityService,
         ILogger<GitLabCollectorService> logger)
     {
         _gitLabService = gitLabService;
@@ -31,6 +35,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         _userSyncService = userSyncService;
         _dataEnrichmentService = dataEnrichmentService;
         _collectionConfig = collectionConfig.Value;
+        _metricsService = metricsService;
+        _dataQualityService = dataQualityService;
         _logger = logger;
     }
 
@@ -201,6 +207,14 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     public async Task<CollectionRunResponse> StartCollectionRunAsync(StartCollectionRunRequest request, CancellationToken cancellationToken = default)
     {
         var runId = Guid.NewGuid();
+        var startTime = DateTimeOffset.UtcNow;
+        
+        using var activity = Diagnostics.ActivitySource.StartActivity("GitLabCollection.Run");
+        activity?.SetTag("run_id", runId.ToString());
+        activity?.SetTag("run_type", request.RunType);
+        activity?.SetTag("trigger_source", request.TriggerSource);
+        activity?.SetTag("window_size_hours", request.WindowSizeHours?.ToString());
+
         _logger.LogInformation("Starting collection run {RunId} of type {RunType}", runId, request.RunType);
 
         var collectionRun = new CollectionRun
@@ -208,7 +222,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             Id = runId,
             RunType = request.RunType,
             Status = "running",
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = startTime,
             TriggerSource = request.TriggerSource,
             WindowSizeHours = request.WindowSizeHours
         };
@@ -237,12 +251,54 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             // Update run with completion
             await UpdateCollectionRunAsync(runId, "completed", stats, null, cancellationToken);
 
+            // Record observability metrics
+            var duration = DateTimeOffset.UtcNow - startTime;
+            _metricsService.RecordRunDuration(request.RunType, "completed", duration, runId);
+            _metricsService.RecordCollectionStats(
+                stats.ProjectsProcessed, 
+                stats.CommitsCollected, 
+                stats.MergeRequestsCollected, 
+                stats.PipelinesCollected, 
+                stats.ReviewEventsCollected, 
+                runId);
+
+            activity?.SetTag("status", "completed");
+            activity?.SetTag("duration_seconds", duration.TotalSeconds.ToString("F2"));
+            activity?.SetTag("projects_processed", stats.ProjectsProcessed.ToString());
+            activity?.SetTag("commits_collected", stats.CommitsCollected.ToString());
+
+            // Run data quality checks after successful collection
+            try
+            {
+                var dataQualityReport = await _dataQualityService.PerformDataQualityChecksAsync(runId, cancellationToken);
+                activity?.SetTag("data_quality_status", dataQualityReport.OverallStatus);
+                activity?.SetTag("data_quality_score", dataQualityReport.OverallScore.ToString("F2"));
+                
+                _logger.LogInformation("Data quality checks completed for run {RunId}. Status: {Status}, Score: {Score:F2}", 
+                    runId, dataQualityReport.OverallStatus, dataQualityReport.OverallScore);
+            }
+            catch (Exception dqEx)
+            {
+                _logger.LogWarning(dqEx, "Data quality checks failed for run {RunId}", runId);
+                activity?.SetTag("data_quality_error", dqEx.Message);
+            }
+
             _logger.LogInformation("Completed collection run {RunId} successfully", runId);
             return await GetCollectionRunResponseAsync(runId, cancellationToken);
         }
         catch (Exception ex)
         {
+            var duration = DateTimeOffset.UtcNow - startTime;
             _logger.LogError(ex, "Failed collection run {RunId}", runId);
+            
+            // Record failure metrics
+            _metricsService.RecordRunDuration(request.RunType, "failed", duration, runId);
+            _metricsService.RecordApiError("collection_run_failed", 500, runId);
+            
+            activity?.SetTag("status", "failed");
+            activity?.SetTag("error_message", ex.Message);
+            activity?.SetTag("duration_seconds", duration.TotalSeconds.ToString("F2"));
+            
             await UpdateCollectionRunAsync(runId, "failed", null, ex.Message, cancellationToken);
             throw;
         }

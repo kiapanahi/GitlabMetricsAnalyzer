@@ -16,6 +16,8 @@ public static class GitLabMetricsEndpoints
            .MapUserMetricsEndpoints()
            .MapPerDeveloperMetricsEndpoints();
            
+        app.MapDataQualityEndpoints();
+           
         app.MapMetricsExportEndpoints();
 
         return app;
@@ -175,6 +177,7 @@ public static class GitLabMetricsEndpoints
     {
         app.MapGet("/status", async (
             [FromServices] GitLabMetricsDbContext dbContext,
+            [FromServices] IDataQualityService dataQualityService,
             CancellationToken cancellationToken) =>
         {
             try
@@ -188,12 +191,32 @@ public static class GitLabMetricsEndpoints
                     .Where(s => s.Entity == "backfill")
                     .FirstOrDefaultAsync(cancellationToken);
 
-                // Calculate coverage
-                //var totalProjects = await dbContext.DimProjects.CountAsync(cancellationToken);
-                //var activeProjects = await dbContext.DimProjects
-                //    .CountAsync(p => !p.archived, cancellationToken);
+                // Get recent collection runs
+                var recentRuns = await dbContext.CollectionRuns
+                    .OrderByDescending(r => r.StartedAt)
+                    .Take(5)
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.RunType,
+                        r.Status,
+                        r.StartedAt,
+                        r.CompletedAt,
+                        Duration = r.CompletedAt.HasValue ? (TimeSpan?)(r.CompletedAt.Value - r.StartedAt) : null,
+                        r.ProjectsProcessed,
+                        r.CommitsCollected,
+                        r.MergeRequestsCollected,
+                        r.PipelinesCollected,
+                        r.ErrorMessage
+                    })
+                    .ToListAsync(cancellationToken);
 
-                //var coveragePercent = totalProjects > 0 ? activeProjects / (decimal)totalProjects * 100 : 0;
+                // Calculate coverage
+                var totalProjects = await dbContext.Projects.CountAsync(cancellationToken);
+                var activeProjects = await dbContext.Projects
+                    .CountAsync(p => !p.Archived, cancellationToken);
+
+                var coveragePercent = totalProjects > 0 ? activeProjects / (decimal)totalProjects * 100 : 0;
 
                 // Calculate lag
                 var lastUpdateTime = lastIncrementalRun?.LastRunAt ?? DateTimeOffset.MinValue;
@@ -206,20 +229,31 @@ public static class GitLabMetricsEndpoints
                 var recentPipelines = await dbContext.RawPipelines
                     .CountAsync(p => p.CreatedAt > DateTimeOffset.UtcNow.AddDays(-7), cancellationToken);
 
+                var recentCommits = await dbContext.RawCommits
+                    .CountAsync(c => c.CommittedAt > DateTimeOffset.UtcNow.AddDays(-7), cancellationToken);
+
+                // Get API error counts from recent runs
+                var failedRuns = await dbContext.CollectionRuns
+                    .CountAsync(r => r.Status == "failed" && r.StartedAt > DateTimeOffset.UtcNow.AddDays(-1), cancellationToken);
+
+                // Perform latest data quality check
+                var dataQualityReport = await dataQualityService.PerformDataQualityChecksAsync(cancellationToken: cancellationToken);
+
                 return Results.Ok(new
                 {
                     timestamp = DateTimeOffset.UtcNow,
                     lastRuns = new
                     {
                         incremental = lastIncrementalRun?.LastRunAt,
-                        backfill = lastBackfillRun?.LastRunAt
+                        backfill = lastBackfillRun?.LastRunAt,
+                        recent = recentRuns
                     },
-                    //coverage = new
-                    //{
-                    //    totalProjects,
-                    //    activeProjects,
-                    //    coveragePercent = Math.Round(coveragePercent, 2)
-                    //},
+                    coverage = new
+                    {
+                        totalProjects,
+                        activeProjects,
+                        coveragePercent = Math.Round(coveragePercent, 2)
+                    },
                     lag = new
                     {
                         lagMinutes = Math.Round(lagMinutes, 2),
@@ -228,12 +262,28 @@ public static class GitLabMetricsEndpoints
                     recentActivity = new
                     {
                         mergeRequestsLast7Days = recentMRs,
-                        pipelinesLast7Days = recentPipelines
+                        pipelinesLast7Days = recentPipelines,
+                        commitsLast7Days = recentCommits
                     },
                     apiErrors = new
                     {
-                        rateLimitHits429 = 0, // Would need to implement tracking
-                        serverErrors5xx = 0   // Would need to implement tracking
+                        failedRunsLast24h = failedRuns,
+                        // Note: More detailed API error tracking would require instrumenting the GitLabService
+                        rateLimitHits429 = 0, 
+                        serverErrors5xx = 0   
+                    },
+                    dataQuality = new
+                    {
+                        overallStatus = dataQualityReport.OverallStatus,
+                        overallScore = Math.Round(dataQualityReport.OverallScore, 3),
+                        generatedAt = dataQualityReport.GeneratedAt,
+                        checks = dataQualityReport.Checks.Select(c => new
+                        {
+                            checkType = c.CheckType,
+                            status = c.Status,
+                            score = c.Score.HasValue ? Math.Round(c.Score.Value, 3) : (double?)null,
+                            description = c.Description
+                        })
                     }
                 });
             }

@@ -57,7 +57,8 @@ public static class Extensions
             .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddProcessInstrumentation()
-                    .AddRuntimeInstrumentation())
+                    .AddRuntimeInstrumentation()
+                    .AddMeter("Toman.Management.KPIAnalysis.GitLabMetrics"))
             .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation());
 
