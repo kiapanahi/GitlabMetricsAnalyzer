@@ -11,7 +11,7 @@ public interface IUserSyncService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of users synchronized</returns>
     Task<int> SyncAllUsersAsync(CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Ensures that users referenced in raw data exist in DimUsers table
     /// Extracts unique user IDs from raw data and fetches missing user details from GitLab
@@ -19,7 +19,7 @@ public interface IUserSyncService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of users synchronized</returns>
     Task<int> SyncMissingUsersFromRawDataAsync(CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Ensures a specific user exists in the DimUsers table
     /// </summary>

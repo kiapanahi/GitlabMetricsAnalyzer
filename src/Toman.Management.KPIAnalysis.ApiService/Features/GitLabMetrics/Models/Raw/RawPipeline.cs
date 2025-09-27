@@ -19,7 +19,7 @@ public sealed class RawPipeline
     public int DurationSec { get; init; }
     public string? Environment { get; init; }
     public DateTimeOffset IngestedAt { get; init; }
-    
+
     // Calculated success rate helper
     public bool IsSuccessful => Status.Equals("success", StringComparison.OrdinalIgnoreCase);
 }

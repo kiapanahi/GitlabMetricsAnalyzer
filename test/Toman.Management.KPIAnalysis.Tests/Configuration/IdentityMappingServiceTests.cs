@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 

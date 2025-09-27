@@ -9,17 +9,17 @@ public interface IUserMetricsService
     /// Get comprehensive metrics for a specific user
     /// </summary>
     Task<UserMetricsResponse> GetUserMetricsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Get a summary of key metrics for a user
     /// </summary>
     Task<UserMetricsSummaryResponse> GetUserMetricsSummaryAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Get user metrics trends over time
     /// </summary>
     Task<UserMetricsTrendsResponse> GetUserMetricsTrendsAsync(long userId, DateTimeOffset fromDate, DateTimeOffset toDate, TrendPeriod period = TrendPeriod.Weekly, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Get user metrics comparison with peers
     /// </summary>

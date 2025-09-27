@@ -21,7 +21,7 @@ public sealed class RawMergeRequest
     public DateTimeOffset? FirstReviewAt { get; init; }
     public string? ReviewerIds { get; init; } // JSON array of reviewer IDs
     public DateTimeOffset IngestedAt { get; init; }
-    
+
     // Calculated fields for cycle time
     public TimeSpan? CycleTime => MergedAt.HasValue ? MergedAt.Value - CreatedAt : null;
     public TimeSpan? ReviewTime => FirstReviewAt.HasValue ? FirstReviewAt.Value - CreatedAt : null;

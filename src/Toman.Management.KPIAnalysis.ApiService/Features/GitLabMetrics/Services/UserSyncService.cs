@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
@@ -48,7 +49,7 @@ public sealed class UserSyncService : IUserSyncService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogInformation("Synchronized {SyncedCount} out of {TotalCount} users", syncedCount, users.Count);
         return syncedCount;
     }
@@ -74,7 +75,7 @@ public sealed class UserSyncService : IUserSyncService
                 {
                     // Try to fetch real user from GitLab by email
                     var gitLabUsers = await _gitLabService.GetUsersAsync(cancellationToken);
-                    var matchingUser = gitLabUsers.FirstOrDefault(u => 
+                    var matchingUser = gitLabUsers.FirstOrDefault(u =>
                         u.Email?.Equals(userInfo.Email, StringComparison.OrdinalIgnoreCase) == true);
 
                     if (matchingUser is not null)
@@ -83,7 +84,7 @@ public sealed class UserSyncService : IUserSyncService
                         if (await SyncUserToDimTableAsync(matchingUser, cancellationToken))
                         {
                             syncedCount++;
-                            
+
                             // Update raw data with correct user ID
                             await UpdateRawDataWithCorrectUserIdAsync(userInfo.TempUserId, matchingUser.Id, cancellationToken);
                         }
@@ -103,8 +104,8 @@ public sealed class UserSyncService : IUserSyncService
 
                         await _dbContext.DimUsers.AddAsync(placeholderUser, cancellationToken);
                         syncedCount++;
-                        
-                        _logger.LogDebug("Created placeholder user for {Email} with temp ID {TempUserId}", 
+
+                        _logger.LogDebug("Created placeholder user for {Email} with temp ID {TempUserId}",
                             userInfo.Email, userInfo.TempUserId);
                     }
                 }
@@ -116,7 +117,7 @@ public sealed class UserSyncService : IUserSyncService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogInformation("Synchronized {SyncedCount} users from raw data", syncedCount);
         return syncedCount;
     }
@@ -157,7 +158,7 @@ public sealed class UserSyncService : IUserSyncService
             {
                 // For init-only properties, we need to remove and recreate
                 _dbContext.DimUsers.Remove(existingUser);
-                
+
                 var updatedUser = new DimUser
                 {
                     UserId = gitLabUser.Id,
@@ -263,7 +264,7 @@ public sealed class UserSyncService : IUserSyncService
             await _dbContext.RawCommits.AddAsync(updatedCommit, cancellationToken);
         }
 
-        _logger.LogDebug("Updated {CommitCount} commits from temp user ID {TempUserId} to real user ID {RealUserId}", 
+        _logger.LogDebug("Updated {CommitCount} commits from temp user ID {TempUserId} to real user ID {RealUserId}",
             commitsToUpdate.Count, tempUserId, realUserId);
     }
 }

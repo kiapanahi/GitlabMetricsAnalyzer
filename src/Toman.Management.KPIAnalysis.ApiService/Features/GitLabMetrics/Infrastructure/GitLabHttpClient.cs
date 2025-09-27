@@ -1,9 +1,5 @@
 using System.Text.Json;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;

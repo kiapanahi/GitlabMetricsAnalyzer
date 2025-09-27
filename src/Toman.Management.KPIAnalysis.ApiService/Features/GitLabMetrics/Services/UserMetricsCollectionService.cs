@@ -29,7 +29,7 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
         // Default to 3 months period if not specified
         var defaultFromDate = DateTimeOffset.UtcNow.AddMonths(-3);
         var defaultToDate = DateTimeOffset.UtcNow;
-        
+
         var from = fromDate ?? defaultFromDate;
         var to = toDate ?? defaultToDate;
 
@@ -61,7 +61,7 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             FromDate = from,
             ToDate = to,
             PeriodDays = (int)(to - from).TotalDays,
-            
+
             // Code Contribution Metrics
             TotalCommits = userMetrics.CodeContribution.TotalCommits,
             TotalLinesAdded = userMetrics.CodeContribution.TotalLinesAdded,
@@ -70,38 +70,38 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             AverageCommitsPerDay = userMetrics.CodeContribution.CommitsPerDay,
             AverageLinesChangedPerCommit = userMetrics.CodeContribution.AverageCommitSize,
             ActiveProjects = userMetrics.CodeContribution.FilesModified, // Now represents actual distinct projects from commits
-            
+
             // Code Review Metrics
             TotalMergeRequestsCreated = userMetrics.CodeReview.MergeRequestsCreated,
             TotalMergeRequestsMerged = userMetrics.CodeReview.MergeRequestsMerged,
             TotalMergeRequestsReviewed = userMetrics.CodeReview.MergeRequestsReviewed,
             AverageMergeRequestCycleTimeHours = userMetrics.CodeReview.AverageMRCycleTime?.TotalHours ?? 0,
             MergeRequestMergeRate = userMetrics.CodeReview.MergeRequestMergeRate,
-            
+
             // Quality Metrics
             TotalPipelinesTriggered = userMetrics.Quality.PipelineFailures + (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation
             SuccessfulPipelines = (int)(userMetrics.Quality.PipelineSuccessRate * 100), // Approximation
             FailedPipelines = userMetrics.Quality.PipelineFailures,
             PipelineSuccessRate = userMetrics.Quality.PipelineSuccessRate,
             AveragePipelineDurationMinutes = 0, // Not available in current model
-            
+
             // Issue Management Metrics
             TotalIssuesCreated = userMetrics.IssueManagement.IssuesCreated,
             TotalIssuesAssigned = userMetrics.IssueManagement.IssuesAssigned, // Now uses actual assigned issues data
             TotalIssuesClosed = userMetrics.IssueManagement.IssuesResolved,
             AverageIssueResolutionTimeHours = userMetrics.IssueManagement.AverageIssueResolutionTime?.TotalHours ?? 0,
-            
+
             // Collaboration Metrics
             TotalCommentsOnMergeRequests = userMetrics.Collaboration.TotalCommentsOnMergeRequests,
             TotalCommentsOnIssues = userMetrics.Collaboration.TotalCommentsOnIssues,
             CollaborationScore = userMetrics.Collaboration.KnowledgeSharingScore,
-            
+
             // Productivity Metrics
             ProductivityScore = userMetrics.Productivity.VelocityScore,
             ProductivityLevel = DetermineProductivityLevel(userMetrics.Productivity.VelocityScore),
             CodeChurnRate = userMetrics.Quality.CodeRevertRate,
             ReviewThroughput = userMetrics.CodeReview.ReviewParticipationRate,
-            
+
             // Metadata
             TotalDataPoints = userMetrics.Metadata.TotalDataPoints,
             DataQuality = DetermineDataQuality(userMetrics.Metadata.TotalDataPoints, (int)(to - from).TotalDays)
@@ -136,7 +136,7 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             .OrderByDescending(m => m.CollectedAt)
             .ToListAsync(cancellationToken);
 
-        _logger.LogDebug("Retrieved {Count} metrics snapshots for user {UserId} between {FromDate} and {ToDate}", 
+        _logger.LogDebug("Retrieved {Count} metrics snapshots for user {UserId} between {FromDate} and {ToDate}",
             metrics.Count, userId, fromDate, toDate);
 
         return metrics;
@@ -183,7 +183,7 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             LinesChangedChangePercent = CalculatePercentChange(baseline.TotalLinesChanged, current.TotalLinesChanged),
             CommitsPerDayChange = current.AverageCommitsPerDay - baseline.AverageCommitsPerDay,
             CommitsPerDayChangePercent = CalculatePercentChange(baseline.AverageCommitsPerDay, current.AverageCommitsPerDay),
-            
+
             // Code Review Changes
             MergeRequestsCreatedChange = current.TotalMergeRequestsCreated - baseline.TotalMergeRequestsCreated,
             MergeRequestsCreatedChangePercent = CalculatePercentChange(baseline.TotalMergeRequestsCreated, current.TotalMergeRequestsCreated),
@@ -191,18 +191,18 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
             CycleTimeChangePercent = CalculatePercentChange(baseline.AverageMergeRequestCycleTimeHours, current.AverageMergeRequestCycleTimeHours),
             MergeRateChange = current.MergeRequestMergeRate - baseline.MergeRequestMergeRate,
             MergeRateChangePercent = CalculatePercentChange(baseline.MergeRequestMergeRate, current.MergeRequestMergeRate),
-            
+
             // Quality Changes
             PipelineSuccessRateChange = current.PipelineSuccessRate - baseline.PipelineSuccessRate,
             PipelineSuccessRateChangePercent = CalculatePercentChange(baseline.PipelineSuccessRate, current.PipelineSuccessRate),
             PipelinesTriggeredChange = current.TotalPipelinesTriggered - baseline.TotalPipelinesTriggered,
             PipelinesTriggeredChangePercent = CalculatePercentChange(baseline.TotalPipelinesTriggered, current.TotalPipelinesTriggered),
-            
+
             // Productivity Changes
             ProductivityScoreChange = current.ProductivityScore - baseline.ProductivityScore,
             ProductivityScoreChangePercent = CalculatePercentChange(baseline.ProductivityScore, current.ProductivityScore),
-            ProductivityLevelChange = baseline.ProductivityLevel == current.ProductivityLevel 
-                ? null 
+            ProductivityLevelChange = baseline.ProductivityLevel == current.ProductivityLevel
+                ? null
                 : $"{baseline.ProductivityLevel} → {current.ProductivityLevel}"
         };
 
@@ -226,8 +226,8 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
         if (improvements.Count > concerns.Count) overallTrend = "Improving";
         else if (concerns.Count > improvements.Count) overallTrend = "Declining";
 
-        return changes with 
-        { 
+        return changes with
+        {
             OverallTrend = overallTrend,
             KeyImprovements = improvements,
             AreasOfConcern = concerns
@@ -249,11 +249,11 @@ public sealed class UserMetricsCollectionService : IUserMetricsCollectionService
     private static string DetermineDataQuality(int totalDataPoints, int periodDays)
     {
         var dataPointsPerDay = (double)totalDataPoints / periodDays;
-        
+
         return dataPointsPerDay switch
         {
             >= 5 => "Excellent",
-            >= 3 => "Good", 
+            >= 3 => "Good",
             >= 1 => "Fair",
             _ => "Poor"
         };

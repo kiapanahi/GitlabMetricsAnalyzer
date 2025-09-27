@@ -22,7 +22,7 @@ public sealed class RawMergeRequestNote
     public string? ResolvedBy { get; init; }
     public string? NoteableType { get; init; } // "MergeRequest" 
     public DateTimeOffset IngestedAt { get; init; }
-    
+
     // Helper properties
     public bool IsUserComment => !System; // Not a system-generated comment
     public bool IsCodeReviewComment => Resolvable; // Comment on code lines

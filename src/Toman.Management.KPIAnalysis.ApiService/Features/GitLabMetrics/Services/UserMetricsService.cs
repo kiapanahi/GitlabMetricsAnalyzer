@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 
-using System.Text.Json;
-
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
@@ -530,16 +528,16 @@ public sealed class UserMetricsService : IUserMetricsService
             // This replaces the previous approximation of UniqueReviewers * 2
             var totalMRs = mergeRequests.Count;
             var activeMRs = mergeRequests.Count(mr => mr.State == "merged" || mr.State == "closed");
-            
+
             // Evidence-based estimation: merged/closed MRs typically have more discussion
             var estimatedComments = activeMRs * 3 + (totalMRs - activeMRs) * 1;
-            
+
             // TODO: Replace with actual database query when comment ingestion is implemented:
             // var actualComments = await _dbContext.RawMergeRequestNotes
             //     .Where(note => mergeRequests.Select(mr => mr.MrId).Contains(note.MergeRequestIid) &&
             //                   !note.System && note.AuthorId == userId)
             //     .CountAsync(cancellationToken);
-            
+
             return estimatedComments;
         }
         catch (Exception ex)
@@ -562,15 +560,15 @@ public sealed class UserMetricsService : IUserMetricsService
         // Count distinct projects involved in collaboration
         var ownProjects = mergeRequests.Select(mr => mr.ProjectId).Distinct().ToHashSet();
         var reviewedProjects = reviewedMRs.Select(mr => mr.ProjectId).Distinct().ToHashSet();
-        
+
         // Cross-team collaboration occurs when reviewing MRs outside own projects
         var crossProjectReviews = reviewedProjects.Except(ownProjects).Count();
-        
+
         // Also count when others from different projects review user's MRs
         var externalReviewsReceived = mergeRequests
             .Where(mr => !string.IsNullOrEmpty(mr.ReviewerIds) && mr.ProjectId != 0) // TODO: Implement proper cross-project review detection
             .Count();
-        
+
         return crossProjectReviews + (externalReviewsReceived > 0 ? 1 : 0);
     }
 
@@ -581,18 +579,18 @@ public sealed class UserMetricsService : IUserMetricsService
     {
         // Mentorship indicator: consistently reviewing multiple people's work
         if (uniqueReviewees < 2) return 0;
-        
+
         // Calculate mentorship score based on:
         // 1. Number of different people mentored (unique reviewees)
         // 2. Consistency of reviews (more than just one-off reviews)
         var avgReviewsPerPerson = reviewedMRs.Count > 0 ? (double)reviewedMRs.Count / uniqueReviewees : 0;
-        
+
         // If reviewing multiple people consistently (>2 reviews per person on average), it's mentorship
         if (avgReviewsPerPerson >= 2 && uniqueReviewees >= 3)
         {
             return Math.Min(uniqueReviewees / 2, 5); // Cap at 5 mentorship activities
         }
-        
+
         return uniqueReviewees >= 4 ? 1 : 0; // Some mentorship if reviewing many people
     }
 
@@ -604,14 +602,14 @@ public sealed class UserMetricsService : IUserMetricsService
         // Normalize metrics per day
         var commitsPerDay = commitsCount / daysDiff;
         var mrsPerDay = mergeRequestsCount / daysDiff;
-        
+
         // Weight different components
         var commitScore = Math.Min(commitsPerDay * 2, 3.0); // Cap commits contribution at 3 points
         var mrScore = Math.Min(mrsPerDay * 3, 4.0); // Cap MR contribution at 4 points  
         var qualityScore = pipelineSuccessRate * 3.0; // Quality contributes up to 3 points
-        
+
         var totalScore = commitScore + mrScore + qualityScore;
-        
+
         // Normalize to 0-10 scale
         return Math.Min(totalScore, 10.0);
     }
@@ -641,7 +639,7 @@ public sealed class UserMetricsService : IUserMetricsService
 
         // If not found in GitLab API, try to find in local database as fallback
         _logger.LogWarning("User {UserId} not found in GitLab API, trying database fallback", userId);
-        
+
         var dbUser = await _dbContext.DimUsers
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);

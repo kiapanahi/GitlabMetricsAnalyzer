@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;

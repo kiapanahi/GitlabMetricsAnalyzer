@@ -1,7 +1,3 @@
-using System.Text.RegularExpressions;
-using Microsoft.Extensions.Options;
-using Toman.Management.KPIAnalysis.ApiService.Configuration;
-
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
