@@ -22,6 +22,20 @@ public sealed class RawMergeRequest
     public string? ReviewerIds { get; init; } // JSON array of reviewer IDs
     public DateTimeOffset IngestedAt { get; init; }
 
+    // Enhanced fields for MR data enrichment
+    public string? Labels { get; init; } // JSON array of labels
+    public string? FirstCommitSha { get; init; }
+    public DateTimeOffset? FirstCommitAt { get; init; }
+    public string? FirstCommitMessage { get; init; }
+    public bool IsHotfix { get; init; } // Derived from labels or branch patterns
+    public bool IsRevert { get; init; } // Derived from title or commit patterns
+    public bool IsDraft { get; init; }
+    public bool HasConflicts { get; init; }
+    public int CommitsCount { get; init; }
+    public int LinesAdded { get; init; }
+    public int LinesDeleted { get; init; }
+    public string? WebUrl { get; init; }
+
     // Calculated fields for cycle time
     public TimeSpan? CycleTime => MergedAt.HasValue ? MergedAt.Value - CreatedAt : null;
     public TimeSpan? ReviewTime => FirstReviewAt.HasValue ? FirstReviewAt.Value - CreatedAt : null;

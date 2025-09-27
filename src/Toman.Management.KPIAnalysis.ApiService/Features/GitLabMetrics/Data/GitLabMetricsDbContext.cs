@@ -313,6 +313,15 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.Deletions).HasColumnName("deletions");
             entity.Property(e => e.IsSigned).HasColumnName("is_signed");
             entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+            entity.Property(e => e.FilesChanged).HasColumnName("files_changed");
+            entity.Property(e => e.AdditionsExcluded).HasColumnName("additions_excluded");
+            entity.Property(e => e.DeletionsExcluded).HasColumnName("deletions_excluded");
+            entity.Property(e => e.FilesChangedExcluded).HasColumnName("files_changed_excluded");
+            entity.Property(e => e.IsMergeCommit).HasColumnName("is_merge_commit");
+            entity.Property(e => e.ParentCount).HasColumnName("parent_count");
+            entity.Property(e => e.ParentShas).HasColumnName("parent_shas").HasColumnType("text");
+            entity.Property(e => e.WebUrl).HasColumnName("web_url").HasMaxLength(500);
+            entity.Property(e => e.ShortSha).HasColumnName("short_sha").HasMaxLength(10);
 
             // Indexes for performance
             entity.HasIndex(e => e.CommittedAt).HasDatabaseName("idx_raw_commit_committed_at");
@@ -344,6 +353,18 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.FirstReviewAt).HasColumnName("first_review_at");
             entity.Property(e => e.ReviewerIds).HasColumnName("reviewer_ids").HasColumnType("text");
             entity.Property(e => e.IngestedAt).HasColumnName("ingested_at");
+            entity.Property(e => e.Labels).HasColumnName("labels").HasColumnType("text");
+            entity.Property(e => e.FirstCommitSha).HasColumnName("first_commit_sha").HasMaxLength(40);
+            entity.Property(e => e.FirstCommitAt).HasColumnName("first_commit_at");
+            entity.Property(e => e.FirstCommitMessage).HasColumnName("first_commit_message").HasColumnType("text");
+            entity.Property(e => e.IsHotfix).HasColumnName("is_hotfix");
+            entity.Property(e => e.IsRevert).HasColumnName("is_revert");
+            entity.Property(e => e.IsDraft).HasColumnName("is_draft");
+            entity.Property(e => e.HasConflicts).HasColumnName("has_conflicts");
+            entity.Property(e => e.CommitsCount).HasColumnName("commits_count");
+            entity.Property(e => e.LinesAdded).HasColumnName("lines_added");
+            entity.Property(e => e.LinesDeleted).HasColumnName("lines_deleted");
+            entity.Property(e => e.WebUrl).HasColumnName("web_url").HasMaxLength(500);
 
             // Indexes for performance
             entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_raw_mr_created_at");

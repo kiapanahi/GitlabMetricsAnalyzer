@@ -14,6 +14,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private readonly IGitLabService _gitLabService;
     private readonly GitLabMetricsDbContext _dbContext;
     private readonly IUserSyncService _userSyncService;
+    private readonly IDataEnrichmentService _dataEnrichmentService;
     private readonly CollectionConfiguration _collectionConfig;
     private readonly ILogger<GitLabCollectorService> _logger;
 
@@ -21,12 +22,14 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         IGitLabService gitLabService,
         GitLabMetricsDbContext dbContext,
         IUserSyncService userSyncService,
+        IDataEnrichmentService dataEnrichmentService,
         IOptions<CollectionConfiguration> collectionConfig,
         ILogger<GitLabCollectorService> logger)
     {
         _gitLabService = gitLabService;
         _dbContext = dbContext;
         _userSyncService = userSyncService;
+        _dataEnrichmentService = dataEnrichmentService;
         _collectionConfig = collectionConfig.Value;
         _logger = logger;
     }
@@ -405,22 +408,79 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                 var commits = await _gitLabService.GetCommitsAsync(projectId, updatedAfter, cancellationToken);
                 if (commits.Count > 0)
                 {
-                    await _dbContext.UpsertRangeAsync(commits, cancellationToken);
-                    stats.CommitsCollected = commits.Count;
+                    // Enrich commits with file exclusion analysis if enabled
+                    if (_collectionConfig.CollectCommitStats)
+                    {
+                        var enrichedCommits = commits
+                            .Where(c => !_dataEnrichmentService.ShouldExcludeCommit(c.Message))
+                            .Select(c => _dataEnrichmentService.EnrichCommit(c))
+                            .ToList();
+                        
+                        if (enrichedCommits.Count > 0)
+                        {
+                            await _dbContext.UpsertRangeAsync(enrichedCommits, cancellationToken);
+                            stats.CommitsCollected = enrichedCommits.Count;
+                        }
+                    }
+                    else
+                    {
+                        await _dbContext.UpsertRangeAsync(commits, cancellationToken);
+                        stats.CommitsCollected = commits.Count;
+                    }
                 }
 
                 // Collect merge requests
                 var mergeRequests = await _gitLabService.GetMergeRequestsAsync(projectId, updatedAfter, cancellationToken);
                 if (mergeRequests.Count > 0)
                 {
-                    await _dbContext.UpsertRangeAsync(mergeRequests, cancellationToken);
-                    stats.MergeRequestsCollected = mergeRequests.Count;
-
-                    // Collect review events if enabled
-                    if (_collectionConfig.CollectReviewEvents)
+                    // Enrich merge requests with additional data if enabled
+                    if (_collectionConfig.EnrichMergeRequestData)
                     {
-                        var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(projectId, mergeRequests, cancellationToken);
-                        stats.ReviewEventsCollected = reviewEventsCount;
+                        var enrichedMergeRequests = new List<Models.Raw.RawMergeRequest>();
+                        
+                        foreach (var mr in mergeRequests)
+                        {
+                            // Skip if branch should be excluded
+                            if (_dataEnrichmentService.ShouldExcludeBranch(mr.SourceBranch) ||
+                                _dataEnrichmentService.ShouldExcludeBranch(mr.TargetBranch))
+                            {
+                                continue;
+                            }
+
+                            // Get commits for this MR to enhance the data
+                            var mrCommits = commits?.Where(c => 
+                                c.CommittedAt >= mr.CreatedAt && 
+                                c.CommittedAt <= (mr.MergedAt ?? DateTimeOffset.UtcNow))
+                                .ToList();
+
+                            var enrichedMr = _dataEnrichmentService.EnrichMergeRequest(mr, mrCommits);
+                            enrichedMergeRequests.Add(enrichedMr);
+                        }
+
+                        if (enrichedMergeRequests.Count > 0)
+                        {
+                            await _dbContext.UpsertRangeAsync(enrichedMergeRequests, cancellationToken);
+                            stats.MergeRequestsCollected = enrichedMergeRequests.Count;
+
+                            // Collect review events if enabled
+                            if (_collectionConfig.CollectReviewEvents)
+                            {
+                                var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(projectId, enrichedMergeRequests, cancellationToken);
+                                stats.ReviewEventsCollected = reviewEventsCount;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        await _dbContext.UpsertRangeAsync(mergeRequests, cancellationToken);
+                        stats.MergeRequestsCollected = mergeRequests.Count;
+
+                        // Collect review events if enabled
+                        if (_collectionConfig.CollectReviewEvents)
+                        {
+                            var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(projectId, mergeRequests, cancellationToken);
+                            stats.ReviewEventsCollected = reviewEventsCount;
+                        }
                     }
                 }
 
