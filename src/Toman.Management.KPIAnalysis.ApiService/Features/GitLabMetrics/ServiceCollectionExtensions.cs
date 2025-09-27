@@ -55,6 +55,10 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IMetricsAggregatesPersistenceService, MetricsAggregatesPersistenceService>();
         builder.Services.AddScoped<IMetricCatalogService, MetricCatalogService>();
         builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
+        
+        // Add observability and data quality services
+        builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
+        builder.Services.AddScoped<IDataQualityService, DataQualityService>();
 
         // Add HTTP client for GitLab API calls (mock in development, real in production)
         if (builder.Environment.IsDevelopment())
