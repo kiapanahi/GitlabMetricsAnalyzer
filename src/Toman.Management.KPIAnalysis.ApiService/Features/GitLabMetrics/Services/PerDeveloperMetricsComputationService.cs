@@ -286,18 +286,18 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             AvgPipelineDurationSec = avgPipelineDurationSec,
             MeanTimeToGreenSec = meanTimeToGreenSec,
             
-            // TODO: Implement remaining metrics
-            DeploymentFrequencyWk = 0,
-            ReleasesCadenceWk = 0,
-            FlakyJobRate = null,
-            RollbackIncidence = 0,
-            DirectPushesDefault = 0,
-            ForcePushesProtected = 0,
-            BranchTtlP50H = null,
-            BranchTtlP90H = null,
-            IssueSlaBreachRate = null,
-            ReopenedIssueRate = null,
-            DefectEscapeRate = null
+            // Computed remaining metrics with basic implementations
+            DeploymentFrequencyWk = ComputeDeploymentFrequency(data.Pipelines, options.WindowDays),
+            ReleasesCadenceWk = ComputeReleasesCadence(data.MergeRequests, options.WindowDays),
+            FlakyJobRate = ComputeFlakyJobRate(data.Pipelines),
+            RollbackIncidence = ComputeRollbackIncidence(data.MergeRequests),
+            DirectPushesDefault = ComputeDirectPushesToDefault(data.Commits, data.MergeRequests),
+            ForcePushesProtected = 0, // TODO: Implement when force push data is available
+            BranchTtlP50H = ComputeBranchTtlP50(data.MergeRequests),
+            BranchTtlP90H = ComputeBranchTtlP90(data.MergeRequests),
+            IssueSlaBreachRate = null, // TODO: Implement when issue SLA data is available
+            ReopenedIssueRate = null, // TODO: Implement when issue data is available
+            DefectEscapeRate = null // TODO: Implement when defect tracking is available
         };
 
         if (options.ApplyWinsorization)
@@ -429,6 +429,103 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         return null;
     }
 
+    private static int ComputeDeploymentFrequency(List<Models.Raw.RawPipeline> pipelines, int windowDays)
+    {
+        // Count successful pipelines that likely represent deployments (success status)
+        var deployments = pipelines.Count(p => p.Status == "success" && 
+                                               (p.Environment is not null || p.Ref == "main" || p.Ref == "master"));
+        return (int)(deployments * 7.0 / windowDays); // Convert to weekly rate
+    }
+
+    private static int ComputeReleasesCadence(List<Models.Raw.RawMergeRequest> mergeRequests, int windowDays)
+    {
+        // Estimate releases based on MRs to main/master with "release" keywords
+        var releases = mergeRequests.Count(mr => mr.State == "merged" &&
+                                                 (mr.TargetBranch == "main" || mr.TargetBranch == "master") &&
+                                                 (mr.Title.ToLowerInvariant().Contains("release") || 
+                                                  mr.Title.ToLowerInvariant().Contains("version")));
+        return (int)(releases * 7.0 / windowDays); // Convert to weekly rate
+    }
+
+    private static decimal? ComputeFlakyJobRate(List<Models.Raw.RawPipeline> pipelines)
+    {
+        if (pipelines.Count == 0) return null;
+
+        // Simplified flaky detection: pipelines that have both success and failure on same commit/ref
+        var groupedByRef = pipelines.GroupBy(p => p.Ref).ToList();
+        var flakyRefs = 0;
+
+        foreach (var group in groupedByRef)
+        {
+            var statuses = group.Select(p => p.Status).Distinct().ToList();
+            if (statuses.Contains("success") && (statuses.Contains("failed") || statuses.Contains("canceled")))
+            {
+                flakyRefs++;
+            }
+        }
+
+        return groupedByRef.Count > 0 ? (decimal)flakyRefs / groupedByRef.Count * 100 : 0;
+    }
+
+    private static int ComputeRollbackIncidence(List<Models.Raw.RawMergeRequest> mergeRequests)
+    {
+        // Detect rollbacks based on title/branch patterns
+        return mergeRequests.Count(mr => mr.State == "merged" &&
+                                        (mr.Title.ToLowerInvariant().Contains("rollback") ||
+                                         mr.Title.ToLowerInvariant().Contains("revert") ||
+                                         mr.SourceBranch.ToLowerInvariant().Contains("rollback")));
+    }
+
+    private static int ComputeDirectPushesToDefault(List<Models.Raw.RawCommit> commits, List<Models.Raw.RawMergeRequest> mergeRequests)
+    {
+        // Estimate direct pushes as commits without associated merge requests
+        // This is a simplified heuristic since we don't have branch information for commits
+        var commitsWithMRs = new HashSet<string>();
+        
+        foreach (var mr in mergeRequests)
+        {
+            // Add estimated commits for this MR (simplified)
+            if (mr.FirstCommitSha is not null)
+            {
+                commitsWithMRs.Add(mr.FirstCommitSha);
+            }
+        }
+
+        return commits.Count(c => !commitsWithMRs.Contains(c.CommitId));
+    }
+
+    private static decimal? ComputeBranchTtlP50(List<Models.Raw.RawMergeRequest> mergeRequests)
+    {
+        var branchLifetimes = mergeRequests
+            .Where(mr => mr.MergedAt.HasValue || mr.ClosedAt.HasValue)
+            .Select(mr => 
+            {
+                var endDate = mr.MergedAt ?? mr.ClosedAt!.Value;
+                return (endDate - mr.CreatedAt).TotalHours;
+            })
+            .Where(hours => hours > 0)
+            .OrderBy(x => x)
+            .ToList();
+
+        return branchLifetimes.Count > 0 ? (decimal)ComputePercentile(branchLifetimes, 0.5) : null;
+    }
+
+    private static decimal? ComputeBranchTtlP90(List<Models.Raw.RawMergeRequest> mergeRequests)
+    {
+        var branchLifetimes = mergeRequests
+            .Where(mr => mr.MergedAt.HasValue || mr.ClosedAt.HasValue)
+            .Select(mr => 
+            {
+                var endDate = mr.MergedAt ?? mr.ClosedAt!.Value;
+                return (endDate - mr.CreatedAt).TotalHours;
+            })
+            .Where(hours => hours > 0)
+            .OrderBy(x => x)
+            .ToList();
+
+        return branchLifetimes.Count > 0 ? (decimal)ComputePercentile(branchLifetimes, 0.9) : null;
+    }
+
     private static double ComputePercentile(List<double> sortedValues, double percentile)
     {
         if (sortedValues.Count == 0) return 0;
@@ -496,13 +593,37 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         var reasons = new Dictionary<string, string>();
 
         if (metrics.MrCycleTimeP50H is null)
-            reasons["MrCycleTimeP50H"] = "No merged merge requests in window";
+            reasons["MrCycleTimeP50H"] = data.MergeRequests.Count == 0 ? "No merge requests in window" : "No merged merge requests in window";
 
         if (metrics.PipelineSuccessRate is null)
             reasons["PipelineSuccessRate"] = "No pipeline executions in window";
 
         if (metrics.TimeToFirstReviewP50H is null)
             reasons["TimeToFirstReviewP50H"] = "Review data not available";
+
+        if (metrics.TimeInReviewP50H is null)
+            reasons["TimeInReviewP50H"] = "Review data not available";
+
+        if (metrics.WipAgeP50H is null)
+            reasons["WipAgeP50H"] = "No WIP merge requests found";
+
+        if (metrics.FlakyJobRate is null)
+            reasons["FlakyJobRate"] = "Insufficient pipeline data for flaky detection";
+
+        if (metrics.BranchTtlP50H is null)
+            reasons["BranchTtlP50H"] = "No completed branches (merged/closed MRs) in window";
+
+        if (metrics.IssueSlaBreachRate is null)
+            reasons["IssueSlaBreachRate"] = "Issue SLA data not available";
+
+        if (metrics.ReopenedIssueRate is null)
+            reasons["ReopenedIssueRate"] = "Issue data not available";
+
+        if (metrics.DefectEscapeRate is null)
+            reasons["DefectEscapeRate"] = "Defect tracking data not available";
+
+        if (metrics.MeanTimeToGreenSec is null)
+            reasons["MeanTimeToGreenSec"] = "Pipeline retry patterns not implemented";
 
         return reasons;
     }
