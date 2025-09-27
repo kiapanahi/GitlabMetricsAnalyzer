@@ -26,6 +26,8 @@ insert_final_newline = true
 # Organize usings
 dotnet_separate_import_directive_groups = true
 dotnet_sort_system_directives_first = true
+dotnet_remove_unnecessary_imports = true
+dotnet_diagnostic.IDE0005.severity = warning
 file_header_template = unset
 
 # this. and Me. preferences

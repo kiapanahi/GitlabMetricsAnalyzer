@@ -1,5 +1,3 @@
-using System;
-
 namespace Toman.Management.KPIAnalysis;
 
 public static class Constants

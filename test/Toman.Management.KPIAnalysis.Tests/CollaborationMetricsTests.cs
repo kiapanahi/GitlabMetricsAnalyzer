@@ -1,5 +1,4 @@
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.Tests;
 
@@ -95,7 +94,7 @@ public class CollaborationMetricsTests
     {
         // Arrange
         var mergeRequests = new List<RawMergeRequest>();
-        
+
         for (int i = 0; i < totalMRs; i++)
         {
             mergeRequests.Add(CreateMergeRequest(i + 1, state: i % 2 == 0 ? "merged" : "open"));
@@ -111,7 +110,7 @@ public class CollaborationMetricsTests
         }
         else
         {
-            Assert.True(result >= expectedMinComments, 
+            Assert.True(result >= expectedMinComments,
                 $"Expected at least {expectedMinComments} comments for {totalMRs} MRs, but got {result}");
         }
     }
@@ -145,12 +144,12 @@ public class CollaborationMetricsTests
         // Simulate the logic from CalculateCrossTeamCollaborations
         var ownProjects = ownMRs.Select(mr => mr.ProjectId).Distinct().ToHashSet();
         var reviewedProjects = reviewedMRs.Select(mr => mr.ProjectId).Distinct().ToHashSet();
-        
+
         var crossProjectReviews = reviewedProjects.Except(ownProjects).Count();
         var externalReviewsReceived = ownMRs
             .Where(mr => !string.IsNullOrEmpty(mr.ReviewerIds) && mr.ProjectId != 0)
             .Count();
-        
+
         return crossProjectReviews + (externalReviewsReceived > 0 ? 1 : 0);
     }
 
@@ -158,14 +157,14 @@ public class CollaborationMetricsTests
     {
         // Simulate the logic from CalculateMentorshipActivities
         if (uniqueReviewees < 2) return 0;
-        
+
         var avgReviewsPerPerson = reviewedMRs.Count > 0 ? (double)reviewedMRs.Count / uniqueReviewees : 0;
-        
+
         if (avgReviewsPerPerson >= 2 && uniqueReviewees >= 3)
         {
             return Math.Min(uniqueReviewees / 2, 5);
         }
-        
+
         return uniqueReviewees >= 4 ? 1 : 0;
     }
 
@@ -174,7 +173,7 @@ public class CollaborationMetricsTests
         // Simulate the logic from CalculateMergeRequestCommentsCountAsync
         var totalMRs = mergeRequests.Count;
         var activeMRs = mergeRequests.Count(mr => mr.State == "merged" || mr.State == "closed");
-        
+
         return activeMRs * 3 + (totalMRs - activeMRs) * 1;
     }
 

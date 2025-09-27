@@ -1,9 +1,6 @@
 using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
-
-using Polly.CircuitBreaker;
 
 using Quartz;
 

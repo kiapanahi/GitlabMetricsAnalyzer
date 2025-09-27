@@ -527,7 +527,7 @@ public sealed class GitLabService : IGitLabService
     {
         // Delegate to the new interface method
         var commits = await _gitLabHttpClient.GetCommitsByUserEmailAsync(projectId, userEmail, since, cancellationToken);
-        
+
         var rawCommits = new List<RawCommit>();
         foreach (var commit in commits)
         {

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
@@ -19,7 +20,7 @@ public sealed class GitLabHealthCheck : IHealthCheck
         try
         {
             var isConnected = await _gitLabService.TestConnectionAsync(cancellationToken);
-            
+
             if (isConnected)
             {
                 _logger.LogDebug("GitLab connection test successful");

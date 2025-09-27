@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;

@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
+
 using Microsoft.Extensions.Options;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
@@ -15,7 +17,7 @@ public sealed class IdentityMappingService : IIdentityMappingService
     public IdentityMappingService(IOptions<MetricsConfiguration> configuration)
     {
         _configuration = configuration.Value;
-        
+
         // Compile bot regex patterns for better performance
         _botRegexes = _configuration.Identity.BotRegexPatterns
             .Select(pattern => new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase))
@@ -33,12 +35,12 @@ public sealed class IdentityMappingService : IIdentityMappingService
             return true;
 
         // Check email against bot patterns if provided
-        if (!string.IsNullOrWhiteSpace(email) && 
+        if (!string.IsNullOrWhiteSpace(email) &&
             _botRegexes.Any(regex => regex.IsMatch(email)))
             return true;
 
         // Check display name against bot patterns if provided
-        if (!string.IsNullOrWhiteSpace(displayName) && 
+        if (!string.IsNullOrWhiteSpace(displayName) &&
             _botRegexes.Any(regex => regex.IsMatch(displayName)))
             return true;
 

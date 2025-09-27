@@ -1,5 +1,3 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Facts;
-
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 public interface IMetricsCalculationService
