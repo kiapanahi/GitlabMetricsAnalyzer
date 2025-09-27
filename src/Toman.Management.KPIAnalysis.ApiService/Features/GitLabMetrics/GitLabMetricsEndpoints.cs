@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
@@ -23,25 +24,80 @@ public static class GitLabMetricsEndpoints
 
         group.MapPost("/collect/incremental", async (
             [FromServices] IGitLabCollectorService collectorService,
+            [FromBody] StartCollectionRunRequest? request,
+            CancellationToken cancellationToken) =>
+        {
+            request ??= new StartCollectionRunRequest { RunType = "incremental", TriggerSource = "api" };
+            var result = await collectorService.StartCollectionRunAsync(request, cancellationToken);
+            return Results.Ok(result);
+        })
+        .WithName("RunIncrementalCollection")
+        .WithSummary("Run incremental GitLab metrics collection with windowed support")
+        .Produces<CollectionRunResponse>(200)
+        .Produces(500);
+
+        group.MapPost("/collect/backfill", async (
+            [FromServices] IGitLabCollectorService collectorService,
+            [FromBody] StartCollectionRunRequest? request,
+            CancellationToken cancellationToken) =>
+        {
+            request ??= new StartCollectionRunRequest { RunType = "backfill", TriggerSource = "api" };
+            var result = await collectorService.StartCollectionRunAsync(request, cancellationToken);
+            return Results.Ok(result);
+        })
+        .WithName("RunBackfillCollection")
+        .WithSummary("Run backfill GitLab metrics collection")
+        .Produces<CollectionRunResponse>(200)
+        .Produces(500);
+
+        group.MapGet("/collect/runs/{runId:guid}", async (
+            [FromServices] IGitLabCollectorService collectorService,
+            [FromRoute] Guid runId,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await collectorService.GetCollectionRunStatusAsync(runId, cancellationToken);
+            return result is not null ? Results.Ok(result) : Results.NotFound();
+        })
+        .WithName("GetCollectionRunStatus")
+        .WithSummary("Get the status of a collection run")
+        .Produces<CollectionRunResponse>(200)
+        .Produces(404);
+
+        group.MapGet("/collect/runs", async (
+            [FromServices] IGitLabCollectorService collectorService,
+            [FromQuery] string? runType,
+            [FromQuery] int limit = 10,
+            CancellationToken cancellationToken = default) =>
+        {
+            var runs = await collectorService.GetRecentCollectionRunsAsync(runType, limit, cancellationToken);
+            return Results.Ok(runs);
+        })
+        .WithName("GetRecentCollectionRuns")
+        .WithSummary("Get recent collection runs")
+        .Produces<IReadOnlyList<CollectionRunResponse>>(200);
+
+        // Legacy endpoints for backward compatibility
+        group.MapPost("/collect/incremental/simple", async (
+            [FromServices] IGitLabCollectorService collectorService,
             CancellationToken cancellationToken) =>
         {
             await collectorService.RunIncrementalCollectionAsync(cancellationToken);
             return Results.Ok(new { Message = "Incremental collection completed" });
         })
-        .WithName("RunIncrementalCollection")
-        .WithSummary("Run incremental GitLab metrics collection")
+        .WithName("RunSimpleIncrementalCollection")
+        .WithSummary("Run simple incremental GitLab metrics collection (legacy)")
         .Produces(200)
         .Produces(500);
 
-        group.MapPost("/collect/backfill", async (
+        group.MapPost("/collect/backfill/simple", async (
             [FromServices] IGitLabCollectorService collectorService,
             CancellationToken cancellationToken) =>
         {
             await collectorService.RunBackfillCollectionAsync(cancellationToken);
             return Results.Ok(new { Message = "Backfill collection completed" });
         })
-        .WithName("RunBackfillCollection")
-        .WithSummary("Run backfill GitLab metrics collection")
+        .WithName("RunSimpleBackfillCollection")
+        .WithSummary("Run simple backfill GitLab metrics collection (legacy)")
         .Produces(200)
         .Produces(500);
 

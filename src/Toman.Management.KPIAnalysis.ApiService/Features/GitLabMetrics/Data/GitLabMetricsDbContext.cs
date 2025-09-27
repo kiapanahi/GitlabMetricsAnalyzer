@@ -41,6 +41,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
 
     // Operational
     public DbSet<IngestionState> IngestionStates => Set<IngestionState>();
+    public DbSet<CollectionRun> CollectionRuns => Set<CollectionRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -535,6 +536,38 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.Entity).HasColumnName("entity").HasMaxLength(100);
             entity.Property(e => e.LastSeenUpdatedAt).HasColumnName("last_seen_updated_at");
             entity.Property(e => e.LastRunAt).HasColumnName("last_run_at");
+            entity.Property(e => e.WindowSizeHours).HasColumnName("window_size_hours");
+            entity.Property(e => e.LastWindowEnd).HasColumnName("last_window_end");
+            
+            entity.HasIndex(e => e.Entity).HasDatabaseName("idx_ingestion_state_entity").IsUnique();
+        });
+
+        modelBuilder.Entity<CollectionRun>(entity =>
+        {
+            entity.ToTable("collection_runs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.RunType).HasColumnName("run_type").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
+            entity.Property(e => e.StartedAt).HasColumnName("started_at");
+            entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
+            entity.Property(e => e.WindowStart).HasColumnName("window_start");
+            entity.Property(e => e.WindowEnd).HasColumnName("window_end");
+            entity.Property(e => e.WindowSizeHours).HasColumnName("window_size_hours");
+            entity.Property(e => e.ProjectsProcessed).HasColumnName("projects_processed");
+            entity.Property(e => e.CommitsCollected).HasColumnName("commits_collected");
+            entity.Property(e => e.MergeRequestsCollected).HasColumnName("merge_requests_collected");
+            entity.Property(e => e.PipelinesCollected).HasColumnName("pipelines_collected");
+            entity.Property(e => e.ReviewEventsCollected).HasColumnName("review_events_collected");
+            entity.Property(e => e.ErrorMessage).HasColumnName("error_message").HasMaxLength(500);
+            entity.Property(e => e.ErrorDetails).HasColumnName("error_details").HasColumnType("text");
+            entity.Property(e => e.TriggerSource).HasColumnName("trigger_source").HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            
+            entity.HasIndex(e => e.RunType).HasDatabaseName("idx_collection_runs_run_type");
+            entity.HasIndex(e => e.Status).HasDatabaseName("idx_collection_runs_status");
+            entity.HasIndex(e => e.StartedAt).HasDatabaseName("idx_collection_runs_started_at");
+            entity.HasIndex(e => new { e.RunType, e.StartedAt }).HasDatabaseName("idx_collection_runs_type_started");
         });
     }
 
