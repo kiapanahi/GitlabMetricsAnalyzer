@@ -11,7 +11,7 @@ public static class UserMetricsEndpoints
     public static WebApplication MapUserMetricsEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/users")
-            .WithTags("User Metrics")
+            .WithTags("User Metrics (Legacy)")
             .WithOpenApi();
 
         group.MapGet("/{userId}/metrics", GetUserMetrics)
@@ -28,6 +28,24 @@ public static class UserMetricsEndpoints
             .WithSummary("Get a summary of key metrics for a GitLab user")
             .WithDescription("Fetches data directly from GitLab API and returns a high-level overview of the most important productivity indicators for the specified GitLab user ID.")
             .Produces<UserMetricsSummaryResponse>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(500);
+
+        group.MapGet("/{userId}/metrics/trends", GetUserMetricsTrends)
+            .WithName("GetUserMetricsTrends")
+            .WithSummary("Get user metrics trends over time")
+            .WithDescription("Fetches trend data for user metrics over specified time period.")
+            .Produces<UserMetricsTrendsResponse>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(500);
+
+        group.MapGet("/{userId}/metrics/comparison", GetUserMetricsComparison)
+            .WithName("GetUserMetricsComparison")
+            .WithSummary("Get user metrics comparison with peers")
+            .WithDescription("Compare user metrics with peer developers.")
+            .Produces<UserMetricsComparisonResponse>(200)
             .Produces(400)
             .Produces(404)
             .Produces(500);

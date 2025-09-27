@@ -23,7 +23,8 @@ public static class GitLabMetricsEndpoints
     private static WebApplication MapGitLabMetricsEndpoints(this WebApplication endpoints)
     {
         var group = endpoints.MapGroup("/gitlab-metrics")
-            .WithTags("GitLab Metrics");
+            .WithTags("GitLab Metrics (Legacy)")
+            .WithOpenApi();
 
         group.MapPost("/collect/incremental", async (
             [FromServices] IGitLabCollectorService collectorService,

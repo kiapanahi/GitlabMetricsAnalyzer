@@ -37,6 +37,10 @@ if (app.Environment.IsDevelopment())
 // Map endpoints
 app.MapDefaultEndpoints();
 
+// Map v1 API endpoints first
+app.MapApiV1Endpoints();
+
+// Map legacy endpoints (to be removed later)
 app.MapGitlabCollectorEndpoints();
 
 app.Run();
