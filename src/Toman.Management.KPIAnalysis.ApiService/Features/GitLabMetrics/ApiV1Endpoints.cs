@@ -21,7 +21,7 @@ public static class ApiV1Endpoints
         v1Group.MapGet("/metrics/developers", GetDevelopersMetrics)
             .WithName("GetDevelopersMetrics_V1")
             .WithSummary("Get developers metrics with filtering and pagination")
-            .WithDescription("Returns paginated list of developer metrics with optional filtering by window/project scope.")
+            .WithDescription("Returns paginated list of developer metrics with optional filtering by window/project scope. Supports query parameters: windowDays, projectIds[], page, pageSize.")
             .Produces<ApiV1DevelopersResponse>(200)
             .Produces(400)
             .Produces(500);
@@ -29,7 +29,7 @@ public static class ApiV1Endpoints
         v1Group.MapGet("/metrics/developers/{developer_id:long}", GetDeveloperMetrics)
             .WithName("GetDeveloperMetrics_V1")
             .WithSummary("Get specific developer metrics with history")
-            .WithDescription("Returns latest aggregate metrics for a developer plus sparkline historical data.")
+            .WithDescription("Returns latest aggregate metrics for a developer plus sparkline historical data. Supports query parameters: windowDays, projectIds[], includeSparkline.")
             .Produces<ApiV1DeveloperResponse>(200)
             .Produces(404)
             .Produces(400)
@@ -39,8 +39,9 @@ public static class ApiV1Endpoints
         v1Group.MapGet("/catalog", GetCatalog)
             .WithName("GetCatalog_V1")
             .WithSummary("Get metric catalog with schema version")
-            .WithDescription("Returns the complete metric catalog including all available metrics with their definitions and current schema version.")
+            .WithDescription("Returns the complete metric catalog including all available metrics with their definitions and current schema version. No additional parameters required.")
             .Produces<ApiV1CatalogResponse>(200)
+            .Produces(400)
             .Produces(500);
 
         return app;

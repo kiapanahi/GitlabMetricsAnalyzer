@@ -11,7 +11,7 @@ public static class UserMetricsEndpoints
     public static WebApplication MapUserMetricsEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/users")
-            .WithTags("User Metrics")
+            .WithTags("User Metrics (Legacy)")
             .WithOpenApi();
 
         group.MapGet("/{userId}/metrics", GetUserMetrics)
