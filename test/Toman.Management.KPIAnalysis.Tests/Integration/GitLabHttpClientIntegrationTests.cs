@@ -1,10 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using Moq;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 namespace Toman.Management.KPIAnalysis.Tests.Integration;
@@ -31,7 +28,7 @@ public sealed class GitLabHttpClientIntegrationTests
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
         // Act
-        var result = await gitLabClient.TestConnectionAsync();
+        var result = await gitLabClient.TestConnectionAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result);
@@ -54,7 +51,7 @@ public sealed class GitLabHttpClientIntegrationTests
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
         // Act
-        var result = await gitLabClient.TestConnectionAsync();
+        var result = await gitLabClient.TestConnectionAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
@@ -89,7 +86,7 @@ public sealed class GitLabHttpClientIntegrationTests
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
         // Act
-        var users = await gitLabClient.GetUsersAsync();
+        var users = await gitLabClient.GetUsersAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(users);
@@ -127,7 +124,7 @@ public sealed class GitLabHttpClientIntegrationTests
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
         // Act
-        var projects = await gitLabClient.GetProjectsAsync();
+        var projects = await gitLabClient.GetProjectsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(projects);
@@ -154,7 +151,7 @@ public sealed class GitLabHttpClientIntegrationTests
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
         // Act
-        var user = await gitLabClient.GetUserByIdAsync(999);
+        var user = await gitLabClient.GetUserByIdAsync(999, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(user);
@@ -191,7 +188,7 @@ public sealed class GitLabHttpClientIntegrationTests
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
         // Act
-        var commits = await gitLabClient.GetCommitsAsync(1);
+        var commits = await gitLabClient.GetCommitsAsync(1, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(commits);
@@ -200,9 +197,9 @@ public sealed class GitLabHttpClientIntegrationTests
         Assert.Equal("Test Author", commits[0].AuthorName);
         Assert.Equal("author@example.com", commits[0].AuthorEmail);
         Assert.NotNull(commits[0].Stats);
-        Assert.Equal(10, commits[0].Stats.Additions);
-        Assert.Equal(5, commits[0].Stats.Deletions);
-        Assert.Equal(15, commits[0].Stats.Total);
+        Assert.Equal(10, commits[0].Stats!.Additions);
+        Assert.Equal(5, commits[0].Stats!.Deletions);
+        Assert.Equal(15, commits[0].Stats!.Total);
     }
 
     /// <summary>
