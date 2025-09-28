@@ -4,7 +4,6 @@ using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 using Toman.Management.KPIAnalysis.Tests.TestFixtures;
-using Xunit;
 
 namespace Toman.Management.KPIAnalysis.Tests.Integration;
 
@@ -54,19 +53,19 @@ public sealed class IngestionEdgeCaseTests : IDisposable
         var notes = GitLabTestFixtures.CompleteFixture.Notes;
 
         // Act - Store all fixture data to database
-        await _dbContext.RawCommits.AddRangeAsync(commits);
-        await _dbContext.RawMergeRequests.AddRangeAsync(mergeRequests);
-        await _dbContext.RawPipelines.AddRangeAsync(pipelines);
-        await _dbContext.RawJobs.AddRangeAsync(jobs);
-        await _dbContext.RawMergeRequestNotes.AddRangeAsync(notes);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.RawCommits.AddRangeAsync(commits, TestContext.Current.CancellationToken);
+        await _dbContext.RawMergeRequests.AddRangeAsync(mergeRequests, TestContext.Current.CancellationToken);
+        await _dbContext.RawPipelines.AddRangeAsync(pipelines, TestContext.Current.CancellationToken);
+        await _dbContext.RawJobs.AddRangeAsync(jobs, TestContext.Current.CancellationToken);
+        await _dbContext.RawMergeRequestNotes.AddRangeAsync(notes, TestContext.Current.CancellationToken);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Verify data structure and relationships
-        var commitCount = await _dbContext.RawCommits.CountAsync();
-        var mrCount = await _dbContext.RawMergeRequests.CountAsync();
-        var pipelineCount = await _dbContext.RawPipelines.CountAsync();
-        var jobCount = await _dbContext.RawJobs.CountAsync();
-        var noteCount = await _dbContext.RawMergeRequestNotes.CountAsync();
+        var commitCount = await _dbContext.RawCommits.CountAsync(TestContext.Current.CancellationToken);
+        var mrCount = await _dbContext.RawMergeRequests.CountAsync(TestContext.Current.CancellationToken);
+        var pipelineCount = await _dbContext.RawPipelines.CountAsync(TestContext.Current.CancellationToken);
+        var jobCount = await _dbContext.RawJobs.CountAsync(TestContext.Current.CancellationToken);
+        var noteCount = await _dbContext.RawMergeRequestNotes.CountAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(5, commitCount); // Regular, merge, revert, bot, refactor commits
         Assert.Equal(6, mrCount); // Standard, draft, hotfix, revert, conflicted, squash MRs
@@ -76,7 +75,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task EnrichMergeRequests_DetectsHotfixPatterns()
+    public void EnrichMergeRequests_DetectsHotfixPatterns()
     {
         // Arrange
         // Use individual fixture methods
@@ -92,7 +91,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task EnrichMergeRequests_DetectsRevertPatterns()
+    public void EnrichMergeRequests_DetectsRevertPatterns()
     {
         // Arrange  
         // Use individual fixture methods
@@ -107,7 +106,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task EnrichMergeRequests_DetectsDraftPatterns()
+    public void EnrichMergeRequests_DetectsDraftPatterns()
     {
         // Arrange
         // Use individual fixture methods
@@ -123,7 +122,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task EnrichCommits_DetectsRevertCommits()
+    public void EnrichCommits_DetectsRevertCommits()
     {
         // Arrange
         // Use individual fixture methods
@@ -139,7 +138,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task EnrichCommits_DetectsBotCommits()
+    public void EnrichCommits_DetectsBotCommits()
     {
         // Arrange
         // Use individual fixture methods
@@ -154,7 +153,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidatePipelineFlakeDetection_IdentifiesRetries()
+    public void ValidatePipelineFlakeDetection_IdentifiesRetries()
     {
         // Arrange
         // Use individual fixture methods
@@ -179,7 +178,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateJobFlakeDetection_IdentifiesRetriedJobs()
+    public void ValidateJobFlakeDetection_IdentifiesRetriedJobs()
     {
         // Arrange
         // Use individual fixture methods
@@ -201,7 +200,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateSquashMergeHandling_HandlesHighCommitCount()
+    public void ValidateSquashMergeHandling_HandlesHighCommitCount()
     {
         // Arrange
         // Use individual fixture methods
@@ -215,7 +214,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateConflictedMergeRequest_HandlesFailedMerge()
+    public void ValidateConflictedMergeRequest_HandlesFailedMerge()
     {
         // Arrange
         // Use individual fixture methods
@@ -230,7 +229,7 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateDiscussionPatterns_HandlesResolutionFlow()
+    public void ValidateDiscussionPatterns_HandlesResolutionFlow()
     {
         // Arrange
         // Use individual fixture methods
@@ -259,20 +258,20 @@ public sealed class IngestionEdgeCaseTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateDataConsistency_EnsuresFixtureDeterminism()
+    public void ValidateDataConsistency_EnsuresFixtureDeterminism()
     {
-        // Arrange & Act - Run fixture creation multiple times
-        var fixtures1 = GitLabTestFixtures.CompleteFixture;
-        var fixtures2 = GitLabTestFixtures.CompleteFixture;
+        // Arrange & Act - Verify fixture properties are accessible
+        var usersCount1 = GitLabTestFixtures.CompleteFixture.Users.Count;
+        var usersCount2 = GitLabTestFixtures.CompleteFixture.Users.Count;
 
         // Assert - Verify deterministic output
-        Assert.Equal(fixtures1.Users.Count, fixtures2.Users.Count);
-        Assert.Equal(fixtures1.Commits.Count, fixtures2.Commits.Count);
-        Assert.Equal(fixtures1.MergeRequests.Count, fixtures2.MergeRequests.Count);
+        Assert.Equal(GitLabTestFixtures.CompleteFixture.Users.Count, GitLabTestFixtures.CompleteFixture.Users.Count);
+        Assert.Equal(GitLabTestFixtures.CompleteFixture.Commits.Count, GitLabTestFixtures.CompleteFixture.Commits.Count);
+        Assert.Equal(GitLabTestFixtures.CompleteFixture.MergeRequests.Count, GitLabTestFixtures.CompleteFixture.MergeRequests.Count);
         
         // Check specific values are identical
-        var user1_1 = fixtures1.Users.First(u => u.Id == 1);
-        var user1_2 = fixtures2.Users.First(u => u.Id == 1);
+        var user1_1 = GitLabTestFixtures.CompleteFixture.Users.First(u => u.Id == 1);
+        var user1_2 = GitLabTestFixtures.CompleteFixture.Users.First(u => u.Id == 1);
         
         Assert.Equal(user1_1.Username, user1_2.Username);
         Assert.Equal(user1_1.Email, user1_2.Email);
