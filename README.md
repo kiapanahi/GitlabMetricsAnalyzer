@@ -15,8 +15,9 @@ A .NET 9 application that collects developer productivity metrics from GitLab an
 - **Tech Stack**: .NET 9, Entity Framework Core, PostgreSQL, .NET Aspire
 - **Design Pattern**: Vertical slice architecture for each feature
 - **API Integration**: NGitLab client for GitLab API interaction
-- **Job Scheduling**: Quartz.NET for background data collection
-- **Resilience**: Retry policies and circuit breakers
+- **Data Collection**: Manual trigger workflows for on-demand collection
+- **Resilience**: Built-in retry policies and error handling for API failures
+- **Export System**: Configurable metrics export with multiple formats
 
 ## Getting Started
 
@@ -38,18 +39,45 @@ A .NET 9 application that collects developer productivity metrics from GitLab an
    - Create a database for the application
 
 3. **Application Configuration**:
-   Update `appsettings.Development.json`:
+   Update `appsettings.json`:
    ```json
    {
      "GitLab": {
        "BaseUrl": "https://your-gitlab-instance.com",
-       "PersonalAccessToken": "your-token-here",
-       "RetryCount": 3,
-       "RetryDelaySeconds": 5,
-       "TimeoutSeconds": 30
+       "Token": "your-token-here"
      },
      "ConnectionStrings": {
        "DefaultConnection": "Host=localhost;Database=GitLabMetrics;Username=your-user;Password=your-password"
+     },
+     "Processing": {
+       "MaxDegreeOfParallelism": 8,
+       "BackfillDays": 180
+     },
+     "Exports": {
+       "Directory": "/data/exports"
+     },
+     "Metrics": {
+       "Identity": {
+         "BotRegexPatterns": [
+           "^.*bot$",
+           "^.*\\[bot\\]$",
+           "^gitlab-ci$",
+           "^dependabot.*"
+         ]
+       },
+       "Excludes": {
+         "CommitPatterns": [
+           "^Merge branch.*",
+           "^Merge pull request.*"
+         ],
+         "BranchPatterns": [
+           "^dependabot/.*"
+         ],
+         "FilePatterns": [
+           "^.*\\.min\\.(js|css)$",
+           "^.*\\.(png|jpg|jpeg|gif|svg|ico)$"
+         ]
+       }
      }
    }
    ```
@@ -76,31 +104,106 @@ cd src/Toman.Management.KPIAnalysis.ApiService
 dotnet ef database update
 ```
 
+## Manual Data Collection
+
+The system operates through manual trigger workflows instead of automatic scheduling:
+
+### Incremental Collection
+Collect only new/updated data since the last collection:
+
+```bash
+curl -X POST "http://localhost:5000/gitlab-metrics/collect/incremental" \
+  -H "Content-Type: application/json" \
+  -d '{"triggerSource": "manual"}'
+```
+
+### Backfill Collection
+Perform a complete data backfill (last 180 days by default):
+
+```bash
+curl -X POST "http://localhost:5000/gitlab-metrics/collect/backfill" \
+  -H "Content-Type: application/json" \
+  -d '{"triggerSource": "manual"}'
+```
+
+### Monitor Collection Status
+Check the status of a running collection:
+
+```bash
+# Get specific run status
+curl "http://localhost:5000/gitlab-metrics/collect/runs/{runId}"
+
+# List recent runs
+curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
+```
+
 ## API Endpoints
 
-### Health Check
+### Health & Status
 - `GET /health` - Application health status
+- `GET /alive` - Liveness check
 
-### GitLab Integration
-- `GET /api/gitlab/test-connection` - Test GitLab API connectivity
-- `GET /api/gitlab/projects` - List accessible GitLab projects
+### Data Collection (Manual Triggers)
+- `POST /gitlab-metrics/collect/incremental` - Run incremental collection
+- `POST /gitlab-metrics/collect/backfill` - Run full backfill collection
+- `GET /gitlab-metrics/collect/runs/{runId}` - Check collection run status
+- `GET /gitlab-metrics/collect/runs` - List recent collection runs
 
-### Metrics
-- `GET /api/metrics/developers` - Developer productivity metrics
-- `GET /api/metrics/projects` - Project-level metrics
-- `GET /api/metrics/team` - Team-wide analytics
+### Developer Metrics API (v1)
+- `GET /api/v1/metrics/developers` - Paginated developer metrics with filtering
+- `GET /api/v1/metrics/developers/{id}` - Individual developer metrics with history
+- `GET /api/v1/catalog` - Available metrics catalog with schema version
+
+### Data Quality & Exports
+- `GET /api/data-quality/reports` - Data quality assessment reports
+- `GET /api/exports/developers` - Export developer metrics to various formats
+- `GET /api/exports/runs/{runId}/download` - Download specific export run results
+
+### Legacy Endpoints (Deprecated)
+- `GET /api/users/{userId}/metrics` - Legacy user metrics endpoint
 
 ## Data Models
 
-### Raw Data
-- **RawCommit**: Individual commit data with stats
-- **RawMergeRequest**: Merge request lifecycle data
-- **RawPipeline**: CI/CD pipeline execution data
+### Core Entities (PRD Aligned)
+- **Developers**: Central developer identity with aliases support
+- **Projects**: GitLab project information
+- **CommitFacts**: Individual commit data with metrics
+- **MergeRequestFacts**: MR lifecycle data with timelines
+- **PipelineFacts**: CI/CD pipeline execution data
+- **ReviewEvents**: Code review activity tracking
+- **DeveloperMetricsAggregates**: Pre-calculated time-series metrics
 
 ### Calculated Metrics
 - **Developer Metrics**: Commit frequency, review participation, pipeline success
-- **Project Metrics**: Activity levels, cycle times, quality indicators
-- **Team Metrics**: Collaboration patterns, delivery velocity
+- **Collaboration Metrics**: Review patterns, knowledge sharing indicators
+- **Quality Metrics**: Pipeline success rates, code revert patterns
+- **Productivity Metrics**: Velocity scores, efficiency indicators
+
+## Data Export System
+
+### Export Developer Metrics
+Generate comprehensive developer metrics export:
+
+```bash
+curl "http://localhost:5000/api/exports/developers?windowDays=90&format=json" \
+  -H "Accept: application/json" \
+  -o developer_metrics.json
+```
+
+### Available Export Formats
+- **JSON**: Structured data for API consumption
+- **CSV**: Tabular format for spreadsheet analysis  
+- **Excel**: Multi-sheet workbooks with charts and summaries
+
+### Export Configuration
+Configure export settings in `appsettings.json`:
+```json
+{
+  "Exports": {
+    "Directory": "/data/exports"
+  }
+}
+```
 
 ## Development
 
@@ -134,10 +237,37 @@ dotnet test
 
 ## Monitoring
 
-The application includes comprehensive telemetry:
-- **Logs**: Structured logging with Serilog
-- **Metrics**: Custom metrics for data collection and processing
-- **Health Checks**: Database and GitLab API connectivity
+The application includes comprehensive observability:
+
+### Health Checks
+- **Application Health**: `GET /health` - Overall system health
+- **Liveness Check**: `GET /alive` - Container liveness probe
+- **GitLab Connectivity**: Automatic GitLab API health validation
+- **Database Connectivity**: PostgreSQL connection health
+
+### Data Quality Monitoring
+Monitor data quality and collection health:
+
+```bash
+# Get data quality reports
+curl "http://localhost:5000/api/data-quality/reports"
+
+# Check recent collection runs
+curl "http://localhost:5000/gitlab-metrics/collect/runs"
+```
+
+### Logging & Telemetry
+- **Structured Logging**: JSON-formatted logs with correlation IDs
+- **OpenTelemetry**: Distributed tracing and metrics collection
+- **Performance Metrics**: Collection timing and throughput statistics
+- **Error Tracking**: Detailed error reporting with context
+
+### Key Metrics to Monitor
+- Collection run success rates
+- Data freshness (last successful collection time)
+- API rate limit consumption
+- Database query performance
+- Export generation success rates
 
 ## Deployment
 
@@ -146,6 +276,36 @@ The application is designed for containerized deployment with .NET Aspire. It in
 - Distributed tracing
 - Health checks
 - Graceful shutdown handling
+
+### Container Deployment
+```bash
+# Build and run with Docker
+docker build -t gitlab-metrics-analyzer .
+docker run -p 5000:8080 -e ConnectionStrings__DefaultConnection="..." gitlab-metrics-analyzer
+```
+
+### Kubernetes Deployment
+The application includes health check endpoints suitable for Kubernetes:
+- Readiness probe: `GET /health`
+- Liveness probe: `GET /alive`
+
+## Future Roadmap (vNext)
+
+### Planned Scheduling Improvements
+The current v1 system uses manual triggers. Future versions will include:
+
+- **Hangfire Integration**: Automated background job scheduling
+- **Aspire Scheduling**: Cloud-native job orchestration
+- **Configurable Schedules**: Flexible collection timing (daily, weekly, custom)
+- **Smart Incremental Windows**: Dynamic window sizing based on activity patterns
+- **Rate Limit Optimization**: Intelligent throttling based on GitLab API limits
+
+### Advanced Features in Development
+- **Team Metrics Aggregation**: Cross-developer collaboration analysis
+- **Project Health Scoring**: Automated project quality assessments  
+- **Anomaly Detection**: Statistical outlier identification
+- **Custom Dashboards**: Interactive visualization components
+- **API Rate Limiting**: Built-in rate limiting for external consumers
 
 ## Troubleshooting
 
