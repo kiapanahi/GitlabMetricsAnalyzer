@@ -28,7 +28,7 @@ internal static class PerDeveloperMetricsEndpoints
             .WithDescription("Computes metrics for multiple developers in a single request");
     }
 
-    private static async Task<IResult> GetSupportedWindows(IPerDeveloperMetricsComputationService service)
+    private static IResult GetSupportedWindows(IPerDeveloperMetricsComputationService service)
     {
         var windows = service.GetSupportedWindowDays();
         return Results.Ok(new SupportedWindowsResponse(windows));
