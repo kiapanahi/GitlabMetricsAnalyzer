@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.Tests.TestFixtures;
 
@@ -17,7 +18,7 @@ public sealed class DeterministicFixtureValidationTests : IDisposable
         var options = new DbContextOptionsBuilder<GitLabMetricsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        
+
         _dbContext = new GitLabMetricsDbContext(options);
     }
 
@@ -55,7 +56,7 @@ public sealed class DeterministicFixtureValidationTests : IDisposable
     {
         // Arrange & Act - Access the static properties directly
         // Since CompleteFixture is a static class with static properties, they should always be consistent
-        
+
         // Assert - Counts should be consistent across accesses
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Users.Count, GitLabTestFixtures.CompleteFixture.Users.Count);
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Commits.Count, GitLabTestFixtures.CompleteFixture.Commits.Count);
@@ -63,7 +64,7 @@ public sealed class DeterministicFixtureValidationTests : IDisposable
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Pipelines.Count, GitLabTestFixtures.CompleteFixture.Pipelines.Count);
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Jobs.Count, GitLabTestFixtures.CompleteFixture.Jobs.Count);
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Notes.Count, GitLabTestFixtures.CompleteFixture.Notes.Count);
-        
+
         // Assert - Content should be identical (testing deterministic behavior)
         var user1 = GitLabTestFixtures.CompleteFixture.Users.First(u => u.Id == 1);
         var user2 = GitLabTestFixtures.CompleteFixture.Users.First(u => u.Id == 1);
@@ -75,43 +76,43 @@ public sealed class DeterministicFixtureValidationTests : IDisposable
     public void DeterministicFixtures_ContainExpectedEdgeCases()
     {
         // Arrange - Access the static properties directly
-        
+
         // Assert - Verify key edge cases exist
-        
+
         // Bot user
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Users, u => u.External == true);
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Users, u => u.Username?.Contains("bot") == true);
-        
+
         // Archived project
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Projects, p => p.Archived == true);
-        
+
         // Merge commit (ParentCount > 1)
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Commits, c => c.ParentCount > 1);
-        
+
         // Revert commit
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Commits, c => c.Message.StartsWith("Revert"));
-        
+
         // Draft MR
         Assert.Contains(GitLabTestFixtures.CompleteFixture.MergeRequests, mr => mr.Title.StartsWith("Draft:"));
-        
+
         // Hotfix MR  
         Assert.Contains(GitLabTestFixtures.CompleteFixture.MergeRequests, mr => mr.Title.Contains("hotfix"));
-        
+
         // Conflicted MR
         Assert.Contains(GitLabTestFixtures.CompleteFixture.MergeRequests, mr => mr.HasConflicts == true);
-        
+
         // Flaky pipeline (same SHA, different statuses)
         var flakyPipelines = GitLabTestFixtures.CompleteFixture.Pipelines.Where(p => p.Sha == "flaky123456").ToList();
         Assert.Equal(2, flakyPipelines.Count);
         Assert.Contains(flakyPipelines, p => p.Status == "failed");
         Assert.Contains(flakyPipelines, p => p.Status == "success");
-        
+
         // Retried job
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Jobs, j => j.RetriedFlag == true);
-        
+
         // System note
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Notes, n => n.System == true);
-        
+
         // Resolved discussion
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Notes, n => n.Resolved == true);
     }
@@ -123,19 +124,19 @@ public sealed class DeterministicFixtureValidationTests : IDisposable
         var baseDate = GitLabTestFixtures.FixedBaseDate;
 
         // Assert - All dates relative to base date
-        Assert.All(GitLabTestFixtures.CompleteFixture.Users, user => 
+        Assert.All(GitLabTestFixtures.CompleteFixture.Users, user =>
             Assert.True(user.CreatedAt <= baseDate));
-        
-        Assert.All(GitLabTestFixtures.CompleteFixture.Projects, project => 
+
+        Assert.All(GitLabTestFixtures.CompleteFixture.Projects, project =>
             Assert.True(project.CreatedAt <= baseDate));
-        
-        Assert.All(GitLabTestFixtures.CompleteFixture.Commits, commit => 
+
+        Assert.All(GitLabTestFixtures.CompleteFixture.Commits, commit =>
             Assert.True(commit.CommittedAt <= baseDate));
-        
-        Assert.All(GitLabTestFixtures.CompleteFixture.MergeRequests, mr => 
+
+        Assert.All(GitLabTestFixtures.CompleteFixture.MergeRequests, mr =>
             Assert.True(mr.CreatedAt <= baseDate));
-        
-        Assert.All(GitLabTestFixtures.CompleteFixture.Pipelines, pipeline => 
+
+        Assert.All(GitLabTestFixtures.CompleteFixture.Pipelines, pipeline =>
             Assert.True(pipeline.CreatedAt <= baseDate));
     }
 

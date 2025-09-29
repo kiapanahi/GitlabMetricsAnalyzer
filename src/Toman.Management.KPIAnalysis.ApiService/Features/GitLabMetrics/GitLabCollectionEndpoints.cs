@@ -110,7 +110,7 @@ internal static class GitLabCollectionEndpoints
         try
         {
             var run = await collectorService.GetCollectionRunStatusAsync(runId, cancellationToken);
-            
+
             if (run is null)
             {
                 return Results.NotFound($"Collection run {runId} not found");
@@ -157,7 +157,7 @@ internal static class GitLabCollectionEndpoints
     {
         try
         {
-            logger.LogWarning("Initiating complete raw data reset. Trigger source: {TriggerSource}", 
+            logger.LogWarning("Initiating complete raw data reset. Trigger source: {TriggerSource}",
                 request?.TriggerSource ?? "api");
 
             // Clear all raw data tables
@@ -194,7 +194,7 @@ internal static class GitLabCollectionEndpoints
     {
         try
         {
-            logger.LogInformation("Resetting incremental collection state. Trigger source: {TriggerSource}", 
+            logger.LogInformation("Resetting incremental collection state. Trigger source: {TriggerSource}",
                 request?.TriggerSource ?? "api");
 
             await dataResetService.ResetIncrementalStateAsync(cancellationToken);

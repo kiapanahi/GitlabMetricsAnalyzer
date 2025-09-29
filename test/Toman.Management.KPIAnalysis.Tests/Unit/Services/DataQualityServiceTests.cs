@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 
 using Moq;
 
-using Xunit;
-
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.DataQuality;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Entities;
@@ -220,7 +218,7 @@ public class DataQualityServiceTests
             },
             new()
             {
-                CheckType = "test2", 
+                CheckType = "test2",
                 Status = "warning",
                 Score = 0.7,
                 Description = "Test 2"
@@ -228,7 +226,7 @@ public class DataQualityServiceTests
             new()
             {
                 CheckType = "test3",
-                Status = "passed", 
+                Status = "passed",
                 Score = 0.95,
                 Description = "Test 3"
             }

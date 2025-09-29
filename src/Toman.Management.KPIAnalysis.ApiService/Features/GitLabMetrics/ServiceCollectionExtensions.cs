@@ -1,10 +1,6 @@
 using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
-
-using Polly;
-using Polly.CircuitBreaker;
 
 using Quartz;
 
@@ -48,15 +44,15 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
         builder.Services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
         builder.Services.AddScoped<IPerDeveloperMetricsComputationService, PerDeveloperMetricsComputationService>();
-        
+
         // Add new metrics persistence and export services
         builder.Services.AddScoped<IMetricsAggregatesPersistenceService, MetricsAggregatesPersistenceService>();
         builder.Services.AddScoped<IMetricCatalogService, MetricCatalogService>();
         builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
-        
+
         // Add data reset service
         builder.Services.AddScoped<IDataResetService, DataResetService>();
-        
+
         // Add observability and data quality services
         builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
         builder.Services.AddScoped<IDataQualityService, DataQualityService>();
@@ -75,10 +71,10 @@ internal static class ServiceCollectionExtensions
                 var configuration = options.Value;
                 client.BaseAddress = new Uri(configuration.BaseUrl.TrimEnd('/') + "/api/v4/");
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
-                
+
                 // Add GitLab-specific headers
                 client.DefaultRequestHeaders.Add("User-Agent", "GitLabMetricsAnalyzer/1.0");
-                
+
                 // Set reasonable timeout for GitLab API calls
                 client.Timeout = TimeSpan.FromMinutes(2);
             })
@@ -89,12 +85,12 @@ internal static class ServiceCollectionExtensions
                 options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
                 options.Retry.UseJitter = true;
                 options.Retry.Delay = TimeSpan.FromSeconds(1);
-                
+
                 // Configure circuit breaker for GitLab API  
                 options.CircuitBreaker.FailureRatio = 0.3; // Break if 30% of requests fail
                 options.CircuitBreaker.MinimumThroughput = 10; // At least 10 requests needed
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
-                
+
                 // Configure total request timeout
                 options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
             });

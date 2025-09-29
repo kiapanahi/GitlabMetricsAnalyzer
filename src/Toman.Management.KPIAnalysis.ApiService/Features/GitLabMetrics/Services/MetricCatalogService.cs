@@ -29,8 +29,8 @@ public sealed class MetricCatalogService : IMetricCatalogService
     }
 
     public async Task<IReadOnlyList<PerDeveloperMetricsExport>> GeneratePerDeveloperExportsAsync(
-        IEnumerable<long> developerIds, 
-        int windowDays, 
+        IEnumerable<long> developerIds,
+        int windowDays,
         DateTime windowEnd,
         CancellationToken cancellationToken = default)
     {

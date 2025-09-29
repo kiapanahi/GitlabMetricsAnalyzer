@@ -65,10 +65,10 @@ public sealed record PerDeveloperMetricsResult
     public required DateTime WindowStart { get; init; }
     public required DateTime WindowEnd { get; init; }
     public required int WindowDays { get; init; }
-    
+
     // Computed metrics matching MetricsData structure
     public required PerDeveloperMetrics Metrics { get; init; }
-    
+
     // Audit information
     public required MetricsAudit Audit { get; init; }
 }

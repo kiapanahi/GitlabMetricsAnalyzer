@@ -1,5 +1,3 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Export;
-
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
@@ -11,23 +9,23 @@ public interface IMetricsExportService
     /// Export metric catalog to JSON file
     /// </summary>
     Task<string> ExportCatalogAsync(CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Export per-developer metrics to JSON files with immutable naming
     /// </summary>
     Task<ExportResult> ExportPerDeveloperMetricsAsync(
-        IEnumerable<long> developerIds, 
-        int windowDays, 
+        IEnumerable<long> developerIds,
+        int windowDays,
         DateTime windowEnd,
         CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Export per-developer metrics from computation results
     /// </summary>
     Task<ExportResult> ExportPerDeveloperMetricsFromResultsAsync(
         IEnumerable<PerDeveloperMetricsResult> results,
         CancellationToken cancellationToken = default);
-        
+
     /// <summary>
     /// Get list of available export files
     /// </summary>

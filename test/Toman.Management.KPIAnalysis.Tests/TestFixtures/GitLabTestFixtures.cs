@@ -12,7 +12,7 @@ public static class GitLabTestFixtures
     /// Fixed date for deterministic test data generation
     /// </summary>
     public static readonly DateTime FixedBaseDate = new(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    
+
     /// <summary>
     /// Creates test users with various patterns for comprehensive testing
     /// </summary>
@@ -24,7 +24,7 @@ public static class GitLabTestFixtures
             {
                 Id = 1,
                 Username = "alice.developer",
-                Email = "alice@example.com", 
+                Email = "alice@example.com",
                 Name = "Alice Developer",
                 State = "active",
                 CreatedAt = FixedBaseDate.AddDays(-365),
@@ -40,7 +40,7 @@ public static class GitLabTestFixtures
                 Id = 2,
                 Username = "bob.reviewer",
                 Email = "bob@example.com",
-                Name = "Bob Reviewer", 
+                Name = "Bob Reviewer",
                 State = "active",
                 CreatedAt = FixedBaseDate.AddDays(-300),
                 IsAdmin = false,
@@ -56,7 +56,7 @@ public static class GitLabTestFixtures
                 Username = "charlie.maintainer",
                 Email = "charlie@example.com",
                 Name = "Charlie Maintainer",
-                State = "active", 
+                State = "active",
                 CreatedAt = FixedBaseDate.AddDays(-200),
                 IsAdmin = true,
                 CanCreateGroup = true,
@@ -115,7 +115,7 @@ public static class GitLabTestFixtures
                 Name = "legacy-system",
                 NameWithNamespace = "company/legacy-system",
                 Path = "legacy-system",
-                PathWithNamespace = "company/legacy-system", 
+                PathWithNamespace = "company/legacy-system",
                 Description = "Legacy system with irregular patterns",
                 DefaultBranch = "master", // Old default branch
                 Visibility = "private",
@@ -147,7 +147,7 @@ public static class GitLabTestFixtures
             }
         };
     }
-    
+
     /// <summary>
     /// Creates test commits covering various edge cases
     /// </summary>
@@ -155,7 +155,7 @@ public static class GitLabTestFixtures
     {
         var users = CreateTestUsers();
         var commits = new List<RawCommit>();
-        
+
         // Regular development commits
         commits.Add(new RawCommit
         {
@@ -172,7 +172,7 @@ public static class GitLabTestFixtures
             IngestedAt = FixedBaseDate,
             ParentCount = 1
         });
-        
+
         // Merge commit
         commits.Add(new RawCommit
         {
@@ -189,7 +189,7 @@ public static class GitLabTestFixtures
             IngestedAt = FixedBaseDate,
             ParentCount = 2 // Merge commit
         });
-        
+
         // Revert commit
         commits.Add(new RawCommit
         {
@@ -206,7 +206,7 @@ public static class GitLabTestFixtures
             IngestedAt = FixedBaseDate,
             ParentCount = 1
         });
-        
+
         // Bot commit (should be excluded)
         commits.Add(new RawCommit
         {
@@ -223,7 +223,7 @@ public static class GitLabTestFixtures
             IngestedAt = FixedBaseDate,
             ParentCount = 1
         });
-        
+
         // Large refactoring commit
         commits.Add(new RawCommit
         {
@@ -240,17 +240,17 @@ public static class GitLabTestFixtures
             IngestedAt = FixedBaseDate,
             ParentCount = 1
         });
-        
+
         return commits;
     }
-    
+
     /// <summary>
     /// Creates test merge requests covering comprehensive edge cases
     /// </summary>
     public static List<RawMergeRequest> CreateTestMergeRequests()
     {
         var mergeRequests = new List<RawMergeRequest>();
-        
+
         // Standard merged MR
         mergeRequests.Add(new RawMergeRequest
         {
@@ -274,7 +274,7 @@ public static class GitLabTestFixtures
             Labels = "enhancement,backend",
             WebUrl = "https://gitlab.example.com/company/main-service/-/merge_requests/101"
         });
-        
+
         // Draft/WIP MR
         mergeRequests.Add(new RawMergeRequest
         {
@@ -296,7 +296,7 @@ public static class GitLabTestFixtures
             Labels = "experimental,draft",
             WebUrl = "https://gitlab.example.com/company/main-service/-/merge_requests/102"
         });
-        
+
         // Hotfix MR
         mergeRequests.Add(new RawMergeRequest
         {
@@ -304,7 +304,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 103,
             AuthorUserId = 3,
-            AuthorName = "charlie.maintainer", 
+            AuthorName = "charlie.maintainer",
             Title = "hotfix: critical security vulnerability patch",
             CreatedAt = FixedBaseDate.AddDays(-3),
             MergedAt = FixedBaseDate.AddDays(-3).AddHours(2), // Quick merge
@@ -320,7 +320,7 @@ public static class GitLabTestFixtures
             Labels = "hotfix,security,critical",
             WebUrl = "https://gitlab.example.com/company/main-service/-/merge_requests/103"
         });
-        
+
         // Revert MR
         mergeRequests.Add(new RawMergeRequest
         {
@@ -344,7 +344,7 @@ public static class GitLabTestFixtures
             Labels = "revert,rollback",
             WebUrl = "https://gitlab.example.com/company/main-service/-/merge_requests/104"
         });
-        
+
         // Conflicted MR (closed without merge)
         mergeRequests.Add(new RawMergeRequest
         {
@@ -368,7 +368,7 @@ public static class GitLabTestFixtures
             HasConflicts = true, // Conflicted MR
             WebUrl = "https://gitlab.example.com/company/main-service/-/merge_requests/105"
         });
-        
+
         // Squash merge MR (many commits, squashed to one)
         mergeRequests.Add(new RawMergeRequest
         {
@@ -393,17 +393,17 @@ public static class GitLabTestFixtures
             CommitsCount = 25, // Many commits that got squashed
             WebUrl = "https://gitlab.example.com/company/main-service/-/merge_requests/106"
         });
-        
+
         return mergeRequests;
     }
-    
+
     /// <summary>
     /// Creates test pipelines covering flaky runs, failures, and success patterns
     /// </summary>
     public static List<RawPipeline> CreateTestPipelines()
     {
         var pipelines = new List<RawPipeline>();
-        
+
         // Successful pipeline
         pipelines.Add(new RawPipeline
         {
@@ -424,7 +424,7 @@ public static class GitLabTestFixtures
             Environment = "production",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Failed pipeline
         pipelines.Add(new RawPipeline
         {
@@ -445,7 +445,7 @@ public static class GitLabTestFixtures
             Environment = "development",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Flaky pipeline (initially failed, then succeeded on retry)
         pipelines.Add(new RawPipeline
         {
@@ -466,7 +466,7 @@ public static class GitLabTestFixtures
             Environment = "development",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Successful retry of flaky pipeline
         pipelines.Add(new RawPipeline
         {
@@ -487,7 +487,7 @@ public static class GitLabTestFixtures
             Environment = "development",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Pipeline scheduled trigger
         pipelines.Add(new RawPipeline
         {
@@ -508,7 +508,7 @@ public static class GitLabTestFixtures
             Environment = "production",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Legacy system pipeline with minimal data
         pipelines.Add(new RawPipeline
         {
@@ -529,17 +529,17 @@ public static class GitLabTestFixtures
             Environment = null, // No environment configured in legacy
             IngestedAt = FixedBaseDate
         });
-        
+
         return pipelines;
     }
-    
+
     /// <summary>
     /// Creates test jobs covering various pipeline job scenarios
     /// </summary>
     public static List<RawJob> CreateTestJobs()
     {
         var jobs = new List<RawJob>();
-        
+
         // Successful test job
         jobs.Add(new RawJob
         {
@@ -553,7 +553,7 @@ public static class GitLabTestFixtures
             FinishedAt = FixedBaseDate.AddDays(-10).AddMinutes(2).AddSeconds(30),
             RetriedFlag = false
         });
-        
+
         // Failed test job (flaky)
         jobs.Add(new RawJob
         {
@@ -567,7 +567,7 @@ public static class GitLabTestFixtures
             FinishedAt = FixedBaseDate.AddDays(-12).AddMinutes(3).AddSeconds(45),
             RetriedFlag = false
         });
-        
+
         // Successful retry of flaky job
         jobs.Add(new RawJob
         {
@@ -581,7 +581,7 @@ public static class GitLabTestFixtures
             FinishedAt = FixedBaseDate.AddDays(-12).AddMinutes(18).AddSeconds(17),
             RetriedFlag = true // This is a retry
         });
-        
+
         // Build job
         jobs.Add(new RawJob
         {
@@ -595,7 +595,7 @@ public static class GitLabTestFixtures
             FinishedAt = FixedBaseDate.AddDays(-10).AddMinutes(1).AddSeconds(45),
             RetriedFlag = false
         });
-        
+
         // Deploy job (failed but different pipeline)
         jobs.Add(new RawJob
         {
@@ -609,7 +609,7 @@ public static class GitLabTestFixtures
             FinishedAt = FixedBaseDate.AddDays(-5).AddMinutes(1).AddSeconds(30),
             RetriedFlag = false
         });
-        
+
         // Legacy system job
         jobs.Add(new RawJob
         {
@@ -623,17 +623,17 @@ public static class GitLabTestFixtures
             FinishedAt = FixedBaseDate.AddDays(-7).AddMinutes(2),
             RetriedFlag = false
         });
-        
+
         return jobs;
     }
-    
+
     /// <summary>
     /// Creates test merge request notes covering various discussion patterns
     /// </summary>
     public static List<RawMergeRequestNote> CreateTestMergeRequestNotes()
     {
         var notes = new List<RawMergeRequestNote>();
-        
+
         // Regular review comment
         notes.Add(new RawMergeRequestNote
         {
@@ -654,7 +654,7 @@ public static class GitLabTestFixtures
             NoteableType = "MergeRequest",
             IngestedAt = FixedBaseDate
         });
-        
+
         // System note for approval
         notes.Add(new RawMergeRequestNote
         {
@@ -675,7 +675,7 @@ public static class GitLabTestFixtures
             NoteableType = "MergeRequest",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Response from author
         notes.Add(new RawMergeRequestNote
         {
@@ -696,7 +696,7 @@ public static class GitLabTestFixtures
             NoteableType = "MergeRequest",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Resolved discussion thread
         notes.Add(new RawMergeRequestNote
         {
@@ -717,7 +717,7 @@ public static class GitLabTestFixtures
             NoteableType = "MergeRequest",
             IngestedAt = FixedBaseDate
         });
-        
+
         // Critical feedback on hotfix
         notes.Add(new RawMergeRequestNote
         {
@@ -738,7 +738,7 @@ public static class GitLabTestFixtures
             NoteableType = "MergeRequest",
             IngestedAt = FixedBaseDate
         });
-        
+
         // System note for merge
         notes.Add(new RawMergeRequestNote
         {
@@ -759,10 +759,10 @@ public static class GitLabTestFixtures
             NoteableType = "MergeRequest",
             IngestedAt = FixedBaseDate
         });
-        
+
         return notes;
     }
-    
+
     /// <summary>
     /// Creates all test fixtures in a consistent, deterministic way
     /// Each property returns fresh instances to avoid Entity Framework tracking conflicts

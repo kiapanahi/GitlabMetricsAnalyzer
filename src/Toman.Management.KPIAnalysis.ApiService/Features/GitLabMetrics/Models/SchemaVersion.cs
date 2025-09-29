@@ -9,7 +9,7 @@ public static class SchemaVersion
     /// Current schema version for metrics data
     /// </summary>
     public const string Current = "1.0.0";
-    
+
     /// <summary>
     /// Supported schema versions for backward compatibility
     /// </summary>
@@ -17,7 +17,7 @@ public static class SchemaVersion
     {
         Current
     };
-    
+
     /// <summary>
     /// Check if a schema version is supported
     /// </summary>

@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -170,7 +169,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         }
 
         // TODO: Apply regex patterns for project names if needed
-        
+
         return filtered.ToList();
     }
 
@@ -215,9 +214,9 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             return rawData;
 
         var excludes = _config.Excludes;
-        
+
         // Apply commit exclusions (no branch field in RawCommit, use source/target branches from MRs for reference)
-        var filteredCommits = rawData.Commits.Where(c => 
+        var filteredCommits = rawData.Commits.Where(c =>
             !IsExcludedCommit(c.Message, excludes.CommitPatterns)).ToList();
 
         // Apply merge request exclusions  
@@ -252,7 +251,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         var timeInReviewP50H = ComputeTimeInReviewP50(data.MergeRequests);
         var wipAgeP50H = ComputeWipAgeP50(data.MergeRequests);
         var wipAgeP90H = ComputeWipAgeP90(data.MergeRequests);
-        
+
         // Compute rate-based metrics
         var pipelineSuccessRate = ComputePipelineSuccessRate(data.Pipelines);
         var approvalBypassRatio = ComputeApprovalBypassRatio(data.MergeRequests);
@@ -283,7 +282,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             WipMrCount = wipMrCount,
             AvgPipelineDurationSec = avgPipelineDurationSec,
             MeanTimeToGreenSec = meanTimeToGreenSec,
-            
+
             // Computed remaining metrics with basic implementations
             DeploymentFrequencyWk = ComputeDeploymentFrequency(data.Pipelines, options.WindowDays),
             ReleasesCadenceWk = ComputeReleasesCadence(data.MergeRequests, options.WindowDays),
@@ -407,7 +406,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
 
     private static int ComputeWipMergeRequestCount(List<Models.Raw.RawMergeRequest> mergeRequests)
     {
-        return mergeRequests.Count(mr => mr.State == "opened" && 
+        return mergeRequests.Count(mr => mr.State == "opened" &&
                                         (mr.Title.Contains("WIP") || mr.Title.Contains("Draft")));
     }
 
@@ -430,7 +429,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
     private static int ComputeDeploymentFrequency(List<Models.Raw.RawPipeline> pipelines, int windowDays)
     {
         // Count successful pipelines that likely represent deployments (success status)
-        var deployments = pipelines.Count(p => p.Status == "success" && 
+        var deployments = pipelines.Count(p => p.Status == "success" &&
                                                (p.Environment is not null || p.Ref == "main" || p.Ref == "master"));
         return (int)(deployments * 7.0 / windowDays); // Convert to weekly rate
     }
@@ -440,7 +439,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         // Estimate releases based on MRs to main/master with "release" keywords
         var releases = mergeRequests.Count(mr => mr.State == "merged" &&
                                                  (mr.TargetBranch == "main" || mr.TargetBranch == "master") &&
-                                                 (mr.Title.ToLowerInvariant().Contains("release") || 
+                                                 (mr.Title.ToLowerInvariant().Contains("release") ||
                                                   mr.Title.ToLowerInvariant().Contains("version")));
         return (int)(releases * 7.0 / windowDays); // Convert to weekly rate
     }
@@ -479,7 +478,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         // Estimate direct pushes as commits without associated merge requests
         // This is a simplified heuristic since we don't have branch information for commits
         var commitsWithMRs = new HashSet<string>();
-        
+
         foreach (var mr in mergeRequests)
         {
             // Add estimated commits for this MR (simplified)
@@ -496,7 +495,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
     {
         var branchLifetimes = mergeRequests
             .Where(mr => mr.MergedAt.HasValue || mr.ClosedAt.HasValue)
-            .Select(mr => 
+            .Select(mr =>
             {
                 var endDate = mr.MergedAt ?? mr.ClosedAt!.Value;
                 return (endDate - mr.CreatedAt).TotalHours;
@@ -512,7 +511,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
     {
         var branchLifetimes = mergeRequests
             .Where(mr => mr.MergedAt.HasValue || mr.ClosedAt.HasValue)
-            .Select(mr => 
+            .Select(mr =>
             {
                 var endDate = mr.MergedAt ?? mr.ClosedAt!.Value;
                 return (endDate - mr.CreatedAt).TotalHours;
@@ -567,7 +566,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             WinsorizedMetrics = 0, // TODO: Count winsorized metrics
 
             DataQuality = DetermineDataQuality(rawData),
-            HasSufficientData = rawData.MergeRequests.Count >= MinSampleSize || 
+            HasSufficientData = rawData.MergeRequests.Count >= MinSampleSize ||
                                rawData.Commits.Count >= MinSampleSize,
 
             NullReasons = GenerateNullReasons(rawData, metrics)
@@ -580,7 +579,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         return totalDataPoints switch
         {
             >= 50 => "Excellent",
-            >= 20 => "Good", 
+            >= 20 => "Good",
             >= 10 => "Fair",
             _ => "Poor"
         };
@@ -628,7 +627,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
 
     // Helper records
     private sealed record DeveloperInfo(string Username, string Email);
-    
+
     private sealed record RawMetricsData
     {
         public List<Models.Raw.RawCommit> Commits { get; init; } = [];

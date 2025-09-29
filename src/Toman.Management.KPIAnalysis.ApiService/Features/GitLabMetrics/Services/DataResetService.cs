@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -52,7 +51,7 @@ public sealed class DataResetService : IDataResetService
         _logger.LogWarning("Starting to clear all raw data tables");
 
         using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        
+
         try
         {
             // Clear raw data tables in reverse dependency order
@@ -66,7 +65,7 @@ public sealed class DataResetService : IDataResetService
             await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM collection_runs", cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
-            
+
             _logger.LogInformation("Successfully cleared all raw data tables");
         }
         catch (Exception ex)
@@ -84,7 +83,7 @@ public sealed class DataResetService : IDataResetService
         try
         {
             await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM ingestion_state", cancellationToken);
-            
+
             _logger.LogInformation("Successfully reset all ingestion states");
         }
         catch (Exception ex)
@@ -109,7 +108,7 @@ public sealed class DataResetService : IDataResetService
                 _dbContext.IngestionStates.Remove(incrementalState);
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
-            
+
             _logger.LogInformation("Successfully reset incremental collection state");
         }
         catch (Exception ex)
@@ -136,7 +135,7 @@ public sealed class DataResetService : IDataResetService
             };
 
             await _dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
-            
+
             _logger.LogInformation("Successfully cleared raw data for type: {DataType}", dataType);
         }
         catch (Exception ex)

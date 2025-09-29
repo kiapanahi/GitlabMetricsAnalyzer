@@ -17,13 +17,13 @@ public sealed class GitLabHttpClientIntegrationTests
     {
         // Arrange
         using var httpClient = new HttpClient(new MockHttpMessageHandler(
-            "/api/v4/version", 
+            "/api/v4/version",
             """{"version":"16.0.0","revision":"abc123"}"""
         ))
         {
             BaseAddress = new Uri("https://gitlab.example.com/api/v4/")
         };
-        
+
         var logger = Mock.Of<ILogger<GitLabHttpClient>>();
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
@@ -39,14 +39,14 @@ public sealed class GitLabHttpClientIntegrationTests
     {
         // Arrange
         using var httpClient = new HttpClient(new MockHttpMessageHandler(
-            "/api/v4/version", 
+            "/api/v4/version",
             string.Empty,
             System.Net.HttpStatusCode.Unauthorized
         ))
         {
             BaseAddress = new Uri("https://gitlab.example.com/api/v4/")
         };
-        
+
         var logger = Mock.Of<ILogger<GitLabHttpClient>>();
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
@@ -75,13 +75,13 @@ public sealed class GitLabHttpClientIntegrationTests
             """;
 
         using var httpClient = new HttpClient(new MockHttpMessageHandler(
-            "/api/v4/users", 
+            "/api/v4/users",
             usersJson
         ))
         {
             BaseAddress = new Uri("https://gitlab.example.com/api/v4/")
         };
-        
+
         var logger = Mock.Of<ILogger<GitLabHttpClient>>();
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
@@ -113,13 +113,13 @@ public sealed class GitLabHttpClientIntegrationTests
             """;
 
         using var httpClient = new HttpClient(new MockHttpMessageHandler(
-            "/api/v4/projects", 
+            "/api/v4/projects",
             projectsJson
         ))
         {
             BaseAddress = new Uri("https://gitlab.example.com/api/v4/")
         };
-        
+
         var logger = Mock.Of<ILogger<GitLabHttpClient>>();
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
@@ -139,14 +139,14 @@ public sealed class GitLabHttpClientIntegrationTests
     {
         // Arrange
         using var httpClient = new HttpClient(new MockHttpMessageHandler(
-            "/api/v4/users/999", 
+            "/api/v4/users/999",
             string.Empty,
             System.Net.HttpStatusCode.NotFound
         ))
         {
             BaseAddress = new Uri("https://gitlab.example.com/api/v4/")
         };
-        
+
         var logger = Mock.Of<ILogger<GitLabHttpClient>>();
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
@@ -177,13 +177,13 @@ public sealed class GitLabHttpClientIntegrationTests
             """;
 
         using var httpClient = new HttpClient(new MockHttpMessageHandler(
-            "/api/v4/projects/1/repository/commits", 
+            "/api/v4/projects/1/repository/commits",
             commitsJson
         ))
         {
             BaseAddress = new Uri("https://gitlab.example.com/api/v4/")
         };
-        
+
         var logger = Mock.Of<ILogger<GitLabHttpClient>>();
         var gitLabClient = new GitLabHttpClient(httpClient, logger);
 
@@ -221,12 +221,12 @@ public sealed class GitLabHttpClientIntegrationTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var response = new HttpResponseMessage(_statusCode);
-            
+
             // Add rate limit headers to simulate GitLab API
             response.Headers.Add("RateLimit-Limit", "2000");
             response.Headers.Add("RateLimit-Remaining", "1999");
             response.Headers.Add("RateLimit-Reset", DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds().ToString());
-            
+
             if (_statusCode == System.Net.HttpStatusCode.OK)
             {
                 response.Content = new StringContent(_responseContent, System.Text.Encoding.UTF8, "application/json");

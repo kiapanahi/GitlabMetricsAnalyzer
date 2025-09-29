@@ -64,8 +64,8 @@ internal static class MetricsExportEndpoints
         try
         {
             var result = await exportService.ExportPerDeveloperMetricsAsync(
-                request.DeveloperIds, 
-                request.WindowDays, 
+                request.DeveloperIds,
+                request.WindowDays,
                 request.WindowEnd ?? DateTime.UtcNow,
                 cancellationToken);
 
@@ -164,9 +164,9 @@ internal static class MetricsExportEndpoints
                 return Results.BadRequest(new { Error = "At least one developer ID is required" });
 
             var results = await persistenceService.GetAggregatesAsync(
-                developerIds, 
-                windowDays, 
-                windowEnd ?? DateTime.UtcNow, 
+                developerIds,
+                windowDays,
+                windowEnd ?? DateTime.UtcNow,
                 cancellationToken);
 
             return Results.Ok(new GetPersistedAggregatesResponse
@@ -210,7 +210,7 @@ internal static class MetricsExportEndpoints
                 WipAgeP90H = result.Metrics.WipAgeP90H,
                 BranchTtlP50H = result.Metrics.BranchTtlP50H,
                 BranchTtlP90H = result.Metrics.BranchTtlP90H,
-                
+
                 PipelineSuccessRate = result.Metrics.PipelineSuccessRate,
                 ApprovalBypassRatio = result.Metrics.ApprovalBypassRatio,
                 ReworkRate = result.Metrics.ReworkRate,
@@ -219,7 +219,7 @@ internal static class MetricsExportEndpoints
                 IssueSlaBreachRate = result.Metrics.IssueSlaBreachRate,
                 ReopenedIssueRate = result.Metrics.ReopenedIssueRate,
                 DefectEscapeRate = result.Metrics.DefectEscapeRate,
-                
+
                 DeploymentFrequencyWk = result.Metrics.DeploymentFrequencyWk,
                 MrThroughputWk = result.Metrics.MrThroughputWk,
                 WipMrCount = result.Metrics.WipMrCount,
@@ -227,7 +227,7 @@ internal static class MetricsExportEndpoints
                 RollbackIncidence = result.Metrics.RollbackIncidence,
                 DirectPushesDefault = result.Metrics.DirectPushesDefault,
                 ForcePushesProtected = result.Metrics.ForcePushesProtected,
-                
+
                 MeanTimeToGreenSec = result.Metrics.MeanTimeToGreenSec,
                 AvgPipelineDurationSec = result.Metrics.AvgPipelineDurationSec
             },

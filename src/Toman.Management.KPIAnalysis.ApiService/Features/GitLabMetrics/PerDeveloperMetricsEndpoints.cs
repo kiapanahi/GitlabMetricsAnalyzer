@@ -84,7 +84,7 @@ internal static class PerDeveloperMetricsEndpoints
             };
 
             var results = await service.ComputeMetricsAsync(request.DeveloperIds, options, cancellationToken);
-            
+
             var response = new ComputeBatchMetricsResponse
             {
                 Results = results.Values.Select(MapToResponse).ToList(),

@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 using Toman.Management.KPIAnalysis.Tests.TestFixtures;
-using Xunit;
 
 namespace Toman.Management.KPIAnalysis.Tests.Integration;
 
@@ -22,9 +22,9 @@ public sealed class MetricVerificationTests : IDisposable
         var options = new DbContextOptionsBuilder<GitLabMetricsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        
+
         _dbContext = new GitLabMetricsDbContext(options);
-        
+
         var metricsConfig = Options.Create(new MetricsConfiguration
         {
             Identity = new IdentityConfiguration
@@ -49,28 +49,28 @@ public sealed class MetricVerificationTests : IDisposable
     {
         // Arrange
         await SeedDeterministicTestDataAsync();
-        
+
         var options = new MetricsComputationOptions
         {
             WindowDays = 14,
             EndDate = GitLabTestFixtures.FixedBaseDate,
             ApplyWinsorization = false
         };
-        
+
         // Act
         var metrics = await _metricsService.ComputeMetricsAsync(1, options, TestContext.Current.CancellationToken); // Alice (ID=1)
-        
+
         // Assert - Verify the correct API structure
         Assert.NotNull(metrics);
         Assert.Equal(1, metrics.DeveloperId);
         Assert.Equal("alice.developer", metrics.DeveloperName);
         Assert.NotNull(metrics.Metrics);
         Assert.NotNull(metrics.Audit);
-        
+
         // Verify metrics properties exist and are accessible
         Assert.True(metrics.Metrics.MrThroughputWk >= 0);
         Assert.True(metrics.Metrics.DeploymentFrequencyWk >= 0);
-        
+
         // Verify audit properties
         Assert.NotNull(metrics.Audit.DataQuality);
     }
@@ -80,17 +80,17 @@ public sealed class MetricVerificationTests : IDisposable
     {
         // Arrange
         await SeedDeterministicTestDataAsync();
-        
+
         var options = new MetricsComputationOptions
         {
             WindowDays = 14,
             EndDate = GitLabTestFixtures.FixedBaseDate,
             ApplyWinsorization = false
         };
-        
+
         // Act
         var metrics = await _metricsService.ComputeMetricsAsync(2, options, TestContext.Current.CancellationToken); // Bob (ID=2)
-        
+
         // Assert - Bob is primarily a reviewer
         Assert.Equal(2, metrics.DeveloperId);
         Assert.Equal("bob.reviewer", metrics.DeveloperName);
@@ -102,28 +102,28 @@ public sealed class MetricVerificationTests : IDisposable
     {
         // Arrange
         await SeedDeterministicTestDataAsync();
-        
+
         var options = new MetricsComputationOptions
         {
             WindowDays = 28,
             EndDate = GitLabTestFixtures.FixedBaseDate,
             ApplyWinsorization = false
         };
-        
+
         // Act
         var metrics = await _metricsService.ComputeMetricsAsync(1, options, TestContext.Current.CancellationToken); // Alice
-        
+
         // Assert - Verify metrics can be computed
         Assert.NotNull(metrics.Metrics.PipelineSuccessRate);
         Assert.NotNull(metrics.Metrics.FlakyJobRate);
-        
+
         // Verify rate values are within expected ranges
         if (metrics.Metrics.PipelineSuccessRate.HasValue)
         {
             Assert.True(metrics.Metrics.PipelineSuccessRate.Value >= 0);
             Assert.True(metrics.Metrics.PipelineSuccessRate.Value <= 1);
         }
-        
+
         if (metrics.Metrics.FlakyJobRate.HasValue)
         {
             Assert.True(metrics.Metrics.FlakyJobRate.Value >= 0);
@@ -136,30 +136,30 @@ public sealed class MetricVerificationTests : IDisposable
     {
         // Arrange
         await SeedDeterministicTestDataAsync();
-        
+
         var optionsWithWinsorization = new MetricsComputationOptions
         {
             WindowDays = 14,
             EndDate = GitLabTestFixtures.FixedBaseDate,
             ApplyWinsorization = true
         };
-        
+
         var optionsWithoutWinsorization = new MetricsComputationOptions
         {
             WindowDays = 14,
             EndDate = GitLabTestFixtures.FixedBaseDate,
             ApplyWinsorization = false
         };
-        
+
         // Act
         var metricsWithWinsorization = await _metricsService.ComputeMetricsAsync(1, optionsWithWinsorization, TestContext.Current.CancellationToken);
         var metricsWithoutWinsorization = await _metricsService.ComputeMetricsAsync(1, optionsWithoutWinsorization, TestContext.Current.CancellationToken);
-        
+
         // Assert - Both should produce valid results
         Assert.NotNull(metricsWithWinsorization);
         Assert.NotNull(metricsWithoutWinsorization);
         Assert.Equal(metricsWithWinsorization.DeveloperId, metricsWithoutWinsorization.DeveloperId);
-        
+
         // Winsorization flag should be different
         Assert.True(metricsWithWinsorization.Audit.WinsorizedMetrics >= 0);
         Assert.True(metricsWithoutWinsorization.Audit.WinsorizedMetrics >= 0);
@@ -169,7 +169,7 @@ public sealed class MetricVerificationTests : IDisposable
     {
         // Clear any existing change tracking to avoid conflicts
         _dbContext.ChangeTracker.Clear();
-        
+
         // Use the deterministic fixtures directly
         var commits = GitLabTestFixtures.CompleteFixture.Commits;
         var mergeRequests = GitLabTestFixtures.CompleteFixture.MergeRequests;

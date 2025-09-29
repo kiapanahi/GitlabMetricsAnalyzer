@@ -67,7 +67,7 @@ public sealed class DataQualityService : IDataQualityService
 
         var failedChecks = checks.Count(c => c.Status == "failed");
         var warningChecks = checks.Count(c => c.Status == "warning");
-        
+
         var overallStatus = failedChecks > 0 ? "critical" : (warningChecks > 0 ? "warning" : "healthy");
 
         var report = new DataQualityReport
@@ -78,7 +78,7 @@ public sealed class DataQualityService : IDataQualityService
             RunId = runId
         };
 
-        _logger.LogInformation("Data quality checks completed. Status: {Status}, Score: {Score:F2}", 
+        _logger.LogInformation("Data quality checks completed. Status: {Status}, Score: {Score:F2}",
             overallStatus, overallScore);
 
         return report;
@@ -141,7 +141,7 @@ public sealed class DataQualityService : IDataQualityService
         {
             _logger.LogError(ex, "Error performing referential integrity check");
             _metricsService.RecordDataQualityCheck("referential_integrity", "failed");
-            
+
             return new DataQualityCheckResult
             {
                 CheckType = "referential_integrity",
@@ -164,8 +164,8 @@ public sealed class DataQualityService : IDataQualityService
             // Check completeness of commits (required: author info, message)
             var totalCommits = await _dbContext.RawCommits.CountAsync(cancellationToken);
             var completeCommits = await _dbContext.RawCommits
-                .CountAsync(c => !string.IsNullOrEmpty(c.AuthorEmail) && 
-                               !string.IsNullOrEmpty(c.AuthorName) && 
+                .CountAsync(c => !string.IsNullOrEmpty(c.AuthorEmail) &&
+                               !string.IsNullOrEmpty(c.AuthorName) &&
                                !string.IsNullOrEmpty(c.Message), cancellationToken);
 
             totalEntities += totalCommits;
@@ -229,7 +229,7 @@ public sealed class DataQualityService : IDataQualityService
         {
             _logger.LogError(ex, "Error performing data completeness check");
             _metricsService.RecordDataQualityCheck("data_completeness", "failed");
-            
+
             return new DataQualityCheckResult
             {
                 CheckType = "data_completeness",
@@ -251,7 +251,7 @@ public sealed class DataQualityService : IDataQualityService
                 .FirstOrDefaultAsync(cancellationToken);
 
             var issues = new List<string>();
-            
+
             if (lastIncrementalRun is null)
             {
                 issues.Add("No incremental runs found");
@@ -259,7 +259,7 @@ public sealed class DataQualityService : IDataQualityService
             else
             {
                 var lagMinutes = (DateTimeOffset.UtcNow - lastIncrementalRun.LastRunAt).TotalMinutes;
-                
+
                 if (lagMinutes > 120) // More than 2 hours lag
                 {
                     issues.Add($"Data is stale: {lagMinutes:F0} minutes since last ingestion");
@@ -280,9 +280,9 @@ public sealed class DataQualityService : IDataQualityService
                 issues.Add("All data is older than 30 days");
             }
 
-            var lagScore = lastIncrementalRun is not null ? 
+            var lagScore = lastIncrementalRun is not null ?
                 Math.Max(0.0, 1.0 - ((DateTimeOffset.UtcNow - lastIncrementalRun.LastRunAt).TotalHours / 24.0)) : 0.0;
-            
+
             var status = issues.Any() ? (issues.Count > 1 ? "failed" : "warning") : "passed";
 
             var result = new DataQualityCheckResult
@@ -302,7 +302,7 @@ public sealed class DataQualityService : IDataQualityService
         {
             _logger.LogError(ex, "Error performing data latency check");
             _metricsService.RecordDataQualityCheck("data_latency", "failed");
-            
+
             return new DataQualityCheckResult
             {
                 CheckType = "data_latency",

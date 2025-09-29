@@ -1,15 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Moq;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Operational;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
-using Xunit;
 
 namespace Toman.Management.KPIAnalysis.Tests.Integration;
 
@@ -39,11 +38,11 @@ public class WindowedCollectionServiceTests : IDisposable
 
         // Add services with mocks
         services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
-        
+
         // Simple mock services
         var mockGitLabService = new Mock<IGitLabService>();
         var mockUserSyncService = new Mock<IUserSyncService>();
-        
+
         services.AddSingleton(mockGitLabService.Object);
         services.AddSingleton(mockUserSyncService.Object);
         services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();

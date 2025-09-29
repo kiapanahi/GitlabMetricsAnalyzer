@@ -1,5 +1,3 @@
-using Xunit;
-
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 namespace Toman.Management.KPIAnalysis.Tests.Unit.Services;

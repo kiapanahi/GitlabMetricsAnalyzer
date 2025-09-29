@@ -37,12 +37,12 @@ public sealed class MetricCatalogServiceTests
 
         // Assert - Check for key PRD metrics
         var metricNames = catalog.Metrics.Select(m => m.Name).ToList();
-        
+
         Assert.Contains(nameof(PerDeveloperMetrics.MrCycleTimeP50H), metricNames);
         Assert.Contains(nameof(PerDeveloperMetrics.PipelineSuccessRate), metricNames);
         Assert.Contains(nameof(PerDeveloperMetrics.DeploymentFrequencyWk), metricNames);
         Assert.Contains(nameof(PerDeveloperMetrics.MrThroughputWk), metricNames);
-        
+
         // Verify all metrics have required properties
         foreach (var metric in catalog.Metrics)
         {
@@ -69,7 +69,7 @@ public sealed class MetricCatalogServiceTests
 
         // Assert
         Assert.Equal(2, exports.Count);
-        
+
         var firstExport = exports.First();
         Assert.Equal(SchemaVersion.Current, firstExport.SchemaVersion);
         Assert.Equal(1, firstExport.DeveloperId);

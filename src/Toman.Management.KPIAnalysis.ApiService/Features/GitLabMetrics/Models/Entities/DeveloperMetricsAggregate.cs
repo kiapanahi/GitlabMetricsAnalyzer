@@ -9,15 +9,15 @@ public sealed class DeveloperMetricsAggregate
 {
     public long Id { get; init; }
     public long DeveloperId { get; init; }
-    
+
     // Window information
     public DateTime WindowStart { get; init; }
     public DateTime WindowEnd { get; init; }
     public int WindowDays { get; init; }
-    
+
     // Schema versioning
     public required string SchemaVersion { get; init; }
-    
+
     // PRD Metrics - Cycle time and review metrics (medians)
     public decimal? MrCycleTimeP50H { get; init; }
     public decimal? TimeToFirstReviewP50H { get; init; }
@@ -52,7 +52,7 @@ public sealed class DeveloperMetricsAggregate
 
     // Audit metadata stored as JSON
     public JsonDocument? AuditMetadata { get; init; }
-    
+
     // Null reasons stored as JSON
     public JsonDocument? NullReasons { get; init; }
 

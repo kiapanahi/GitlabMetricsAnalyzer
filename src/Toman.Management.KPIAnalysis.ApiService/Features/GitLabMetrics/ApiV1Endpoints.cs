@@ -69,7 +69,7 @@ public static class ApiV1Endpoints
 
             // For now, get all developers and filter - in production this should be optimized with database filtering
             var allDeveloperIds = await GetAllDeveloperIds(persistenceService, effectiveProjectIds, cancellationToken);
-            
+
             // Apply pagination
             var skip = (page - 1) * pageSize;
             var pagedDeveloperIds = allDeveloperIds.Skip(skip).Take(pageSize);
@@ -233,7 +233,7 @@ public static class ApiV1Endpoints
         for (int i = 6; i >= 0; i--)
         {
             var pointDate = now.AddDays(-i);
-            
+
             points.Add(new ApiV1SparklinePoint
             {
                 Date = pointDate,

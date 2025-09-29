@@ -24,13 +24,13 @@ public sealed class DataQualityReport
     public double OverallScore { get; init; } // Average of all check scores
     public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
     public Guid? RunId { get; init; }
-    
+
     /// <summary>
     /// Get checks by status
     /// </summary>
     public IReadOnlyList<DataQualityCheckResult> GetChecksByStatus(string status) =>
         Checks.Where(c => c.Status.Equals(status, StringComparison.OrdinalIgnoreCase)).ToList();
-        
+
     /// <summary>
     /// Check if the overall quality is acceptable
     /// </summary>

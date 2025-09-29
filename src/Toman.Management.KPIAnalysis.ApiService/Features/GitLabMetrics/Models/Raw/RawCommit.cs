@@ -15,7 +15,7 @@ public sealed class RawCommit
     public int Deletions { get; init; }
     public bool IsSigned { get; init; }
     public DateTime IngestedAt { get; init; }
-    
+
     // Enhanced fields for commit analysis
     public int FilesChanged { get; init; }
     public int AdditionsExcluded { get; init; } // Lines added excluding filtered files

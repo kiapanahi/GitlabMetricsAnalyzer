@@ -6,8 +6,6 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
-using Xunit;
-
 namespace Toman.Management.KPIAnalysis.Tests.Unit.Services;
 
 public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
@@ -151,7 +149,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
         var mergeRequest2 = new RawMergeRequest
         {
             ProjectId = 1,
-            ProjectName = "Test Project", 
+            ProjectName = "Test Project",
             MrId = 2,
             AuthorUserId = developerId,
             AuthorName = "Test Developer",

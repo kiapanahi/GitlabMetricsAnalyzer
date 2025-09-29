@@ -11,16 +11,16 @@ public interface IMetricCatalogService
     /// Generate metric catalog JSON from current schema
     /// </summary>
     Task<MetricCatalog> GenerateCatalogAsync();
-    
+
     /// <summary>
     /// Generate per-developer metrics export from persisted aggregates
     /// </summary>
     Task<IReadOnlyList<PerDeveloperMetricsExport>> GeneratePerDeveloperExportsAsync(
-        IEnumerable<long> developerIds, 
-        int windowDays, 
+        IEnumerable<long> developerIds,
+        int windowDays,
         DateTime windowEnd,
         CancellationToken cancellationToken = default);
-        
+
     /// <summary>
     /// Generate per-developer metrics export from computation results
     /// </summary>

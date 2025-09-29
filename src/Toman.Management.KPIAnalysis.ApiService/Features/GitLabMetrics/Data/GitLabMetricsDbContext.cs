@@ -239,15 +239,15 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(e => e.DeveloperId).HasColumnName("developer_id");
-            
+
             // Window information
             entity.Property(e => e.WindowStart).HasColumnName("window_start");
             entity.Property(e => e.WindowEnd).HasColumnName("window_end");
             entity.Property(e => e.WindowDays).HasColumnName("window_days");
-            
+
             // Schema versioning
             entity.Property(e => e.SchemaVersion).HasColumnName("schema_version").HasMaxLength(20);
-            
+
             // PRD Metrics
             entity.Property(e => e.MrCycleTimeP50H).HasColumnName("mr_cycle_time_p50h").HasPrecision(10, 2);
             entity.Property(e => e.TimeToFirstReviewP50H).HasColumnName("time_to_first_review_p50h").HasPrecision(10, 2);
@@ -256,7 +256,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.WipAgeP90H).HasColumnName("wip_age_p90h").HasPrecision(10, 2);
             entity.Property(e => e.BranchTtlP50H).HasColumnName("branch_ttl_p50h").HasPrecision(10, 2);
             entity.Property(e => e.BranchTtlP90H).HasColumnName("branch_ttl_p90h").HasPrecision(10, 2);
-            
+
             entity.Property(e => e.PipelineSuccessRate).HasColumnName("pipeline_success_rate").HasPrecision(5, 4);
             entity.Property(e => e.ApprovalBypassRatio).HasColumnName("approval_bypass_ratio").HasPrecision(5, 4);
             entity.Property(e => e.ReworkRate).HasColumnName("rework_rate").HasPrecision(5, 4);
@@ -265,7 +265,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.IssueSlaBreachRate).HasColumnName("issue_sla_breach_rate").HasPrecision(5, 4);
             entity.Property(e => e.ReopenedIssueRate).HasColumnName("reopened_issue_rate").HasPrecision(5, 4);
             entity.Property(e => e.DefectEscapeRate).HasColumnName("defect_escape_rate").HasPrecision(5, 4);
-            
+
             entity.Property(e => e.DeploymentFrequencyWk).HasColumnName("deployment_frequency_wk");
             entity.Property(e => e.MrThroughputWk).HasColumnName("mr_throughput_wk");
             entity.Property(e => e.WipMrCount).HasColumnName("wip_mr_count");
@@ -273,23 +273,23 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.RollbackIncidence).HasColumnName("rollback_incidence");
             entity.Property(e => e.DirectPushesDefault).HasColumnName("direct_pushes_default");
             entity.Property(e => e.ForcePushesProtected).HasColumnName("force_pushes_protected");
-            
+
             entity.Property(e => e.MeanTimeToGreenSec).HasColumnName("mean_time_to_green_sec").HasPrecision(12, 2);
             entity.Property(e => e.AvgPipelineDurationSec).HasColumnName("avg_pipeline_duration_sec").HasPrecision(12, 2);
-            
+
             // JSON columns for audit metadata and null reasons
             entity.Property(e => e.AuditMetadata).HasColumnName("audit_metadata")
                 .HasConversion(
                     v => v == null ? (string?)null : v.RootElement.GetRawText(),
                     v => string.IsNullOrEmpty(v) ? (JsonDocument?)null : JsonDocument.Parse(v, default(JsonDocumentOptions)))
                 .HasColumnType("jsonb");
-                
+
             entity.Property(e => e.NullReasons).HasColumnName("null_reasons")
                 .HasConversion(
                     v => v == null ? (string?)null : v.RootElement.GetRawText(),
                     v => string.IsNullOrEmpty(v) ? (JsonDocument?)null : JsonDocument.Parse(v, default(JsonDocumentOptions)))
                 .HasColumnType("jsonb");
-            
+
             entity.Property(e => e.CalculatedAt).HasColumnName("calculated_at");
 
             entity.HasOne(e => e.Developer).WithMany(d => d.MetricsAggregates).HasForeignKey(e => e.DeveloperId);
@@ -595,7 +595,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.LastRunAt).HasColumnName("last_run_at");
             entity.Property(e => e.WindowSizeHours).HasColumnName("window_size_hours");
             entity.Property(e => e.LastWindowEnd).HasColumnName("last_window_end");
-            
+
             entity.HasIndex(e => e.Entity).HasDatabaseName("idx_ingestion_state_entity").IsUnique();
         });
 
@@ -620,7 +620,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.ErrorDetails).HasColumnName("error_details").HasColumnType("text");
             entity.Property(e => e.TriggerSource).HasColumnName("trigger_source").HasMaxLength(50);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
-            
+
             entity.HasIndex(e => e.RunType).HasDatabaseName("idx_collection_runs_run_type");
             entity.HasIndex(e => e.Status).HasDatabaseName("idx_collection_runs_status");
             entity.HasIndex(e => e.StartedAt).HasDatabaseName("idx_collection_runs_started_at");
