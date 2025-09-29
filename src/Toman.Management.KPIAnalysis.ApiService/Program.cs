@@ -19,7 +19,6 @@ builder.AddGitLabMetricsServices();
 builder.Services.AddHealthChecks()
     .AddGitLabHealthCheck();
 
-builder.Services.Configure<ProcessingConfiguration>(builder.Configuration.GetSection(ProcessingConfiguration.SectionName));
 builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
 
 var app = builder.Build();
