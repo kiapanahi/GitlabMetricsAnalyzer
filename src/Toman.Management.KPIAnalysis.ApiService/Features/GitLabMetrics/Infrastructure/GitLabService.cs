@@ -55,7 +55,7 @@ public sealed class GitLabService : IGitLabService
         return await _gitLabHttpClient.GetGroupProjectsAsync(groupId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<RawCommit>> GetCommitsAsync(long projectId, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawCommit>> GetCommitsAsync(long projectId, DateTime? since = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -81,12 +81,12 @@ public sealed class GitLabService : IGitLabService
                         AuthorUserId = tempAuthorUserId, // Temporary ID - will be resolved later
                         AuthorName = commit.AuthorName ?? "Unknown",
                         AuthorEmail = authorEmail,
-                        CommittedAt = commit.CommittedDate ?? DateTimeOffset.UtcNow,
+                        CommittedAt = commit.CommittedDate ?? DateTime.UtcNow,
                         Message = commit.Message ?? "",
                         Additions = commit.Stats?.Additions ?? 0,
                         Deletions = commit.Stats?.Deletions ?? 0,
                         IsSigned = false, // Not available in our model
-                        IngestedAt = DateTimeOffset.UtcNow
+                        IngestedAt = DateTime.UtcNow
                     };
 
                     // Filter by date if specified
@@ -111,7 +111,7 @@ public sealed class GitLabService : IGitLabService
         }
     }
 
-    public async Task<IReadOnlyList<RawMergeRequest>> GetMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawMergeRequest>> GetMergeRequestsAsync(long projectId, DateTime? updatedAfter = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -131,7 +131,7 @@ public sealed class GitLabService : IGitLabService
                         AuthorUserId = mr.Author?.Id ?? 0,
                         AuthorName = mr.Author?.Name ?? "Unknown",
                         Title = mr.Title ?? "",
-                        CreatedAt = mr.CreatedAt ?? DateTimeOffset.UtcNow,
+                        CreatedAt = mr.CreatedAt ?? DateTime.UtcNow,
                         MergedAt = mr.MergedAt,
                         ClosedAt = mr.ClosedAt,
                         State = mr.State ?? "opened",
@@ -142,7 +142,7 @@ public sealed class GitLabService : IGitLabService
                         ApprovalsGiven = 0, // Would need approvals API
                         FirstReviewAt = null, // Would need to check notes/discussions
                         ReviewerIds = null, // Would need to get reviewers
-                        IngestedAt = DateTimeOffset.UtcNow
+                        IngestedAt = DateTime.UtcNow
                     };
 
                     // Filter by date if specified
@@ -167,7 +167,7 @@ public sealed class GitLabService : IGitLabService
         }
     }
 
-    public async Task<IReadOnlyList<RawPipeline>> GetPipelinesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawPipeline>> GetPipelinesAsync(long projectId, DateTime? updatedAfter = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -190,13 +190,13 @@ public sealed class GitLabService : IGitLabService
                         AuthorUserId = pipeline.User?.Id ?? 0,
                         AuthorName = pipeline.User?.Name ?? "Unknown",
                         TriggerSource = "unknown", // Not available in our model
-                        CreatedAt = pipeline.CreatedAt ?? DateTimeOffset.UtcNow,
-                        UpdatedAt = pipeline.UpdatedAt ?? DateTimeOffset.UtcNow,
+                        CreatedAt = pipeline.CreatedAt ?? DateTime.UtcNow,
+                        UpdatedAt = pipeline.UpdatedAt ?? DateTime.UtcNow,
                         StartedAt = null, // Not available in our model
                         FinishedAt = null, // Not available in our model
                         DurationSec = 0, // Not available in our model
                         Environment = null, // Would need to check pipeline jobs for environment
-                        IngestedAt = DateTimeOffset.UtcNow
+                        IngestedAt = DateTime.UtcNow
                     };
 
                     // Filter by date if specified
@@ -416,12 +416,12 @@ public sealed class GitLabService : IGitLabService
         var commitsCount = 0;
         var mergeRequestsCount = 0;
         var issuesCount = 0;
-        DateTimeOffset? lastActivity = null;
+        DateTime? lastActivity = null;
 
         try
         {
             // Count commits by email (most reliable for contribution counting)
-            var recentCommits = await GetCommitsByUserEmailAsync(project.Id, userEmail, DateTimeOffset.UtcNow.AddYears(-1), cancellationToken);
+            var recentCommits = await GetCommitsByUserEmailAsync(project.Id, userEmail, DateTime.UtcNow.AddYears(-1), cancellationToken);
             commitsCount = recentCommits.Count;
             if (recentCommits.Count > 0)
             {
@@ -429,7 +429,7 @@ public sealed class GitLabService : IGitLabService
             }
 
             // Count merge requests by user ID
-            var recentMRs = await GetMergeRequestsAsync(project.Id, DateTimeOffset.UtcNow.AddYears(-1), cancellationToken);
+            var recentMRs = await GetMergeRequestsAsync(project.Id, DateTime.UtcNow.AddYears(-1), cancellationToken);
             var userMRs = recentMRs.Where(mr => mr.AuthorUserId == userId).ToList();
             mergeRequestsCount = userMRs.Count;
             if (userMRs.Count > 0)
@@ -523,7 +523,7 @@ public sealed class GitLabService : IGitLabService
         return await _gitLabHttpClient.GetUserProjectsByActivityAsync(userId, userEmail, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTimeOffset? since = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTime? since = null, CancellationToken cancellationToken = default)
     {
         // Delegate to the new interface method
         var commits = await _gitLabHttpClient.GetCommitsByUserEmailAsync(projectId, userEmail, since, cancellationToken);
@@ -542,12 +542,12 @@ public sealed class GitLabService : IGitLabService
                 AuthorUserId = authorUserId, // Consistent email-based ID
                 AuthorName = commit.AuthorName ?? "Unknown",
                 AuthorEmail = userEmail,
-                CommittedAt = commit.CommittedDate ?? DateTimeOffset.UtcNow,
+                CommittedAt = commit.CommittedDate ?? DateTime.UtcNow,
                 Message = commit.Message ?? "",
                 Additions = commit.Stats?.Additions ?? 0,
                 Deletions = commit.Stats?.Deletions ?? 0,
                 IsSigned = false,
-                IngestedAt = DateTimeOffset.UtcNow
+                IngestedAt = DateTime.UtcNow
             };
 
             rawCommits.Add(rawCommit);
@@ -579,7 +579,7 @@ public sealed class GitLabService : IGitLabService
                         AuthorId = note.Author?.Id ?? 0,
                         AuthorName = note.Author?.Name ?? "Unknown",
                         Body = note.Body ?? "",
-                        CreatedAt = note.CreatedAt ?? DateTimeOffset.UtcNow,
+                        CreatedAt = note.CreatedAt ?? DateTime.UtcNow,
                         UpdatedAt = note.UpdatedAt,
                         System = note.System,
                         Resolvable = note.Resolvable,
@@ -587,7 +587,7 @@ public sealed class GitLabService : IGitLabService
                         ResolvedById = note.ResolvedBy?.Id,
                         ResolvedBy = note.ResolvedBy?.Name,
                         NoteableType = note.NoteableType,
-                        IngestedAt = DateTimeOffset.UtcNow
+                        IngestedAt = DateTime.UtcNow
                     };
 
                     rawNotes.Add(rawNote);
@@ -608,3 +608,4 @@ public sealed class GitLabService : IGitLabService
         }
     }
 }
+

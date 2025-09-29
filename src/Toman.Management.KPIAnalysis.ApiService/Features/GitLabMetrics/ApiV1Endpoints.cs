@@ -64,7 +64,7 @@ public static class ApiV1Endpoints
             if (pageSize > 100) pageSize = 100;
 
             var effectiveWindowDays = windowDays ?? 30;
-            var windowEnd = DateTimeOffset.UtcNow;
+            var windowEnd = DateTime.UtcNow;
             var effectiveProjectIds = projectIds ?? Array.Empty<long>();
 
             // For now, get all developers and filter - in production this should be optimized with database filtering
@@ -123,7 +123,7 @@ public static class ApiV1Endpoints
         try
         {
             var effectiveWindowDays = windowDays ?? 30;
-            var windowEnd = DateTimeOffset.UtcNow;
+            var windowEnd = DateTime.UtcNow;
 
             // Get latest aggregate
             var exports = await catalogService.GeneratePerDeveloperExportsAsync(
@@ -208,7 +208,7 @@ public static class ApiV1Endpoints
     {
         // This is a simplified implementation - in production you would have a specific method
         // for getting developer IDs with project filtering
-        var windowEnd = DateTimeOffset.UtcNow;
+        var windowEnd = DateTime.UtcNow;
         var allResults = await persistenceService.GetAggregatesAsync(
             Array.Empty<long>(), // Empty array means get all
             30,
@@ -281,7 +281,7 @@ public sealed class ApiV1Filter
 {
     public required int WindowDays { get; init; }
     public required long[] ProjectIds { get; init; }
-    public required DateTimeOffset WindowEnd { get; init; }
+    public required DateTime WindowEnd { get; init; }
 }
 
 public sealed class ApiV1SparklinePoint

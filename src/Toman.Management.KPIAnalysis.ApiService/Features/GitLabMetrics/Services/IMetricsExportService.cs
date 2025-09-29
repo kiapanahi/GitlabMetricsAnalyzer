@@ -18,7 +18,7 @@ public interface IMetricsExportService
     Task<ExportResult> ExportPerDeveloperMetricsAsync(
         IEnumerable<long> developerIds, 
         int windowDays, 
-        DateTimeOffset windowEnd,
+        DateTime windowEnd,
         CancellationToken cancellationToken = default);
     
     /// <summary>
@@ -42,7 +42,7 @@ public sealed class ExportResult
     public required string CatalogFilePath { get; init; }
     public required IReadOnlyList<string> DataFilePaths { get; init; }
     public required int ExportedCount { get; init; }
-    public required DateTimeOffset ExportedAt { get; init; }
+    public required DateTime ExportedAt { get; init; }
     public required string SchemaVersion { get; init; }
 }
 

@@ -14,9 +14,9 @@ public sealed class PipelineFact
     public required string Sha { get; init; }
     public required string Status { get; init; } // 'success', 'failed', 'canceled', etc.
     public string? Source { get; init; } // 'push', 'merge_request_event', etc.
-    public DateTimeOffset CreatedAt { get; init; }
-    public DateTimeOffset? StartedAt { get; init; }
-    public DateTimeOffset? FinishedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? StartedAt { get; init; }
+    public DateTime? FinishedAt { get; init; }
     public int? DurationSeconds { get; init; }
 
     public DateTimeOffset CreatedAtFact { get; init; } = DateTimeOffset.UtcNow;

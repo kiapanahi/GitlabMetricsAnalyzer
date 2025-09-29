@@ -9,7 +9,7 @@ public sealed class RawJob
     public required string Name { get; init; }
     public required string Status { get; init; }
     public int DurationSec { get; init; }
-    public DateTimeOffset? StartedAt { get; init; }
-    public DateTimeOffset? FinishedAt { get; init; }
+    public DateTime? StartedAt { get; init; }
+    public DateTime? FinishedAt { get; init; }
     public bool RetriedFlag { get; init; }
 }

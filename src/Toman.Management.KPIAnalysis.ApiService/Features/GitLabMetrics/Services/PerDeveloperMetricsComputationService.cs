@@ -70,7 +70,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             DeveloperId = developerId,
             DeveloperName = developer.Username,
             DeveloperEmail = developer.Email,
-            ComputationDate = DateTimeOffset.UtcNow,
+            ComputationDate = DateTime.UtcNow,
             WindowStart = windowStart,
             WindowEnd = options.EndDate,
             WindowDays = options.WindowDays,
@@ -174,7 +174,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         return filtered.ToList();
     }
 
-    private async Task<RawMetricsData> FetchRawDataAsync(long developerId, DateTimeOffset windowStart, DateTimeOffset windowEnd, IReadOnlyList<long> projectIds, CancellationToken cancellationToken)
+    private async Task<RawMetricsData> FetchRawDataAsync(long developerId, DateTime windowStart, DateTime windowEnd, IReadOnlyList<long> projectIds, CancellationToken cancellationToken)
     {
         // Fetch data sequentially to avoid concurrent DbContext usage
         var commits = await _dbContext.RawCommits
@@ -333,7 +333,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
 
     private static decimal? ComputeWipAgeP50(List<Models.Raw.RawMergeRequest> mergeRequests)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = DateTime.UtcNow;
         var wipAges = mergeRequests
             .Where(mr => mr.State == "opened" && (mr.Title.Contains("WIP") || mr.Title.Contains("Draft")))
             .Select(mr => (now - mr.CreatedAt).TotalHours)
@@ -346,7 +346,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
 
     private static decimal? ComputeWipAgeP90(List<Models.Raw.RawMergeRequest> mergeRequests)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = DateTime.UtcNow;
         var wipAges = mergeRequests
             .Where(mr => mr.State == "opened" && (mr.Title.Contains("WIP") || mr.Title.Contains("Draft")))
             .Select(mr => (now - mr.CreatedAt).TotalHours)
@@ -381,7 +381,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         var reworkCount = 0;
         foreach (var mr in mergeRequests.Where(mr => mr.MergedAt.HasValue))
         {
-            var mrCommits = commits.Where(c => c.CommittedAt > mr.CreatedAt && c.CommittedAt <= (mr.MergedAt ?? DateTimeOffset.MaxValue)).ToList();
+            var mrCommits = commits.Where(c => c.CommittedAt > mr.CreatedAt && c.CommittedAt <= (mr.MergedAt ?? DateTime.MaxValue)).ToList();
             if (mrCommits.Any(c => c.Message.ToLowerInvariant().Contains("fix") || c.Message.ToLowerInvariant().Contains("rework")))
             {
                 reworkCount++;

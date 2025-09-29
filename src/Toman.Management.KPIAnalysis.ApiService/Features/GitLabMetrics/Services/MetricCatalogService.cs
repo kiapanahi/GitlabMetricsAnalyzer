@@ -20,7 +20,7 @@ public sealed class MetricCatalogService : IMetricCatalogService
         var catalog = new MetricCatalog
         {
             Version = SchemaVersion.Current,
-            GeneratedAt = DateTimeOffset.UtcNow,
+            GeneratedAt = DateTime.UtcNow,
             Description = "GitLab Developer Productivity Metrics Catalog - Contains all available metrics as defined in the PRD",
             Metrics = GetMetricDefinitions()
         };
@@ -31,7 +31,7 @@ public sealed class MetricCatalogService : IMetricCatalogService
     public async Task<IReadOnlyList<PerDeveloperMetricsExport>> GeneratePerDeveloperExportsAsync(
         IEnumerable<long> developerIds, 
         int windowDays, 
-        DateTimeOffset windowEnd,
+        DateTime windowEnd,
         CancellationToken cancellationToken = default)
     {
         var results = await _persistenceService.GetAggregatesAsync(developerIds, windowDays, windowEnd, cancellationToken);

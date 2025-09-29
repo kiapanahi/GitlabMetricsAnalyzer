@@ -9,23 +9,23 @@ public sealed class RawMergeRequest
     public required long AuthorUserId { get; init; }
     public required string AuthorName { get; init; }
     public required string Title { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
-    public DateTimeOffset? MergedAt { get; init; }
-    public DateTimeOffset? ClosedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? MergedAt { get; init; }
+    public DateTime? ClosedAt { get; init; }
     public required string State { get; init; }
     public int ChangesCount { get; init; }
     public required string SourceBranch { get; init; }
     public required string TargetBranch { get; init; }
     public int ApprovalsRequired { get; init; }
     public int ApprovalsGiven { get; init; }
-    public DateTimeOffset? FirstReviewAt { get; init; }
+    public DateTime? FirstReviewAt { get; init; }
     public string? ReviewerIds { get; init; } // JSON array of reviewer IDs
-    public DateTimeOffset IngestedAt { get; init; }
+    public DateTime IngestedAt { get; init; }
 
     // Enhanced fields for MR data enrichment
     public string? Labels { get; init; } // JSON array of labels
     public string? FirstCommitSha { get; init; }
-    public DateTimeOffset? FirstCommitAt { get; init; }
+    public DateTime? FirstCommitAt { get; init; }
     public string? FirstCommitMessage { get; init; }
     public bool IsHotfix { get; init; } // Derived from labels or branch patterns
     public bool IsRevert { get; init; } // Derived from title or commit patterns

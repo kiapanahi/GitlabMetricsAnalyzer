@@ -11,8 +11,8 @@ public sealed class DeveloperMetricsAggregate
     public long DeveloperId { get; init; }
     
     // Window information
-    public DateTimeOffset WindowStart { get; init; }
-    public DateTimeOffset WindowEnd { get; init; }
+    public DateTime WindowStart { get; init; }
+    public DateTime WindowEnd { get; init; }
     public int WindowDays { get; init; }
     
     // Schema versioning
@@ -56,7 +56,7 @@ public sealed class DeveloperMetricsAggregate
     // Null reasons stored as JSON
     public JsonDocument? NullReasons { get; init; }
 
-    public DateTimeOffset CalculatedAt { get; init; } = DateTimeOffset.UtcNow;
+    public DateTime CalculatedAt { get; init; } = DateTime.UtcNow;
 
     // Navigation properties
     public Developer Developer { get; init; } = null!;

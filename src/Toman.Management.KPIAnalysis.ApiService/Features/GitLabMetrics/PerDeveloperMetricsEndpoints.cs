@@ -45,7 +45,7 @@ internal static class PerDeveloperMetricsEndpoints
             var options = new MetricsComputationOptions
             {
                 WindowDays = request.WindowDays,
-                EndDate = request.EndDate ?? DateTimeOffset.UtcNow,
+                EndDate = request.EndDate ?? DateTime.UtcNow,
                 ProjectIds = request.ProjectIds ?? Array.Empty<long>(),
                 ApplyWinsorization = request.ApplyWinsorization ?? true,
                 ApplyFileExclusions = request.ApplyFileExclusions ?? true
@@ -77,7 +77,7 @@ internal static class PerDeveloperMetricsEndpoints
             var options = new MetricsComputationOptions
             {
                 WindowDays = request.WindowDays,
-                EndDate = request.EndDate ?? DateTimeOffset.UtcNow,
+                EndDate = request.EndDate ?? DateTime.UtcNow,
                 ProjectIds = request.ProjectIds ?? Array.Empty<long>(),
                 ApplyWinsorization = request.ApplyWinsorization ?? true,
                 ApplyFileExclusions = request.ApplyFileExclusions ?? true
@@ -188,7 +188,7 @@ public sealed class ComputeMetricsRequest
     /// <summary>
     /// End date for the computation window. If not provided, uses current date.
     /// </summary>
-    public DateTimeOffset? EndDate { get; init; }
+    public DateTime? EndDate { get; init; }
 
     /// <summary>
     /// Optional project IDs to scope the computation to
@@ -221,7 +221,7 @@ public sealed class ComputeBatchMetricsRequest
     /// <summary>
     /// End date for the computation window. If not provided, uses current date.
     /// </summary>
-    public DateTimeOffset? EndDate { get; init; }
+    public DateTime? EndDate { get; init; }
 
     /// <summary>
     /// Optional project IDs to scope the computation to
@@ -257,9 +257,9 @@ public sealed class PerDeveloperMetricsResponse
     public required long DeveloperId { get; init; }
     public required string DeveloperName { get; init; }
     public required string DeveloperEmail { get; init; }
-    public required DateTimeOffset ComputationDate { get; init; }
-    public required DateTimeOffset WindowStart { get; init; }
-    public required DateTimeOffset WindowEnd { get; init; }
+    public required DateTime ComputationDate { get; init; }
+    public required DateTime WindowStart { get; init; }
+    public required DateTime WindowEnd { get; init; }
     public required int WindowDays { get; init; }
     public required PerDeveloperMetricsDto Metrics { get; init; }
     public required MetricsAuditDto Audit { get; init; }

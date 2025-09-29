@@ -93,7 +93,7 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
     public async Task AggregateExistsAsync_ShouldReturnFalseForNonExistingAggregate()
     {
         // Act
-        var exists = await _service.AggregateExistsAsync(999, 14, DateTimeOffset.UtcNow);
+        var exists = await _service.AggregateExistsAsync(999, 14, DateTime.UtcNow);
 
         // Assert
         Assert.False(exists);
@@ -116,7 +116,7 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
 
     private static PerDeveloperMetricsResult CreateTestMetricsResult()
     {
-        var windowEnd = DateTimeOffset.UtcNow.Date;
+        var windowEnd = DateTime.UtcNow.Date;
         var windowStart = windowEnd.AddDays(-14);
 
         return new PerDeveloperMetricsResult
@@ -124,7 +124,7 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
             DeveloperId = 1,
             DeveloperName = "Test User",
             DeveloperEmail = "test@example.com",
-            ComputationDate = DateTimeOffset.UtcNow,
+            ComputationDate = DateTime.UtcNow,
             WindowStart = windowStart,
             WindowEnd = windowEnd,
             WindowDays = 14,

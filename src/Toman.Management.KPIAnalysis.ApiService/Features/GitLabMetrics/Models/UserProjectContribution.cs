@@ -33,7 +33,7 @@ public sealed class UserProjectContribution
     /// <summary>
     /// Last activity date by the user in this project
     /// </summary>
-    public DateTimeOffset? LastActivityAt { get; init; }
+    public DateTime? LastActivityAt { get; init; }
 
     /// <summary>
     /// Indicates if the user has any meaningful contribution to this project

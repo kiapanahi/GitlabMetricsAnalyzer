@@ -7,8 +7,8 @@ public sealed class IngestionState
 {
     public int Id { get; init; }
     public required string Entity { get; init; }
-    public DateTimeOffset LastSeenUpdatedAt { get; init; }
-    public DateTimeOffset LastRunAt { get; init; }
+    public DateTime LastSeenUpdatedAt { get; init; }
+    public DateTime LastRunAt { get; init; }
     /// <summary>
     /// Size of the window for incremental runs (in hours). Used for windowed collection.
     /// </summary>
@@ -16,5 +16,5 @@ public sealed class IngestionState
     /// <summary>
     /// The end time of the last successfully processed window for incremental runs.
     /// </summary>
-    public DateTimeOffset? LastWindowEnd { get; init; }
+    public DateTime? LastWindowEnd { get; init; }
 }

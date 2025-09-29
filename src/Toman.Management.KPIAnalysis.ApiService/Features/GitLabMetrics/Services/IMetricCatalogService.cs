@@ -18,7 +18,7 @@ public interface IMetricCatalogService
     Task<IReadOnlyList<PerDeveloperMetricsExport>> GeneratePerDeveloperExportsAsync(
         IEnumerable<long> developerIds, 
         int windowDays, 
-        DateTimeOffset windowEnd,
+        DateTime windowEnd,
         CancellationToken cancellationToken = default);
         
     /// <summary>

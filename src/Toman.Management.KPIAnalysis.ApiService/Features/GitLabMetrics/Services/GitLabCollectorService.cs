@@ -56,7 +56,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             .Where(s => s.Entity == "incremental")
             .FirstOrDefaultAsync(cancellationToken);
 
-        var updatedAfter = lastRun?.LastSeenUpdatedAt ?? DateTimeOffset.UtcNow.AddHours(-1);
+        var updatedAfter = lastRun?.LastSeenUpdatedAt ?? DateTime.UtcNow.AddHours(-1);
 
         await CollectDataAsync(updatedAfter, cancellationToken);
 
@@ -64,8 +64,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         var state = new IngestionState
         {
             Entity = "incremental",
-            LastSeenUpdatedAt = DateTimeOffset.UtcNow,
-            LastRunAt = DateTimeOffset.UtcNow
+            LastSeenUpdatedAt = DateTime.UtcNow,
+            LastRunAt = DateTime.UtcNow
         };
 
         await _dbContext.UpsertAsync(state, cancellationToken);
@@ -83,8 +83,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         var state = new IngestionState
         {
             Entity = "backfill",
-            LastSeenUpdatedAt = DateTimeOffset.UtcNow,
-            LastRunAt = DateTimeOffset.UtcNow
+            LastSeenUpdatedAt = DateTime.UtcNow,
+            LastRunAt = DateTime.UtcNow
         };
 
         await _dbContext.UpsertAsync(state, cancellationToken);
@@ -92,7 +92,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         _logger.LogInformation("Completed backfill GitLab collection");
     }
 
-    private async Task CollectDataAsync(DateTimeOffset? updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectDataAsync(DateTime? updatedAfter, CancellationToken cancellationToken)
     {
         // Discover and collect projects
         var projects = await _gitLabService.GetProjectsAsync(cancellationToken);
@@ -117,7 +117,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
     }
 
-    private async Task ProcessProjectAsync(long projectId, DateTimeOffset? updatedAfter, CancellationToken cancellationToken)
+    private async Task ProcessProjectAsync(long projectId, DateTime? updatedAfter, CancellationToken cancellationToken)
     {
         using var activity = Diagnostics.ActivitySource.StartActivity("ProcessProject");
         activity?.SetTag("projectId", projectId);
@@ -142,7 +142,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
     }
 
-    private async Task CollectCommitsAsync(long projectId, DateTimeOffset? since, CancellationToken cancellationToken)
+    private async Task CollectCommitsAsync(long projectId, DateTime? since, CancellationToken cancellationToken)
     {
         using var activity = Diagnostics.ActivitySource.StartActivity("CollectCommits");
         activity?.SetTag("projectId", projectId);
@@ -162,7 +162,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
     }
 
-    private async Task CollectMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectMergeRequestsAsync(long projectId, DateTime? updatedAfter, CancellationToken cancellationToken)
     {
         using var activity = Diagnostics.ActivitySource.StartActivity("CollectMergeRequests");
         activity?.SetTag("projectId", projectId);
@@ -182,7 +182,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
     }
 
-    private async Task CollectPipelinesAsync(long projectId, DateTimeOffset? updatedAfter, CancellationToken cancellationToken)
+    private async Task CollectPipelinesAsync(long projectId, DateTime? updatedAfter, CancellationToken cancellationToken)
     {
         using var activity = Diagnostics.ActivitySource.StartActivity("CollectPipelines");
         activity?.SetTag("projectId", projectId);
@@ -207,8 +207,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     public async Task<CollectionRunResponse> StartCollectionRunAsync(StartCollectionRunRequest request, CancellationToken cancellationToken = default)
     {
         var runId = Guid.NewGuid();
-        var startTime = DateTimeOffset.UtcNow;
-        
+        var startTime = DateTime.UtcNow;
+
         using var activity = Diagnostics.ActivitySource.StartActivity("GitLabCollection.Run");
         activity?.SetTag("run_id", runId.ToString());
         activity?.SetTag("run_type", request.RunType);
@@ -255,11 +255,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             var duration = DateTimeOffset.UtcNow - startTime;
             _metricsService.RecordRunDuration(request.RunType, "completed", duration, runId);
             _metricsService.RecordCollectionStats(
-                stats.ProjectsProcessed, 
-                stats.CommitsCollected, 
-                stats.MergeRequestsCollected, 
-                stats.PipelinesCollected, 
-                stats.ReviewEventsCollected, 
+                stats.ProjectsProcessed,
+                stats.CommitsCollected,
+                stats.MergeRequestsCollected,
+                stats.PipelinesCollected,
+                stats.ReviewEventsCollected,
                 runId);
 
             activity?.SetTag("status", "completed");
@@ -273,8 +273,8 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                 var dataQualityReport = await _dataQualityService.PerformDataQualityChecksAsync(runId, cancellationToken);
                 activity?.SetTag("data_quality_status", dataQualityReport.OverallStatus);
                 activity?.SetTag("data_quality_score", dataQualityReport.OverallScore.ToString("F2"));
-                
-                _logger.LogInformation("Data quality checks completed for run {RunId}. Status: {Status}, Score: {Score:F2}", 
+
+                _logger.LogInformation("Data quality checks completed for run {RunId}. Status: {Status}, Score: {Score:F2}",
                     runId, dataQualityReport.OverallStatus, dataQualityReport.OverallScore);
             }
             catch (Exception dqEx)
@@ -290,15 +290,15 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         {
             var duration = DateTimeOffset.UtcNow - startTime;
             _logger.LogError(ex, "Failed collection run {RunId}", runId);
-            
+
             // Record failure metrics
             _metricsService.RecordRunDuration(request.RunType, "failed", duration, runId);
             _metricsService.RecordApiError("collection_run_failed", 500, runId);
-            
+
             activity?.SetTag("status", "failed");
             activity?.SetTag("error_message", ex.Message);
             activity?.SetTag("duration_seconds", duration.TotalSeconds.ToString("F2"));
-            
+
             await UpdateCollectionRunAsync(runId, "failed", null, ex.Message, cancellationToken);
             throw;
         }
@@ -336,7 +336,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             .Where(s => s.Entity == "incremental")
             .FirstOrDefaultAsync(cancellationToken);
 
-        DateTimeOffset windowStart;
+        DateTime windowStart;
         if (state?.LastWindowEnd.HasValue == true)
         {
             // Start from last window end minus overlap
@@ -345,11 +345,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         else
         {
             // First run - start from configured time ago
-            windowStart = DateTimeOffset.UtcNow.Subtract(windowSize);
+            windowStart = DateTime.UtcNow.Subtract(windowSize);
         }
 
         var windowEnd = windowStart.Add(windowSize);
-        var now = DateTimeOffset.UtcNow;
+        var now = DateTime.UtcNow;
 
         // Don't go beyond current time
         if (windowEnd > now)
@@ -357,7 +357,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             windowEnd = now;
         }
 
-        _logger.LogInformation("Collecting incremental data for window {WindowStart} to {WindowEnd} (Run {RunId})", 
+        _logger.LogInformation("Collecting incremental data for window {WindowStart} to {WindowEnd} (Run {RunId})",
             windowStart, windowEnd, runId);
 
         // Update run with window information
@@ -375,24 +375,24 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private async Task<CollectionStats> ExecuteBackfillCollectionAsync(Guid runId, StartCollectionRunRequest request, CancellationToken cancellationToken)
     {
         var startDate = request.BackfillStartDate;
-        var endDate = request.BackfillEndDate ?? DateTimeOffset.UtcNow;
+        var endDate = request.BackfillEndDate ?? DateTime.UtcNow;
 
-        _logger.LogInformation("Collecting backfill data from {StartDate} to {EndDate} (Run {RunId})", 
+        _logger.LogInformation("Collecting backfill data from {StartDate} to {EndDate} (Run {RunId})",
             startDate, endDate, runId);
 
         // Update run with window information
-        await UpdateCollectionRunWindowAsync(runId, startDate, endDate, null, cancellationToken);
+        await UpdateCollectionRunWindowAsync(runId, startDate?.DateTime, endDate.DateTime, null, cancellationToken);
 
         // Collect data for the backfill period
-        var stats = await CollectDataForWindowAsync(startDate, endDate, cancellationToken);
+        var stats = await CollectDataForWindowAsync(startDate?.DateTime, endDate.DateTime, cancellationToken);
 
         // Update backfill state
-        await UpsertIngestionStateAsync("backfill", endDate, DateTimeOffset.UtcNow, null, cancellationToken);
+        await UpsertIngestionStateAsync("backfill", endDate.DateTime, DateTime.UtcNow, null, cancellationToken);
 
         return stats;
     }
 
-    private async Task<CollectionStats> CollectDataForWindowAsync(DateTimeOffset? startDate, DateTimeOffset? endDate, CancellationToken cancellationToken)
+    private async Task<CollectionStats> CollectDataForWindowAsync(DateTime? startDate, DateTime? endDate, CancellationToken cancellationToken)
     {
         var stats = new CollectionStats();
 
@@ -450,7 +450,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return stats;
     }
 
-    private async Task<CollectionStats> ProcessProjectWithRetryAsync(long projectId, DateTimeOffset? updatedAfter, CancellationToken cancellationToken)
+    private async Task<CollectionStats> ProcessProjectWithRetryAsync(long projectId, DateTime? updatedAfter, CancellationToken cancellationToken)
     {
         var stats = new CollectionStats();
         var retryCount = 0;
@@ -471,7 +471,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                             .Where(c => !_dataEnrichmentService.ShouldExcludeCommit(c.Message))
                             .Select(c => _dataEnrichmentService.EnrichCommit(c))
                             .ToList();
-                        
+
                         if (enrichedCommits.Count > 0)
                         {
                             await _dbContext.UpsertRangeAsync(enrichedCommits, cancellationToken);
@@ -493,7 +493,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                     if (_collectionConfig.EnrichMergeRequestData)
                     {
                         var enrichedMergeRequests = new List<Models.Raw.RawMergeRequest>();
-                        
+
                         foreach (var mr in mergeRequests)
                         {
                             // Skip if branch should be excluded
@@ -504,9 +504,9 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                             }
 
                             // Get commits for this MR to enhance the data
-                            var mrCommits = commits?.Where(c => 
-                                c.CommittedAt >= mr.CreatedAt && 
-                                c.CommittedAt <= (mr.MergedAt ?? DateTimeOffset.UtcNow))
+                            var mrCommits = commits?.Where(c =>
+                                c.CommittedAt >= mr.CreatedAt &&
+                                c.CommittedAt <= (mr.MergedAt ?? DateTime.UtcNow))
                                 .ToList();
 
                             var enrichedMr = _dataEnrichmentService.EnrichMergeRequest(mr, mrCommits);
@@ -559,7 +559,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                     throw;
                 }
 
-                _logger.LogWarning(ex, "Failed to process project {ProjectId}, retry {RetryCount}/{MaxRetries}", 
+                _logger.LogWarning(ex, "Failed to process project {ProjectId}, retry {RetryCount}/{MaxRetries}",
                     projectId, retryCount, _collectionConfig.MaxRetries);
                 await Task.Delay(delay, cancellationToken);
                 delay *= 2; // Exponential backoff
@@ -572,7 +572,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     private async Task<int> CollectReviewEventsForMergeRequestsAsync(long projectId, IReadOnlyList<Models.Raw.RawMergeRequest> mergeRequests, CancellationToken cancellationToken)
     {
         var totalReviewEvents = 0;
-        
+
         foreach (var mr in mergeRequests)
         {
             try
@@ -586,7 +586,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to collect review events for MR {MrId} in project {ProjectId}", 
+                _logger.LogWarning(ex, "Failed to collect review events for MR {MrId} in project {ProjectId}",
                     mr.MrId, projectId);
             }
         }
@@ -594,7 +594,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return totalReviewEvents;
     }
 
-    private async Task UpsertIngestionStateAsync(string entity, DateTimeOffset? lastSeenUpdatedAt, DateTimeOffset lastRunAt, int? windowSizeHours, CancellationToken cancellationToken)
+    private async Task UpsertIngestionStateAsync(string entity, DateTime? lastSeenUpdatedAt, DateTime lastRunAt, int? windowSizeHours, CancellationToken cancellationToken)
     {
         var state = await _dbContext.IngestionStates
             .Where(s => s.Entity == entity)
@@ -643,7 +643,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                 RunType = run.RunType,
                 Status = status,
                 StartedAt = run.StartedAt,
-                CompletedAt = status == "completed" || status == "failed" ? DateTimeOffset.UtcNow : run.CompletedAt,
+                CompletedAt = status == "completed" || status == "failed" ? DateTime.UtcNow : run.CompletedAt,
                 WindowStart = run.WindowStart,
                 WindowEnd = run.WindowEnd,
                 WindowSizeHours = run.WindowSizeHours,
@@ -661,7 +661,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         }
     }
 
-    private async Task UpdateCollectionRunWindowAsync(Guid runId, DateTimeOffset? windowStart, DateTimeOffset? windowEnd, int? windowSizeHours, CancellationToken cancellationToken)
+    private async Task UpdateCollectionRunWindowAsync(Guid runId, DateTime? windowStart, DateTime? windowEnd, int? windowSizeHours, CancellationToken cancellationToken)
     {
         var run = await _dbContext.CollectionRuns
             .Where(r => r.Id == runId)
@@ -669,27 +669,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
         if (run is not null)
         {
-            var updatedRun = new CollectionRun
-            {
-                Id = runId,
-                RunType = run.RunType,
-                Status = run.Status,
-                StartedAt = run.StartedAt,
-                CompletedAt = run.CompletedAt,
-                WindowStart = windowStart,
-                WindowEnd = windowEnd,
-                WindowSizeHours = windowSizeHours,
-                ProjectsProcessed = run.ProjectsProcessed,
-                CommitsCollected = run.CommitsCollected,
-                MergeRequestsCollected = run.MergeRequestsCollected,
-                PipelinesCollected = run.PipelinesCollected,
-                ReviewEventsCollected = run.ReviewEventsCollected,
-                ErrorMessage = run.ErrorMessage,
-                ErrorDetails = run.ErrorDetails,
-                TriggerSource = run.TriggerSource,
-                CreatedAt = run.CreatedAt
-            };
-            await _dbContext.UpsertAsync(updatedRun, cancellationToken);
+            run.WindowStart = windowStart;
+            run.WindowEnd = windowEnd;
+            run.WindowSizeHours = windowSizeHours;
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 
@@ -715,7 +699,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             RunType = run.RunType,
             Status = run.Status,
             StartedAt = run.StartedAt,
-            CompletedAt = run.CompletedAt,
+            CompletedAt = run.CompletedAt?.DateTime,
             WindowStart = run.WindowStart,
             WindowEnd = run.WindowEnd,
             WindowSizeHours = run.WindowSizeHours,

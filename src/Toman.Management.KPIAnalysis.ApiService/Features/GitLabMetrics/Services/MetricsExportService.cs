@@ -52,7 +52,7 @@ public sealed class MetricsExportService : IMetricsExportService
     public async Task<ExportResult> ExportPerDeveloperMetricsAsync(
         IEnumerable<long> developerIds, 
         int windowDays, 
-        DateTimeOffset windowEnd,
+        DateTime windowEnd,
         CancellationToken cancellationToken = default)
     {
         var results = await _persistenceService.GetAggregatesAsync(developerIds, windowDays, windowEnd, cancellationToken);
@@ -64,7 +64,7 @@ public sealed class MetricsExportService : IMetricsExportService
         CancellationToken cancellationToken = default)
     {
         var resultsList = results.ToList();
-        var exportedAt = DateTimeOffset.UtcNow;
+        var exportedAt = DateTime.UtcNow;
         
         // Generate catalog
         var catalogPath = await ExportCatalogAsync(cancellationToken);
@@ -137,14 +137,14 @@ public sealed class MetricsExportService : IMetricsExportService
 
     private static string GenerateCatalogFileName()
     {
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
         var version = SchemaVersion.Current.Replace(".", "-");
         return $"metric_catalog_{version}_{timestamp}.json";
     }
 
-    private static string GeneratePerDeveloperFileName(long developerId, int windowDays, DateTimeOffset windowEnd)
+    private static string GeneratePerDeveloperFileName(long developerId, int windowDays, DateTime windowEnd)
     {
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
         var version = SchemaVersion.Current.Replace(".", "-");
         var windowEndFormatted = windowEnd.ToString("yyyyMMdd");
         return $"per_developer_metrics_{version}_dev{developerId}_w{windowDays}d_end{windowEndFormatted}_{timestamp}.json";
@@ -188,13 +188,13 @@ public sealed class MetricsExportService : IMetricsExportService
         return null;
     }
 
-    private static DateTimeOffset? ExtractWindowEnd(string fileName)
+    private static DateTime? ExtractWindowEnd(string fileName)
     {
         var match = System.Text.RegularExpressions.Regex.Match(fileName, @"_end(\d{8})_");
         if (match.Success && DateTime.TryParseExact(match.Groups[1].Value, "yyyyMMdd", null, 
             System.Globalization.DateTimeStyles.None, out var date))
         {
-            return new DateTimeOffset(date, TimeSpan.Zero);
+            return new DateTime(date.Ticks, DateTimeKind.Utc);
         }
         return null;
     }

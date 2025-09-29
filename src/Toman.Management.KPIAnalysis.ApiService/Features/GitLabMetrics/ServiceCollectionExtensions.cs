@@ -54,6 +54,9 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IMetricCatalogService, MetricCatalogService>();
         builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
         
+        // Add data reset service
+        builder.Services.AddScoped<IDataResetService, DataResetService>();
+        
         // Add observability and data quality services
         builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
         builder.Services.AddScoped<IDataQualityService, DataQualityService>();

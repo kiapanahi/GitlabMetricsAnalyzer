@@ -54,7 +54,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
     {
         // Arrange
         const long developerId = 123;
-        var endDate = DateTimeOffset.UtcNow;
+        var endDate = DateTime.UtcNow;
         var windowStart = endDate.AddDays(-14);
 
         await SeedTestDataAsync(developerId, windowStart, endDate);
@@ -87,7 +87,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
         var options = new MetricsComputationOptions
         {
             WindowDays = 30, // Unsupported window
-            EndDate = DateTimeOffset.UtcNow
+            EndDate = DateTime.UtcNow
         };
 
         // Act & Assert
@@ -101,7 +101,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
         var options = new MetricsComputationOptions
         {
             WindowDays = 14,
-            EndDate = DateTimeOffset.UtcNow
+            EndDate = DateTime.UtcNow
         };
 
         // Act & Assert
@@ -113,7 +113,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
     {
         // Arrange
         const long developerId = 456;
-        var endDate = DateTimeOffset.UtcNow;
+        var endDate = DateTime.UtcNow;
         var windowStart = endDate.AddDays(-14);
 
         // Add commits and merge requests with specific cycle times
@@ -129,7 +129,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             Message = "Test commit",
             Additions = 10,
             Deletions = 5,
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         var mergeRequest1 = new RawMergeRequest
@@ -145,7 +145,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             State = "merged",
             SourceBranch = "feature/test1",
             TargetBranch = "main",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         var mergeRequest2 = new RawMergeRequest
@@ -161,7 +161,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             State = "merged",
             SourceBranch = "feature/test2",
             TargetBranch = "main",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         _dbContext.RawCommits.Add(commit);
@@ -189,7 +189,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
     {
         // Arrange
         const long developerId = 789;
-        var endDate = DateTimeOffset.UtcNow;
+        var endDate = DateTime.UtcNow;
         var windowStart = endDate.AddDays(-14);
 
         await SeedBasicDeveloperData(developerId, windowStart, endDate);
@@ -209,7 +209,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             CreatedAt = windowStart.AddDays(1),
             UpdatedAt = windowStart.AddDays(1),
             DurationSec = 300,
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         var pipeline2 = new RawPipeline
@@ -226,7 +226,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             CreatedAt = windowStart.AddDays(2),
             UpdatedAt = windowStart.AddDays(2),
             DurationSec = 150,
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         var pipeline3 = new RawPipeline
@@ -243,7 +243,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             CreatedAt = windowStart.AddDays(3),
             UpdatedAt = windowStart.AddDays(3),
             DurationSec = 200,
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         _dbContext.RawPipelines.AddRange(pipeline1, pipeline2, pipeline3);
@@ -270,7 +270,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
     {
         // Arrange
         const long developerId = 101;
-        var endDate = DateTimeOffset.UtcNow;
+        var endDate = DateTime.UtcNow;
         var windowStart = endDate.AddDays(-14);
 
         // Add minimal data (below MinSampleSize = 5)
@@ -286,7 +286,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             Message = "Single commit",
             Additions = 5,
             Deletions = 2,
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         _dbContext.RawCommits.Add(commit);
@@ -309,7 +309,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
         Assert.Equal("Poor", result.Audit.DataQuality);
     }
 
-    private async Task SeedTestDataAsync(long developerId, DateTimeOffset windowStart, DateTimeOffset windowEnd)
+    private async Task SeedTestDataAsync(long developerId, DateTime windowStart, DateTime windowEnd)
     {
         await SeedBasicDeveloperData(developerId, windowStart, windowEnd);
 
@@ -327,14 +327,14 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             State = "merged",
             SourceBranch = "feature/test",
             TargetBranch = "main",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         _dbContext.RawMergeRequests.Add(mr);
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task SeedBasicDeveloperData(long developerId, DateTimeOffset windowStart, DateTimeOffset windowEnd)
+    private async Task SeedBasicDeveloperData(long developerId, DateTime windowStart, DateTime windowEnd)
     {
         var commit = new RawCommit
         {
@@ -348,7 +348,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
             Message = "Test commit",
             Additions = 10,
             Deletions = 5,
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
 
         _dbContext.RawCommits.Add(commit);

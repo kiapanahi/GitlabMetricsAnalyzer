@@ -87,10 +87,10 @@ public class WindowedCollectionServiceTests : IDisposable
         var state = new IngestionState
         {
             Entity = "incremental",
-            LastSeenUpdatedAt = DateTimeOffset.UtcNow,
-            LastRunAt = DateTimeOffset.UtcNow,
+            LastSeenUpdatedAt = DateTime.UtcNow,
+            LastRunAt = DateTime.UtcNow,
             WindowSizeHours = 24,
-            LastWindowEnd = DateTimeOffset.UtcNow.AddHours(-1)
+            LastWindowEnd = DateTime.UtcNow.AddHours(-1)
         };
 
         // Act

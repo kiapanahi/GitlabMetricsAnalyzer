@@ -40,7 +40,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
         return aggregates.Select(a => a.Id).ToList();
     }
 
-    public async Task<PerDeveloperMetricsResult?> GetAggregateAsync(long developerId, int windowDays, DateTimeOffset windowEnd, CancellationToken cancellationToken = default)
+    public async Task<PerDeveloperMetricsResult?> GetAggregateAsync(long developerId, int windowDays, DateTime windowEnd, CancellationToken cancellationToken = default)
     {
         var windowStart = windowEnd.AddDays(-windowDays);
         
@@ -56,7 +56,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
         return aggregate is null ? null : MapFromAggregate(aggregate);
     }
 
-    public async Task<IReadOnlyList<PerDeveloperMetricsResult>> GetAggregatesAsync(IEnumerable<long> developerIds, int windowDays, DateTimeOffset windowEnd, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PerDeveloperMetricsResult>> GetAggregatesAsync(IEnumerable<long> developerIds, int windowDays, DateTime windowEnd, CancellationToken cancellationToken = default)
     {
         var windowStart = windowEnd.AddDays(-windowDays);
         var developerIdsList = developerIds.ToList();
@@ -73,7 +73,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
         return aggregates.Select(MapFromAggregate).ToList();
     }
 
-    public async Task<bool> AggregateExistsAsync(long developerId, int windowDays, DateTimeOffset windowEnd, CancellationToken cancellationToken = default)
+    public async Task<bool> AggregateExistsAsync(long developerId, int windowDays, DateTime windowEnd, CancellationToken cancellationToken = default)
     {
         var windowStart = windowEnd.AddDays(-windowDays);
         

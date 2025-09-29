@@ -10,7 +10,7 @@ public sealed class DataQualityCheckResult
     public double? Score { get; init; } // 0.0 to 1.0
     public required string Description { get; init; }
     public string? Details { get; init; }
-    public DateTimeOffset CheckedAt { get; init; } = DateTimeOffset.UtcNow;
+    public DateTime CheckedAt { get; init; } = DateTime.UtcNow;
     public Guid? RunId { get; init; }
 }
 
@@ -22,7 +22,7 @@ public sealed class DataQualityReport
     public required IReadOnlyList<DataQualityCheckResult> Checks { get; init; }
     public required string OverallStatus { get; init; } // "healthy", "warning", "critical"
     public double OverallScore { get; init; } // Average of all check scores
-    public DateTimeOffset GeneratedAt { get; init; } = DateTimeOffset.UtcNow;
+    public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
     public Guid? RunId { get; init; }
     
     /// <summary>

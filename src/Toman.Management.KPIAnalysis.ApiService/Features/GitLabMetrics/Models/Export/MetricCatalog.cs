@@ -8,7 +8,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.
 public sealed class MetricCatalog
 {
     public required string Version { get; init; }
-    public required DateTimeOffset GeneratedAt { get; init; }
+    public required DateTime GeneratedAt { get; init; }
     public required string Description { get; init; }
     public required IReadOnlyList<MetricDefinition> Metrics { get; init; }
 }
@@ -38,9 +38,9 @@ public sealed class PerDeveloperMetricsExport
     public required long DeveloperId { get; init; }
     public required string DeveloperName { get; init; }
     public required string DeveloperEmail { get; init; }
-    public required DateTimeOffset ComputationDate { get; init; }
-    public required DateTimeOffset WindowStart { get; init; }
-    public required DateTimeOffset WindowEnd { get; init; }
+    public required DateTime ComputationDate { get; init; }
+    public required DateTime WindowStart { get; init; }
+    public required DateTime WindowEnd { get; init; }
     public required int WindowDays { get; init; }
     public required PerDeveloperMetrics Metrics { get; init; }
     public required MetricsAudit Audit { get; init; }

@@ -4,6 +4,8 @@ public static class GitLabMetricsEndpoints
 {
     public static WebApplication MapGitlabCollectorEndpoints(this WebApplication app)
     {
+        app.MapGitLabCollectionEndpoints();
+        
         app.MapPerDeveloperMetricsEndpoints();
            
         app.MapDataQualityEndpoints();

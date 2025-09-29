@@ -8,13 +8,13 @@ public sealed class CollectionRun
     public Guid Id { get; init; } = Guid.NewGuid();
     public required string RunType { get; init; } // "incremental", "backfill"
     public required string Status { get; init; } // "running", "completed", "failed", "cancelled"
-    public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.UtcNow;
+    public DateTime StartedAt { get; init; } = DateTime.UtcNow;
     public DateTimeOffset? CompletedAt { get; init; }
     
     // Window information for incremental runs
-    public DateTimeOffset? WindowStart { get; init; }
-    public DateTimeOffset? WindowEnd { get; init; }
-    public int? WindowSizeHours { get; init; }
+    public DateTime? WindowStart { get; set; }
+    public DateTime? WindowEnd { get; set; }
+    public int? WindowSizeHours { get; set; }
     
     // Statistics
     public int ProjectsProcessed { get; init; }
@@ -29,7 +29,7 @@ public sealed class CollectionRun
     
     // Metadata
     public string? TriggerSource { get; init; } // "manual", "scheduled", "api"
-    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -71,13 +71,13 @@ public sealed class CollectionRunResponse
     public required Guid RunId { get; init; }
     public required string RunType { get; init; }
     public required string Status { get; init; }
-    public required DateTimeOffset StartedAt { get; init; }
-    public DateTimeOffset? CompletedAt { get; init; }
-    public TimeSpan? Duration => CompletedAt.HasValue ? CompletedAt.Value - StartedAt : DateTimeOffset.UtcNow - StartedAt;
+    public required DateTime StartedAt { get; init; }
+    public DateTime? CompletedAt { get; init; }
+    public TimeSpan? Duration => CompletedAt.HasValue ? CompletedAt.Value - StartedAt : DateTime.UtcNow - StartedAt;
     
     // Window information
-    public DateTimeOffset? WindowStart { get; init; }
-    public DateTimeOffset? WindowEnd { get; init; }
+    public DateTime? WindowStart { get; init; }
+    public DateTime? WindowEnd { get; init; }
     public int? WindowSizeHours { get; init; }
     
     // Statistics

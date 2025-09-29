@@ -25,7 +25,7 @@ public sealed class FactUserMetrics
     /// <summary>
     /// When this metrics snapshot was collected
     /// </summary>
-    public DateTimeOffset CollectedAt { get; init; }
+    public DateTime CollectedAt { get; init; }
 
     /// <summary>
     /// Start date for the metrics calculation period
