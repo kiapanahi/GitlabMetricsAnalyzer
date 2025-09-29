@@ -43,7 +43,7 @@ public interface IObservabilityMetricsService
 /// </summary>
 public sealed class ObservabilityMetricsService : IObservabilityMetricsService, IDisposable
 {
-    private readonly Meter _meter;
+    private static readonly Meter Meter = new("Toman.Management.KPIAnalysis.GitLabMetrics", Constants.ServiceVersion);
     private readonly Histogram<double> _runDurationHistogram;
     private readonly Counter<long> _gitLabApiCallsCounter;
     private readonly Gauge<double> _developerCoverageGauge;
@@ -53,35 +53,33 @@ public sealed class ObservabilityMetricsService : IObservabilityMetricsService, 
 
     public ObservabilityMetricsService()
     {
-        _meter = new Meter("Toman.Management.KPIAnalysis.GitLabMetrics", Constants.ServiceVersion);
-
         // Collection run duration in seconds
-        _runDurationHistogram = _meter.CreateHistogram<double>(
+        _runDurationHistogram = Meter.CreateHistogram<double>(
             "metrics_run_duration_seconds",
             description: "Duration of GitLab collection runs in seconds");
 
         // GitLab API calls counter
-        _gitLabApiCallsCounter = _meter.CreateCounter<long>(
+        _gitLabApiCallsCounter = Meter.CreateCounter<long>(
             "gitlab_api_calls_total",
             description: "Total number of GitLab API calls made");
 
         // Developer coverage ratio (active/total developers)
-        _developerCoverageGauge = _meter.CreateGauge<double>(
+        _developerCoverageGauge = Meter.CreateGauge<double>(
             "developer_coverage_ratio",
             description: "Ratio of active developers to total developers");
 
         // Data collections counter
-        _collectionsCounter = _meter.CreateCounter<long>(
+        _collectionsCounter = Meter.CreateCounter<long>(
             "data_collections_total",
             description: "Total number of data items collected by type");
 
         // API errors counter
-        _apiErrorsCounter = _meter.CreateCounter<long>(
+        _apiErrorsCounter = Meter.CreateCounter<long>(
             "api_errors_total",
             description: "Total number of API errors by type and response code");
 
         // Data quality checks counter
-        _dataQualityChecksCounter = _meter.CreateCounter<long>(
+        _dataQualityChecksCounter = Meter.CreateCounter<long>(
             "data_quality_checks_total",
             description: "Total number of data quality checks performed");
     }
@@ -150,6 +148,6 @@ public sealed class ObservabilityMetricsService : IObservabilityMetricsService, 
 
     public void Dispose()
     {
-        _meter.Dispose();
+        Meter.Dispose();
     }
 }
