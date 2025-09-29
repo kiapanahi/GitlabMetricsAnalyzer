@@ -36,11 +36,7 @@ if (app.Environment.IsDevelopment())
 // Map endpoints
 app.MapDefaultEndpoints();
 
-// Map v1 API endpoints first
-app.MapApiV1Endpoints();
-
-// Map additional endpoints
-app.MapGitlabCollectorEndpoints();
+app.MapGitlabMetricsEndpoints();
 
 app.Run();
 
