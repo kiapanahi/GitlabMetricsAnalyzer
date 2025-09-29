@@ -15,10 +15,6 @@ builder.Services.AddProblemDetails();
 
 builder.AddGitLabMetricsServices();
 
-// Add GitLab health check
-builder.Services.AddHealthChecks()
-    .AddGitLabHealthCheck();
-
 builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
 
 var app = builder.Build();

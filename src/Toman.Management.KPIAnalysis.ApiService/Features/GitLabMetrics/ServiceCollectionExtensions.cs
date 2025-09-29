@@ -19,7 +19,11 @@ internal static class ServiceCollectionExtensions
     internal static IHostApplicationBuilder AddGitLabMetricsServices(this IHostApplicationBuilder builder)
     {
         builder.Services.AddOpenTelemetry()
-        .WithTracing(tracing => tracing.AddSource(Diagnostics.ActivitySource.Name));
+        .WithTracing(tracing => tracing.AddSource(Diagnostics.ActivitySource.Name))
+        .WithMetrics(metrics => metrics.AddMeter("Toman.Management.KPIAnalysis.GitLabMetrics"));
+
+        // Add GitLab health check
+        builder.Services.AddHealthChecks().AddGitLabHealthCheck();
 
         // Add configurations
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
