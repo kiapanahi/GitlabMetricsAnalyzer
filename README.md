@@ -143,12 +143,6 @@ curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
 - `GET /health` - Application health status
 - `GET /alive` - Liveness check
 
-### Data Collection (Manual Triggers)
-- `POST /gitlab-metrics/collect/incremental` - Run incremental collection
-- `POST /gitlab-metrics/collect/backfill` - Run full backfill collection
-- `GET /gitlab-metrics/collect/runs/{runId}` - Check collection run status
-- `GET /gitlab-metrics/collect/runs` - List recent collection runs
-
 ### Developer Metrics API (v1)
 - `GET /api/v1/metrics/developers` - Paginated developer metrics with filtering
 - `GET /api/v1/metrics/developers/{id}` - Individual developer metrics with history
@@ -158,9 +152,6 @@ curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
 - `GET /api/data-quality/reports` - Data quality assessment reports
 - `GET /api/exports/developers` - Export developer metrics to various formats
 - `GET /api/exports/runs/{runId}/download` - Download specific export run results
-
-### Legacy Endpoints (Deprecated)
-- `GET /api/users/{userId}/metrics` - Legacy user metrics endpoint
 
 ## Data Models
 
