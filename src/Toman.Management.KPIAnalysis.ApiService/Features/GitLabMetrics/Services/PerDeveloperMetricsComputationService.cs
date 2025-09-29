@@ -364,7 +364,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
         if (pipelines.Count == 0) return null;
 
         var successCount = pipelines.Count(p => p.Status == "success");
-        return (decimal)successCount / pipelines.Count * 100;
+        return (decimal)successCount / pipelines.Count;
     }
 
     private static decimal? ComputeApprovalBypassRatio(List<Models.Raw.RawMergeRequest> mergeRequests)
@@ -464,7 +464,7 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             }
         }
 
-        return groupedByRef.Count > 0 ? (decimal)flakyRefs / groupedByRef.Count * 100 : 0;
+        return groupedByRef.Count > 0 ? (decimal)flakyRefs / groupedByRef.Count : 0;
     }
 
     private static int ComputeRollbackIncidence(List<Models.Raw.RawMergeRequest> mergeRequests)

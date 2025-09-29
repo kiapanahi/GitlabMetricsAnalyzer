@@ -163,7 +163,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             CommitId = "abc123def456",
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             AuthorEmail = "alice@example.com",
             CommittedAt = FixedBaseDate.AddDays(-10),
             Message = "feat: add user authentication endpoint",
@@ -180,7 +180,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             CommitId = "merge456789",
             AuthorUserId = 2,
-            AuthorName = "Bob Reviewer",
+            AuthorName = "bob.reviewer",
             AuthorEmail = "bob@example.com",
             CommittedAt = FixedBaseDate.AddDays(-8),
             Message = "Merge branch 'feature/auth' into 'main'",
@@ -197,7 +197,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             CommitId = "revert789",
             AuthorUserId = 3,
-            AuthorName = "Charlie Maintainer",
+            AuthorName = "charlie.maintainer",
             AuthorEmail = "charlie@example.com",
             CommittedAt = FixedBaseDate.AddDays(-6),
             Message = "Revert \"feat: add user authentication endpoint\"",
@@ -214,7 +214,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             CommitId = "bot123456",
             AuthorUserId = 4,
-            AuthorName = "Deployment Bot",
+            AuthorName = "deployment.bot",
             AuthorEmail = "bot@example.com",
             CommittedAt = FixedBaseDate.AddDays(-5),
             Message = "chore: automated version bump to v1.2.3",
@@ -231,7 +231,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             CommitId = "refactor999",
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             AuthorEmail = "alice@example.com",
             CommittedAt = FixedBaseDate.AddDays(-15),
             Message = "refactor: restructure authentication module",
@@ -258,7 +258,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 101,
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             Title = "feat: add user authentication endpoint",
             CreatedAt = FixedBaseDate.AddDays(-12),
             MergedAt = FixedBaseDate.AddDays(-8),
@@ -282,7 +282,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 102,
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             Title = "Draft: experimental feature implementation",
             CreatedAt = FixedBaseDate.AddDays(-5),
             State = "opened",
@@ -304,7 +304,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 103,
             AuthorUserId = 3,
-            AuthorName = "Charlie Maintainer", 
+            AuthorName = "charlie.maintainer", 
             Title = "hotfix: critical security vulnerability patch",
             CreatedAt = FixedBaseDate.AddDays(-3),
             MergedAt = FixedBaseDate.AddDays(-3).AddHours(2), // Quick merge
@@ -328,7 +328,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 104,
             AuthorUserId = 3,
-            AuthorName = "Charlie Maintainer",
+            AuthorName = "charlie.maintainer",
             Title = "Revert \"feat: add user authentication endpoint\"",
             CreatedAt = FixedBaseDate.AddDays(-6),
             MergedAt = FixedBaseDate.AddDays(-6).AddHours(1),
@@ -352,7 +352,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 105,
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             Title = "feature: advanced user permissions",
             CreatedAt = FixedBaseDate.AddDays(-20),
             ClosedAt = FixedBaseDate.AddDays(-18),
@@ -376,7 +376,7 @@ public static class GitLabTestFixtures
             ProjectName = "main-service",
             MrId = 106,
             AuthorUserId = 2,
-            AuthorName = "Bob Reviewer",
+            AuthorName = "bob.reviewer",
             Title = "refactor: clean up authentication module",
             CreatedAt = FixedBaseDate.AddDays(-25),
             MergedAt = FixedBaseDate.AddDays(-20),
@@ -414,7 +414,7 @@ public static class GitLabTestFixtures
             Ref = "main",
             Sha = "abc123def456",
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             TriggerSource = "push",
             CreatedAt = FixedBaseDate.AddDays(-10),
             UpdatedAt = FixedBaseDate.AddDays(-10).AddMinutes(15),
@@ -435,7 +435,7 @@ public static class GitLabTestFixtures
             Ref = "feature/experimental",
             Sha = "fail456789",
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             TriggerSource = "push",
             CreatedAt = FixedBaseDate.AddDays(-5),
             UpdatedAt = FixedBaseDate.AddDays(-5).AddMinutes(8),
@@ -456,7 +456,7 @@ public static class GitLabTestFixtures
             Ref = "feature/auth",
             Sha = "flaky123456",
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             TriggerSource = "push",
             CreatedAt = FixedBaseDate.AddDays(-12),
             UpdatedAt = FixedBaseDate.AddDays(-12).AddMinutes(10),
@@ -477,7 +477,7 @@ public static class GitLabTestFixtures
             Ref = "feature/auth",
             Sha = "flaky123456", // Same SHA as flaky pipeline
             AuthorUserId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             TriggerSource = "web", // Manual retry
             CreatedAt = FixedBaseDate.AddDays(-12).AddMinutes(15), // Retry
             UpdatedAt = FixedBaseDate.AddDays(-12).AddMinutes(30),
@@ -498,7 +498,7 @@ public static class GitLabTestFixtures
             Ref = "main",
             Sha = "scheduled123",
             AuthorUserId = 4,
-            AuthorName = "Deployment Bot",
+            AuthorName = "deployment.bot",
             TriggerSource = "schedule",
             CreatedAt = FixedBaseDate.AddDays(-7),
             UpdatedAt = FixedBaseDate.AddDays(-7).AddMinutes(20),
@@ -519,7 +519,7 @@ public static class GitLabTestFixtures
             Ref = "master",
             Sha = "legacy456789",
             AuthorUserId = 3,
-            AuthorName = "Charlie Maintainer",
+            AuthorName = "charlie.maintainer",
             TriggerSource = "push",
             CreatedAt = FixedBaseDate.AddDays(-7),
             UpdatedAt = FixedBaseDate.AddDays(-7).AddMinutes(5),
@@ -643,7 +643,7 @@ public static class GitLabTestFixtures
             NoteId = 2001,
             Body = "This looks good overall, but could you add some unit tests for the new authentication logic?",
             AuthorId = 2,
-            AuthorName = "Bob Reviewer",
+            AuthorName = "bob.reviewer",
             CreatedAt = FixedBaseDate.AddDays(-10),
             UpdatedAt = FixedBaseDate.AddDays(-10),
             System = false,
@@ -664,7 +664,7 @@ public static class GitLabTestFixtures
             NoteId = 2002,
             Body = "approved this merge request",
             AuthorId = 2,
-            AuthorName = "Bob Reviewer",
+            AuthorName = "bob.reviewer",
             CreatedAt = FixedBaseDate.AddDays(-9),
             UpdatedAt = FixedBaseDate.AddDays(-9),
             System = true, // System note
@@ -685,7 +685,7 @@ public static class GitLabTestFixtures
             NoteId = 2003,
             Body = "Good point! I've added comprehensive unit tests in commit abc789. Please take another look.",
             AuthorId = 1,
-            AuthorName = "Alice Developer",
+            AuthorName = "alice.developer",
             CreatedAt = FixedBaseDate.AddDays(-9).AddHours(2),
             UpdatedAt = FixedBaseDate.AddDays(-9).AddHours(2),
             System = false,
@@ -706,7 +706,7 @@ public static class GitLabTestFixtures
             NoteId = 2004,
             Body = "Perfect! The tests look comprehensive. Thanks for the quick fix.",
             AuthorId = 2,
-            AuthorName = "Bob Reviewer",
+            AuthorName = "bob.reviewer",
             CreatedAt = FixedBaseDate.AddDays(-9).AddHours(3),
             UpdatedAt = FixedBaseDate.AddDays(-9).AddHours(3),
             System = false,
@@ -727,7 +727,7 @@ public static class GitLabTestFixtures
             NoteId = 2005,
             Body = "LGTM - this security fix is critical and well-tested. Approving for immediate merge.",
             AuthorId = 2,
-            AuthorName = "Bob Reviewer",
+            AuthorName = "bob.reviewer",
             CreatedAt = FixedBaseDate.AddDays(-3).AddHours(1),
             UpdatedAt = FixedBaseDate.AddDays(-3).AddHours(1),
             System = false,
@@ -748,7 +748,7 @@ public static class GitLabTestFixtures
             NoteId = 2006,
             Body = "merged",
             AuthorId = 3,
-            AuthorName = "Charlie Maintainer",
+            AuthorName = "charlie.maintainer",
             CreatedAt = FixedBaseDate.AddDays(-3).AddHours(2),
             UpdatedAt = FixedBaseDate.AddDays(-3).AddHours(2),
             System = true, // System merge note
@@ -765,15 +765,16 @@ public static class GitLabTestFixtures
     
     /// <summary>
     /// Creates all test fixtures in a consistent, deterministic way
+    /// Each property returns fresh instances to avoid Entity Framework tracking conflicts
     /// </summary>
     public static class CompleteFixture
     {
-        public static List<GitLabUser> Users { get; } = CreateTestUsers();
-        public static List<GitLabProject> Projects { get; } = CreateTestProjects();
-        public static List<RawCommit> Commits { get; } = CreateTestCommits();
-        public static List<RawMergeRequest> MergeRequests { get; } = CreateTestMergeRequests();
-        public static List<RawPipeline> Pipelines { get; } = CreateTestPipelines();
-        public static List<RawJob> Jobs { get; } = CreateTestJobs();
-        public static List<RawMergeRequestNote> Notes { get; } = CreateTestMergeRequestNotes();
+        public static List<GitLabUser> Users => CreateTestUsers();
+        public static List<GitLabProject> Projects => CreateTestProjects();
+        public static List<RawCommit> Commits => CreateTestCommits();
+        public static List<RawMergeRequest> MergeRequests => CreateTestMergeRequests();
+        public static List<RawPipeline> Pipelines => CreateTestPipelines();
+        public static List<RawJob> Jobs => CreateTestJobs();
+        public static List<RawMergeRequestNote> Notes => CreateTestMergeRequestNotes();
     }
 }

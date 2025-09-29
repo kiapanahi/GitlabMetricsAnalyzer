@@ -167,7 +167,10 @@ public sealed class MetricVerificationTests : IDisposable
 
     private async Task SeedDeterministicTestDataAsync()
     {
-        // Use the deterministic fixtures
+        // Clear any existing change tracking to avoid conflicts
+        _dbContext.ChangeTracker.Clear();
+        
+        // Use the deterministic fixtures directly
         var commits = GitLabTestFixtures.CompleteFixture.Commits;
         var mergeRequests = GitLabTestFixtures.CompleteFixture.MergeRequests;
         var pipelines = GitLabTestFixtures.CompleteFixture.Pipelines;

@@ -52,6 +52,9 @@ public sealed class IngestionEdgeCaseTests : IDisposable
         var jobs = GitLabTestFixtures.CompleteFixture.Jobs;
         var notes = GitLabTestFixtures.CompleteFixture.Notes;
 
+        // Clear any existing change tracking
+        _dbContext.ChangeTracker.Clear();
+
         // Act - Store all fixture data to database
         await _dbContext.RawCommits.AddRangeAsync(commits, TestContext.Current.CancellationToken);
         await _dbContext.RawMergeRequests.AddRangeAsync(mergeRequests, TestContext.Current.CancellationToken);

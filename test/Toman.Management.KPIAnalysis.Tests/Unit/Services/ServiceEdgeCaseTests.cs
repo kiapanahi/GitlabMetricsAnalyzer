@@ -35,7 +35,7 @@ public sealed class ServiceEdgeCaseTests : IDisposable
             {
                 CommitPatterns = ["^Merge.*", ".*automatic.*", "^chore: automated.*"],
                 BranchPatterns = ["^temp/.*", "^experimental/.*"],
-                FilePatterns = [".*\\.lock", "node_modules/.*", "dist/.*"]
+                FilePatterns = [".*-lock\\.json$", ".*\\.lock$", "node_modules/.*", "dist/.*"]
             }
         });
 
@@ -301,7 +301,7 @@ public sealed class ServiceEdgeCaseTests : IDisposable
         Assert.Contains(GitLabTestFixtures.CompleteFixture.Commits, c => c.Message.StartsWith("Revert"));
         
         // Should have bot commit
-        Assert.Contains(GitLabTestFixtures.CompleteFixture.Commits, c => c.AuthorName.Contains("Bot"));
+        Assert.Contains(GitLabTestFixtures.CompleteFixture.Commits, c => c.AuthorName.Contains("bot"));
         
         // Should have draft MR
         Assert.Contains(GitLabTestFixtures.CompleteFixture.MergeRequests, mr => mr.Title.StartsWith("Draft:"));

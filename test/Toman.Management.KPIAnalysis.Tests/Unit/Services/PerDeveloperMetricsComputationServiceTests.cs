@@ -260,7 +260,7 @@ public sealed class PerDeveloperMetricsComputationServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result.Metrics.PipelineSuccessRate);
-        Assert.Equal(66.67m, Math.Round(result.Metrics.PipelineSuccessRate.Value, 2)); // 2/3 = 66.67%
+        Assert.Equal(0.67m, Math.Round(result.Metrics.PipelineSuccessRate.Value, 2)); // 2/3 = 0.67 (67%)
         Assert.True(result.Audit.HasPipelineData);
         Assert.Equal(3, result.Audit.TotalPipelines);
     }

@@ -31,6 +31,9 @@ public sealed class DeterministicFixtureValidationTests : IDisposable
         var jobs = GitLabTestFixtures.CompleteFixture.Jobs;
         var notes = GitLabTestFixtures.CompleteFixture.Notes;
 
+        // Clear any existing change tracking
+        _dbContext.ChangeTracker.Clear();
+
         // Act
         await _dbContext.RawCommits.AddRangeAsync(commits, TestContext.Current.CancellationToken);
         await _dbContext.RawMergeRequests.AddRangeAsync(mergeRequests, TestContext.Current.CancellationToken);
