@@ -44,8 +44,6 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();
         builder.Services.AddScoped<IGitLabService, GitLabService>();
         builder.Services.AddScoped<IMetricsCalculationService, MetricsCalculationService>();
-        builder.Services.AddScoped<IUserMetricsService, UserMetricsService>();
-        builder.Services.AddScoped<IUserMetricsCollectionService, UserMetricsCollectionService>();
         builder.Services.AddScoped<IUserSyncService, UserSyncService>();
         builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
         builder.Services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
