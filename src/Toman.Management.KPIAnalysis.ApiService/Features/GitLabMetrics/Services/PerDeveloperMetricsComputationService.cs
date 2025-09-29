@@ -176,22 +176,22 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
 
     private async Task<RawMetricsData> FetchRawDataAsync(long developerId, DateTimeOffset windowStart, DateTimeOffset windowEnd, IReadOnlyList<long> projectIds, CancellationToken cancellationToken)
     {
-        // Fetch all data in parallel
-        var commitsTask = _dbContext.RawCommits
+        // Fetch data sequentially to avoid concurrent DbContext usage
+        var commits = await _dbContext.RawCommits
             .Where(c => c.AuthorUserId == developerId &&
                        c.CommittedAt >= windowStart &&
                        c.CommittedAt < windowEnd &&
                        projectIds.Contains(c.ProjectId))
             .ToListAsync(cancellationToken);
 
-        var mergeRequestsTask = _dbContext.RawMergeRequests
+        var mergeRequests = await _dbContext.RawMergeRequests
             .Where(mr => mr.AuthorUserId == developerId &&
                         mr.CreatedAt >= windowStart &&
                         mr.CreatedAt < windowEnd &&
                         projectIds.Contains((int)mr.ProjectId))
             .ToListAsync(cancellationToken);
 
-        var pipelinesTask = _dbContext.RawPipelines
+        var pipelines = await _dbContext.RawPipelines
             .Where(p => p.AuthorUserId == developerId &&
                        p.CreatedAt >= windowStart &&
                        p.CreatedAt < windowEnd &&
@@ -199,14 +199,12 @@ public sealed class PerDeveloperMetricsComputationService : IPerDeveloperMetrics
             .ToListAsync(cancellationToken);
 
         // TODO: Add review events when available
-        
-        await Task.WhenAll(commitsTask, mergeRequestsTask, pipelinesTask);
 
         return new RawMetricsData
         {
-            Commits = await commitsTask,
-            MergeRequests = await mergeRequestsTask,
-            Pipelines = await pipelinesTask,
+            Commits = commits,
+            MergeRequests = mergeRequests,
+            Pipelines = pipelines,
             ReviewEvents = [] // TODO: Implement when review events are available
         };
     }
