@@ -40,7 +40,7 @@ app.MapDefaultEndpoints();
 // Map v1 API endpoints first
 app.MapApiV1Endpoints();
 
-// Map legacy endpoints (to be removed later)
+// Map additional endpoints
 app.MapGitlabCollectorEndpoints();
 
 app.Run();

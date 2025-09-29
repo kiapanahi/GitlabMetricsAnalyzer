@@ -52,7 +52,6 @@ All API responses include schema version information:
 ### API Evolution
 - **v1**: Current stable version
 - **v2**: Future version (backward compatibility maintained)
-- **Legacy**: Deprecated endpoints (marked for removal)
 
 ### Version Headers
 ```bash
