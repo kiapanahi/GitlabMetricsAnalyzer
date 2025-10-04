@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Dimensions;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Entities;
@@ -52,6 +53,41 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
         ConfigureRawTables(modelBuilder);
         ConfigureFactTables(modelBuilder);
         ConfigureOperationalTables(modelBuilder);
+
+        // Configure all DateTime properties to use UTC - must be done after entity configuration
+        ConfigureDateTimeUtcConversion(modelBuilder);
+    }
+
+    private static void ConfigureDateTimeUtcConversion(ModelBuilder modelBuilder)
+    {
+        // Apply UTC conversion to all DateTime properties across all entities
+        // Assumes all DateTime values are in local time and converts them to UTC
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                {
+                    property.SetValueConverter(
+                        new ValueConverter<DateTime, DateTime>(
+                            v => v.Kind == DateTimeKind.Unspecified 
+                                ? DateTime.SpecifyKind(v, DateTimeKind.Local).ToUniversalTime()
+                                : v.ToUniversalTime(),
+                            v => DateTime.SpecifyKind(v, DateTimeKind.Utc)));
+                }
+                else if (property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(
+                        new ValueConverter<DateTime?, DateTime?>(
+                            v => v.HasValue
+                                ? v.Value.Kind == DateTimeKind.Unspecified
+                                    ? DateTime.SpecifyKind(v.Value, DateTimeKind.Local).ToUniversalTime()
+                                    : v.Value.ToUniversalTime()
+                                : v,
+                            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v));
+                }
+            }
+        }
     }
 
     private static void ConfigurePrdEntities(ModelBuilder modelBuilder)
