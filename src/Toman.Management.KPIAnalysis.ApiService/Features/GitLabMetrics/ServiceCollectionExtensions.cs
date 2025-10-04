@@ -61,8 +61,9 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
         builder.Services.AddScoped<IDataQualityService, DataQualityService>();
 
-        // Add HTTP client for GitLab API calls (mock in development, real in production)
-        if (builder.Environment.IsDevelopment())
+        // Add HTTP client for GitLab API calls (configurable via GitLab:UseMockClient)
+        var gitLabConfig = builder.Configuration.GetSection(GitLabConfiguration.SectionName).Get<GitLabConfiguration>();
+        if (gitLabConfig?.UseMockClient == true)
         {
             builder.Services.AddSingleton<IGitLabHttpClient, MockGitLabHttpClient>();
         }

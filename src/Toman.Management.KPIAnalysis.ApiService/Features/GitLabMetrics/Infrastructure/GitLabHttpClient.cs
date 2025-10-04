@@ -453,19 +453,17 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
     {
         try
         {
-            _logger.LogDebug("Fetching all accessible projects via GitLab API");
+            _logger.LogDebug("Fetching ALL projects (including archived) via GitLab API");
 
             var projectDtos = await GetPaginatedAsync<DTOs.GitLabProject>("projects", cancellationToken,
                 new Dictionary<string, string>
                 {
-                    {"simple", "true"},
-                    {"membership", "true"}, // Only projects where user is a member
-                    {"archived", "false"} // Exclude archived projects by default
+                    {"simple", "true"}
                 });
 
             var projects = projectDtos.Select(MapToProject).ToList();
 
-            _logger.LogInformation("Successfully fetched {ProjectCount} projects via GitLab API", projects.Count);
+            _logger.LogInformation("Successfully fetched {ProjectCount} projects (including archived) via GitLab API", projects.Count);
             return projects.AsReadOnly();
         }
         catch (Exception ex)
