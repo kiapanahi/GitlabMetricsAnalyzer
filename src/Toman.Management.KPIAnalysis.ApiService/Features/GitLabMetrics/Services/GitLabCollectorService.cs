@@ -321,11 +321,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             try
             {
                 await Task.Delay(_collectionConfig.ProjectProcessingDelayMs, cancellationToken);
-                
+
                 // Create a separate DbContext instance for this parallel task
                 await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
                 var projectStats = await ProcessProjectWithRetryAsync(dbContext, (int)project.Id, startDate, cancellationToken);
-                
+
                 lock (stats)
                 {
                     stats.CommitsCollected += projectStats.CommitsCollected;
@@ -546,26 +546,17 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
         if (run is not null)
         {
-            var updatedRun = new CollectionRun
-            {
-                Id = runId,
-                Status = status,
-                StartedAt = run.StartedAt,
-                CompletedAt = status == "completed" || status == "failed" ? DateTime.UtcNow : run.CompletedAt,
-                WindowStart = run.WindowStart,
-                WindowEnd = run.WindowEnd,
-                WindowSizeHours = run.WindowSizeHours,
-                ProjectsProcessed = stats?.ProjectsProcessed ?? run.ProjectsProcessed,
-                CommitsCollected = stats?.CommitsCollected ?? run.CommitsCollected,
-                MergeRequestsCollected = stats?.MergeRequestsCollected ?? run.MergeRequestsCollected,
-                PipelinesCollected = stats?.PipelinesCollected ?? run.PipelinesCollected,
-                ReviewEventsCollected = stats?.ReviewEventsCollected ?? run.ReviewEventsCollected,
-                ErrorMessage = errorMessage ?? run.ErrorMessage,
-                ErrorDetails = errorMessage ?? run.ErrorDetails,
-                TriggerSource = run.TriggerSource,
-                CreatedAt = run.CreatedAt
-            };
-            await _dbContext.UpsertAsync(updatedRun, cancellationToken);
+            run.Status = status;
+            run.CompletedAt = status == "completed" || status == "failed" ? DateTime.UtcNow : run.CompletedAt;
+            run.ProjectsProcessed = stats?.ProjectsProcessed ?? run.ProjectsProcessed;
+            run.CommitsCollected = stats?.CommitsCollected ?? run.CommitsCollected;
+            run.MergeRequestsCollected = stats?.MergeRequestsCollected ?? run.MergeRequestsCollected;
+            run.PipelinesCollected = stats?.PipelinesCollected ?? run.PipelinesCollected;
+            run.ReviewEventsCollected = stats?.ReviewEventsCollected ?? run.ReviewEventsCollected;
+            run.ErrorMessage = errorMessage ?? run.ErrorMessage;
+            run.ErrorDetails = errorMessage ?? run.ErrorDetails;
+            
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
