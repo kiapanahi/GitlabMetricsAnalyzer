@@ -13,6 +13,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 {
     private readonly IGitLabService _gitLabService;
     private readonly GitLabMetricsDbContext _dbContext;
+    private readonly IDbContextFactory<GitLabMetricsDbContext> _dbContextFactory;
     private readonly IUserSyncService _userSyncService;
     private readonly IDataEnrichmentService _dataEnrichmentService;
     private readonly CollectionConfiguration _collectionConfig;
@@ -23,6 +24,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     public GitLabCollectorService(
         IGitLabService gitLabService,
         GitLabMetricsDbContext dbContext,
+        IDbContextFactory<GitLabMetricsDbContext> dbContextFactory,
         IUserSyncService userSyncService,
         IDataEnrichmentService dataEnrichmentService,
         IOptions<CollectionConfiguration> collectionConfig,
@@ -32,6 +34,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
     {
         _gitLabService = gitLabService;
         _dbContext = dbContext;
+        _dbContextFactory = dbContextFactory;
         _userSyncService = userSyncService;
         _dataEnrichmentService = dataEnrichmentService;
         _collectionConfig = collectionConfig.Value;
@@ -318,7 +321,11 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             try
             {
                 await Task.Delay(_collectionConfig.ProjectProcessingDelayMs, cancellationToken);
-                var projectStats = await ProcessProjectWithRetryAsync((int)project.Id, startDate, cancellationToken);
+                
+                // Create a separate DbContext instance for this parallel task
+                await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var projectStats = await ProcessProjectWithRetryAsync(dbContext, (int)project.Id, startDate, cancellationToken);
+                
                 lock (stats)
                 {
                     stats.CommitsCollected += projectStats.CommitsCollected;
@@ -352,7 +359,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return stats;
     }
 
-    private async Task<CollectionStats> ProcessProjectWithRetryAsync(long projectId, DateTime? updatedAfter, CancellationToken cancellationToken)
+    private async Task<CollectionStats> ProcessProjectWithRetryAsync(GitLabMetricsDbContext dbContext, long projectId, DateTime? updatedAfter, CancellationToken cancellationToken)
     {
         var stats = new CollectionStats();
         var retryCount = 0;
@@ -376,13 +383,13 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
                         if (enrichedCommits.Count > 0)
                         {
-                            await _dbContext.UpsertRangeAsync(enrichedCommits, cancellationToken);
+                            await dbContext.UpsertRangeAsync(enrichedCommits, cancellationToken);
                             stats.CommitsCollected = enrichedCommits.Count;
                         }
                     }
                     else
                     {
-                        await _dbContext.UpsertRangeAsync(commits, cancellationToken);
+                        await dbContext.UpsertRangeAsync(commits, cancellationToken);
                         stats.CommitsCollected = commits.Count;
                     }
                 }
@@ -417,26 +424,26 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
                         if (enrichedMergeRequests.Count > 0)
                         {
-                            await _dbContext.UpsertRangeAsync(enrichedMergeRequests, cancellationToken);
+                            await dbContext.UpsertRangeAsync(enrichedMergeRequests, cancellationToken);
                             stats.MergeRequestsCollected = enrichedMergeRequests.Count;
 
                             // Collect review events if enabled
                             if (_collectionConfig.CollectReviewEvents)
                             {
-                                var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(projectId, enrichedMergeRequests, cancellationToken);
+                                var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(dbContext, projectId, enrichedMergeRequests, cancellationToken);
                                 stats.ReviewEventsCollected = reviewEventsCount;
                             }
                         }
                     }
                     else
                     {
-                        await _dbContext.UpsertRangeAsync(mergeRequests, cancellationToken);
+                        await dbContext.UpsertRangeAsync(mergeRequests, cancellationToken);
                         stats.MergeRequestsCollected = mergeRequests.Count;
 
                         // Collect review events if enabled
                         if (_collectionConfig.CollectReviewEvents)
                         {
-                            var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(projectId, mergeRequests, cancellationToken);
+                            var reviewEventsCount = await CollectReviewEventsForMergeRequestsAsync(dbContext, projectId, mergeRequests, cancellationToken);
                             stats.ReviewEventsCollected = reviewEventsCount;
                         }
                     }
@@ -446,7 +453,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                 var pipelines = await _gitLabService.GetPipelinesAsync(projectId, updatedAfter, cancellationToken);
                 if (pipelines.Count > 0)
                 {
-                    await _dbContext.UpsertRangeAsync(pipelines, cancellationToken);
+                    await dbContext.UpsertRangeAsync(pipelines, cancellationToken);
                     stats.PipelinesCollected = pipelines.Count;
                 }
 
@@ -471,7 +478,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return stats;
     }
 
-    private async Task<int> CollectReviewEventsForMergeRequestsAsync(long projectId, IReadOnlyList<Models.Raw.RawMergeRequest> mergeRequests, CancellationToken cancellationToken)
+    private async Task<int> CollectReviewEventsForMergeRequestsAsync(GitLabMetricsDbContext dbContext, long projectId, IReadOnlyList<Models.Raw.RawMergeRequest> mergeRequests, CancellationToken cancellationToken)
     {
         var totalReviewEvents = 0;
 
@@ -482,7 +489,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
                 var notes = await _gitLabService.GetMergeRequestNotesAsync(projectId, mr.MrId, cancellationToken);
                 if (notes.Count > 0)
                 {
-                    await _dbContext.UpsertRangeAsync(notes, cancellationToken);
+                    await dbContext.UpsertRangeAsync(notes, cancellationToken);
                     totalReviewEvents += notes.Count;
                 }
             }

@@ -38,6 +38,9 @@ internal static class ServiceCollectionExtensions
             options.EnableDetailedErrors();
         });
 
+        // Add DbContextFactory for parallel operations
+        builder.Services.AddDbContextFactory<GitLabMetricsDbContext>();
+
         builder.Services.AddHostedService<MigratorBackgroundService>();
 
         // Add services
