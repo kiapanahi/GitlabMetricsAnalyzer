@@ -6,7 +6,6 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.
 public sealed class CollectionRun
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public required string RunType { get; set; } // "backfill"
     public required string Status { get; set; } // "running", "completed", "failed", "cancelled"
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
@@ -38,11 +37,6 @@ public sealed class CollectionRun
 public sealed class StartCollectionRunRequest
 {
     /// <summary>
-    /// Type of collection run: "backfill"
-    /// </summary>
-    public required string RunType { get; init; }
-
-    /// <summary>
     /// Size of the window in hours (optional, defaults to system setting)
     /// </summary>
     public int? WindowSizeHours { get; init; }
@@ -69,7 +63,6 @@ public sealed class StartCollectionRunRequest
 public sealed class CollectionRunResponse
 {
     public required Guid RunId { get; init; }
-    public required string RunType { get; init; }
     public required string Status { get; init; }
     public required DateTime StartedAt { get; init; }
     public DateTime? CompletedAt { get; init; }

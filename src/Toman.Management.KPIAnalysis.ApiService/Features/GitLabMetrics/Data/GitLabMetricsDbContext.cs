@@ -604,7 +604,6 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.ToTable("collection_runs");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.RunType).HasColumnName("run_type").HasMaxLength(50);
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
             entity.Property(e => e.StartedAt).HasColumnName("started_at");
             entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
@@ -621,10 +620,8 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
             entity.Property(e => e.TriggerSource).HasColumnName("trigger_source").HasMaxLength(50);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
 
-            entity.HasIndex(e => e.RunType).HasDatabaseName("idx_collection_runs_run_type");
             entity.HasIndex(e => e.Status).HasDatabaseName("idx_collection_runs_status");
             entity.HasIndex(e => e.StartedAt).HasDatabaseName("idx_collection_runs_started_at");
-            entity.HasIndex(e => new { e.RunType, e.StartedAt }).HasDatabaseName("idx_collection_runs_type_started");
         });
     }
 

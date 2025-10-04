@@ -46,7 +46,6 @@ internal static class GitLabCollectionEndpoints
         {
             var collectionRequest = new StartCollectionRunRequest
             {
-                RunType = "backfill",
                 TriggerSource = request?.TriggerSource ?? "api",
                 BackfillStartDate = request?.BackfillStartDate,
                 BackfillEndDate = request?.BackfillEndDate
@@ -94,12 +93,11 @@ internal static class GitLabCollectionEndpoints
     private static async Task<IResult> GetRecentCollectionRuns(
         IGitLabCollectorService collectorService,
         CancellationToken cancellationToken,
-        [FromQuery] string? runType = null,
         [FromQuery] int limit = 10)
     {
         try
         {
-            var runs = await collectorService.GetRecentCollectionRunsAsync(runType, limit, cancellationToken);
+            var runs = await collectorService.GetRecentCollectionRunsAsync(limit, cancellationToken);
             return Results.Ok(runs);
         }
         catch (Exception ex)

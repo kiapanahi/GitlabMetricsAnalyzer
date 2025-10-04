@@ -178,16 +178,14 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
         using var activity = Diagnostics.ActivitySource.StartActivity("GitLabCollection.Run");
         activity?.SetTag("run_id", runId.ToString());
-        activity?.SetTag("run_type", request.RunType);
         activity?.SetTag("trigger_source", request.TriggerSource);
         activity?.SetTag("window_size_hours", request.WindowSizeHours?.ToString());
 
-        _logger.LogInformation("Starting collection run {RunId} of type {RunType}", runId, request.RunType);
+        _logger.LogInformation("Starting collection run {RunId}", runId);
 
         var collectionRun = new CollectionRun
         {
             Id = runId,
-            RunType = request.RunType,
             Status = "running",
             StartedAt = startTime,
             TriggerSource = request.TriggerSource,
@@ -200,23 +198,15 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             _dbContext.CollectionRuns.Add(collectionRun);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            // Execute collection based on run type
-            CollectionStats stats;
-            if (request.RunType.Equals("backfill", StringComparison.OrdinalIgnoreCase))
-            {
-                stats = await ExecuteBackfillCollectionAsync(runId, request, cancellationToken);
-            }
-            else
-            {
-                throw new ArgumentException($"Unknown run type: {request.RunType}", nameof(request.RunType));
-            }
+            // Execute backfill collection
+            CollectionStats stats = await ExecuteBackfillCollectionAsync(runId, request, cancellationToken);
 
             // Update run with completion
             await UpdateCollectionRunAsync(runId, "completed", stats, null, cancellationToken);
 
             // Record observability metrics
             var duration = DateTimeOffset.UtcNow - startTime;
-            _metricsService.RecordRunDuration(request.RunType, "completed", duration, runId);
+            _metricsService.RecordRunDuration("backfill", "completed", duration, runId);
             _metricsService.RecordCollectionStats(
                 stats.ProjectsProcessed,
                 stats.CommitsCollected,
@@ -255,7 +245,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             _logger.LogError(ex, "Failed collection run {RunId}", runId);
 
             // Record failure metrics
-            _metricsService.RecordRunDuration(request.RunType, "failed", duration, runId);
+            _metricsService.RecordRunDuration("backfill", "failed", duration, runId);
             _metricsService.RecordApiError("collection_run_failed", 500, runId);
 
             activity?.SetTag("status", "failed");
@@ -272,14 +262,9 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return await GetCollectionRunResponseAsync(runId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<CollectionRunResponse>> GetRecentCollectionRunsAsync(string? runType = null, int limit = 10, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CollectionRunResponse>> GetRecentCollectionRunsAsync(int limit = 10, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.CollectionRuns.AsQueryable();
-
-        if (!string.IsNullOrEmpty(runType))
-        {
-            query = query.Where(r => r.RunType == runType);
-        }
 
         var runs = await query
             .OrderByDescending(r => r.StartedAt)
@@ -557,7 +542,6 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             var updatedRun = new CollectionRun
             {
                 Id = runId,
-                RunType = run.RunType,
                 Status = status,
                 StartedAt = run.StartedAt,
                 CompletedAt = status == "completed" || status == "failed" ? DateTime.UtcNow : run.CompletedAt,
@@ -613,7 +597,6 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         return new CollectionRunResponse
         {
             RunId = run.Id,
-            RunType = run.RunType,
             Status = run.Status,
             StartedAt = run.StartedAt,
             CompletedAt = run.CompletedAt,

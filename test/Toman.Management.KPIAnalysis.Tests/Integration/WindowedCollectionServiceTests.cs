@@ -58,7 +58,6 @@ public class WindowedCollectionServiceTests : IDisposable
         // Arrange
         var collectionRun = new CollectionRun
         {
-            RunType = "backfill",
             Status = "running",
             TriggerSource = "test",
             WindowSizeHours = 2
@@ -69,12 +68,10 @@ public class WindowedCollectionServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var retrieved = await _dbContext.CollectionRuns
-            .Where(r => r.RunType == "backfill")
             .FirstOrDefaultAsync();
 
         // Assert
         Assert.NotNull(retrieved);
-        Assert.Equal("backfill", retrieved.RunType);
         Assert.Equal("running", retrieved.Status);
         Assert.Equal(2, retrieved.WindowSizeHours);
     }

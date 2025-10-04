@@ -17,7 +17,7 @@ public interface IGitLabCollectorService
     Task<CollectionRunResponse?> GetCollectionRunStatusAsync(Guid runId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get recent collection runs with optional filtering
+    /// Get recent collection runs
     /// </summary>
-    Task<IReadOnlyList<CollectionRunResponse>> GetRecentCollectionRunsAsync(string? runType = null, int limit = 10, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CollectionRunResponse>> GetRecentCollectionRunsAsync(int limit = 10, CancellationToken cancellationToken = default);
 }
