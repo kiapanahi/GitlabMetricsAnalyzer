@@ -20,11 +20,6 @@ public interface IDataResetService
     Task ResetIngestionStateAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Resets only incremental collection state
-    /// </summary>
-    Task ResetIncrementalStateAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Clears specific raw data tables by type
     /// </summary>
     Task ClearRawDataByTypeAsync(string dataType, CancellationToken cancellationToken = default);
@@ -89,31 +84,6 @@ public sealed class DataResetService : IDataResetService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reset ingestion states");
-            throw;
-        }
-    }
-
-    public async Task ResetIncrementalStateAsync(CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Resetting incremental collection state");
-
-        try
-        {
-            var incrementalState = await _dbContext.IngestionStates
-                .Where(s => s.Entity == "incremental")
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (incrementalState is not null)
-            {
-                _dbContext.IngestionStates.Remove(incrementalState);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-
-            _logger.LogInformation("Successfully reset incremental collection state");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to reset incremental state");
             throw;
         }
     }

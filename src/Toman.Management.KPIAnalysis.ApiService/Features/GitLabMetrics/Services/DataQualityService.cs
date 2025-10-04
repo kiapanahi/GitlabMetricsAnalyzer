@@ -245,28 +245,28 @@ public sealed class DataQualityService : IDataQualityService
     {
         try
         {
-            // Get the last ingestion timestamp
-            var lastIncrementalRun = await _dbContext.IngestionStates
-                .Where(s => s.Entity == "incremental")
+            // Get the last backfill run timestamp
+            var lastBackfillRun = await _dbContext.IngestionStates
+                .Where(s => s.Entity == "backfill")
                 .FirstOrDefaultAsync(cancellationToken);
 
             var issues = new List<string>();
 
-            if (lastIncrementalRun is null)
+            if (lastBackfillRun is null)
             {
-                issues.Add("No incremental runs found");
+                issues.Add("No backfill runs found");
             }
             else
             {
-                var lagMinutes = (DateTimeOffset.UtcNow - lastIncrementalRun.LastRunAt).TotalMinutes;
+                var lagMinutes = (DateTimeOffset.UtcNow - lastBackfillRun.LastRunAt).TotalMinutes;
 
-                if (lagMinutes > 120) // More than 2 hours lag
+                if (lagMinutes > 1440) // More than 24 hours lag
                 {
-                    issues.Add($"Data is stale: {lagMinutes:F0} minutes since last ingestion");
+                    issues.Add($"Data is stale: {lagMinutes / 60:F0} hours since last collection");
                 }
-                else if (lagMinutes > 60) // More than 1 hour lag
+                else if (lagMinutes > 720) // More than 12 hours lag
                 {
-                    issues.Add($"Data has some lag: {lagMinutes:F0} minutes since last ingestion");
+                    issues.Add($"Data has some lag: {lagMinutes / 60:F0} hours since last collection");
                 }
             }
 
@@ -280,8 +280,8 @@ public sealed class DataQualityService : IDataQualityService
                 issues.Add("All data is older than 30 days");
             }
 
-            var lagScore = lastIncrementalRun is not null ?
-                Math.Max(0.0, 1.0 - ((DateTimeOffset.UtcNow - lastIncrementalRun.LastRunAt).TotalHours / 24.0)) : 0.0;
+            var lagScore = lastBackfillRun is not null ?
+                Math.Max(0.0, 1.0 - ((DateTimeOffset.UtcNow - lastBackfillRun.LastRunAt).TotalHours / 24.0)) : 0.0;
 
             var status = issues.Any() ? (issues.Count > 1 ? "failed" : "warning") : "passed";
 

@@ -23,7 +23,7 @@ public class ObservabilityMetricsServiceTests
 
         // Act & Assert
         var exception = Record.Exception(() =>
-            service.RecordRunDuration("incremental", "completed", TimeSpan.FromMinutes(5), runId));
+            service.RecordRunDuration("backfill", "completed", TimeSpan.FromMinutes(5), runId));
 
         Assert.Null(exception);
     }

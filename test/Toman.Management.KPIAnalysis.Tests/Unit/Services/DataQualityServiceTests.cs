@@ -187,7 +187,7 @@ public class DataQualityServiceTests
         var ingestionState = new ApiService.Features.GitLabMetrics.Models.Operational.IngestionState
         {
             Id = 1,
-            Entity = "incremental",
+            Entity = "backfill",
             LastSeenUpdatedAt = DateTime.UtcNow.AddMinutes(-30),
             LastRunAt = DateTime.UtcNow.AddMinutes(-30) // 30 minutes ago - fresh
         };

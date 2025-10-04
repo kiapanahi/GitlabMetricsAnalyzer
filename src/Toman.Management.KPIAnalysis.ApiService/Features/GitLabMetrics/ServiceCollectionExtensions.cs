@@ -109,14 +109,6 @@ internal static class ServiceCollectionExtensions
                 q.UseSimpleTypeLoader();
                 q.UseInMemoryStore();
 
-                // Incremental collection job (hourly at :15)
-                var incrementalJobKey = new JobKey("IncrementalCollection");
-                q.AddJob<IncrementalCollectionJob>(opts => opts.WithIdentity(incrementalJobKey));
-                q.AddTrigger(opts => opts
-                    .ForJob(incrementalJobKey)
-                    .WithIdentity("IncrementalCollection-trigger")
-                    .WithCronSchedule("0 15 * * * ?")); // Every hour at :15
-
                 // Nightly processing job (daily at 02:00)
                 var nightlyJobKey = new JobKey("NightlyProcessing");
                 q.AddJob<NightlyProcessingJob>(opts => opts.WithIdentity(nightlyJobKey));

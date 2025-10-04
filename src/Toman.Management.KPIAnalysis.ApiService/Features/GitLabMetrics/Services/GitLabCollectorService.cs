@@ -40,39 +40,6 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
         _logger = logger;
     }
 
-    public async Task RunIncrementalCollectionAsync(CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Starting incremental GitLab collection");
-
-        // Test connection first
-        if (!await _gitLabService.TestConnectionAsync(cancellationToken))
-        {
-            _logger.LogError("GitLab connection test failed. Aborting incremental collection.");
-            return;
-        }
-
-        // Get last run timestamp
-        var lastRun = await _dbContext.IngestionStates
-            .Where(s => s.Entity == "incremental")
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var updatedAfter = lastRun?.LastSeenUpdatedAt ?? DateTime.UtcNow.AddHours(-1);
-
-        await CollectDataAsync(updatedAfter, cancellationToken);
-
-        // Update ingestion state
-        var state = new IngestionState
-        {
-            Entity = "incremental",
-            LastSeenUpdatedAt = DateTime.UtcNow,
-            LastRunAt = DateTime.UtcNow
-        };
-
-        await _dbContext.UpsertAsync(state, cancellationToken);
-
-        _logger.LogInformation("Completed incremental GitLab collection");
-    }
-
     public async Task RunBackfillCollectionAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting backfill GitLab collection");
@@ -235,11 +202,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
 
             // Execute collection based on run type
             CollectionStats stats;
-            if (request.RunType.Equals("incremental", StringComparison.OrdinalIgnoreCase))
-            {
-                stats = await ExecuteWindowedIncrementalCollectionAsync(runId, request, cancellationToken);
-            }
-            else if (request.RunType.Equals("backfill", StringComparison.OrdinalIgnoreCase))
+            if (request.RunType.Equals("backfill", StringComparison.OrdinalIgnoreCase))
             {
                 stats = await ExecuteBackfillCollectionAsync(runId, request, cancellationToken);
             }
@@ -324,52 +287,6 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             .ToListAsync(cancellationToken);
 
         return runs.Select(MapToCollectionRunResponse).ToList().AsReadOnly();
-    }
-
-    private async Task<CollectionStats> ExecuteWindowedIncrementalCollectionAsync(Guid runId, StartCollectionRunRequest request, CancellationToken cancellationToken)
-    {
-        var windowSize = TimeSpan.FromHours(request.WindowSizeHours ?? _collectionConfig.DefaultWindowSizeHours);
-        var overlap = TimeSpan.FromHours(_collectionConfig.WindowOverlapHours);
-
-        // Get last incremental run state
-        var state = await _dbContext.IngestionStates
-            .Where(s => s.Entity == "incremental")
-            .FirstOrDefaultAsync(cancellationToken);
-
-        DateTime windowStart;
-        if (state?.LastWindowEnd.HasValue == true)
-        {
-            // Start from last window end minus overlap
-            windowStart = state.LastWindowEnd.Value.Subtract(overlap);
-        }
-        else
-        {
-            // First run - start from configured time ago
-            windowStart = DateTime.UtcNow.Subtract(windowSize);
-        }
-
-        var windowEnd = windowStart.Add(windowSize);
-        var now = DateTime.UtcNow;
-
-        // Don't go beyond current time
-        if (windowEnd > now)
-        {
-            windowEnd = now;
-        }
-
-        _logger.LogInformation("Collecting incremental data for window {WindowStart} to {WindowEnd} (Run {RunId})",
-            windowStart, windowEnd, runId);
-
-        // Update run with window information
-        await UpdateCollectionRunWindowAsync(runId, windowStart, windowEnd, (int)windowSize.TotalHours, cancellationToken);
-
-        // Collect data for the window
-        var stats = await CollectDataForWindowAsync(windowStart, windowEnd, cancellationToken);
-
-        // Update ingestion state
-        await UpsertIngestionStateAsync("incremental", windowEnd, windowEnd, (int)windowSize.TotalHours, cancellationToken);
-
-        return stats;
     }
 
     private async Task<CollectionStats> ExecuteBackfillCollectionAsync(Guid runId, StartCollectionRunRequest request, CancellationToken cancellationToken)
@@ -699,7 +616,7 @@ public sealed class GitLabCollectorService : IGitLabCollectorService
             RunType = run.RunType,
             Status = run.Status,
             StartedAt = run.StartedAt,
-            CompletedAt = run.CompletedAt?.DateTime,
+            CompletedAt = run.CompletedAt,
             WindowStart = run.WindowStart,
             WindowEnd = run.WindowEnd,
             WindowSizeHours = run.WindowSizeHours,

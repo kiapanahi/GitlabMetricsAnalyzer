@@ -23,8 +23,8 @@ public sealed class NightlyProcessingJob : IJob
 
         try
         {
-            // Run full collection
-            await _collectorService.RunIncrementalCollectionAsync(context.CancellationToken);
+            // Run backfill collection
+            await _collectorService.RunBackfillCollectionAsync(context.CancellationToken);
 
             _logger.LogInformation("Completed nightly processing job");
         }

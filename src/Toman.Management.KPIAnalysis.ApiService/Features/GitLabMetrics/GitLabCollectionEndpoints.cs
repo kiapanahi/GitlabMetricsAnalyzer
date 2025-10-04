@@ -16,11 +16,6 @@ internal static class GitLabCollectionEndpoints
             .WithTags("GitLab Collection")
             .WithOpenApi();
 
-        group.MapPost("/incremental", TriggerIncrementalCollection)
-            .WithName("TriggerIncrementalCollection")
-            .WithSummary("Trigger incremental data collection")
-            .WithDescription("Starts an incremental collection run to fetch new/updated data from GitLab since the last run");
-
         group.MapPost("/backfill", TriggerBackfillCollection)
             .WithName("TriggerBackfillCollection")
             .WithSummary("Trigger backfill data collection")
@@ -40,38 +35,6 @@ internal static class GitLabCollectionEndpoints
             .WithName("ResetRawData")
             .WithSummary("Reset all raw data")
             .WithDescription("Clears all raw data tables and resets ingestion state for complete re-seeding");
-
-        group.MapPost("/reset-incremental-state", ResetIncrementalState)
-            .WithName("ResetIncrementalState")
-            .WithSummary("Reset incremental collection state")
-            .WithDescription("Resets the incremental collection timestamp to force re-collection of recent data");
-    }
-
-    private static async Task<IResult> TriggerIncrementalCollection(
-        [FromBody] TriggerCollectionRequest? request,
-        IGitLabCollectorService collectorService,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var collectionRequest = new StartCollectionRunRequest
-            {
-                RunType = "incremental",
-                TriggerSource = request?.TriggerSource ?? "api",
-                WindowSizeHours = request?.WindowSizeHours
-            };
-
-            var response = await collectorService.StartCollectionRunAsync(collectionRequest, cancellationToken);
-            return Results.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return Results.Problem(
-                title: "Collection Failed",
-                detail: ex.Message,
-                statusCode: 500
-            );
-        }
     }
 
     private static async Task<IResult> TriggerBackfillCollection(
@@ -185,39 +148,6 @@ internal static class GitLabCollectionEndpoints
             );
         }
     }
-
-    private static async Task<IResult> ResetIncrementalState(
-        [FromBody] ResetDataRequest request,
-        IDataResetService dataResetService,
-        ILogger<DataResetService> logger,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            logger.LogInformation("Resetting incremental collection state. Trigger source: {TriggerSource}",
-                request?.TriggerSource ?? "api");
-
-            await dataResetService.ResetIncrementalStateAsync(cancellationToken);
-
-            logger.LogInformation("Incremental state reset completed successfully");
-
-            return Results.Ok(new
-            {
-                Message = "Incremental collection state has been reset. Next incremental run will collect recent data.",
-                ResetAt = DateTime.UtcNow,
-                TriggerSource = request?.TriggerSource ?? "api"
-            });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to reset incremental state");
-            return Results.Problem(
-                title: "Reset Failed",
-                detail: ex.Message,
-                statusCode: 500
-            );
-        }
-    }
 }
 
 /// <summary>
@@ -229,11 +159,6 @@ public sealed class TriggerCollectionRequest
     /// Source that triggered this collection (e.g., "manual", "api", "scheduled")
     /// </summary>
     public string? TriggerSource { get; init; }
-
-    /// <summary>
-    /// Window size in hours for incremental collection (optional)
-    /// </summary>
-    public int? WindowSizeHours { get; init; }
 }
 
 /// <summary>

@@ -5,31 +5,31 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.
 /// </summary>
 public sealed class CollectionRun
 {
-    public Guid Id { get; init; } = Guid.NewGuid();
-    public required string RunType { get; init; } // "incremental", "backfill"
-    public required string Status { get; init; } // "running", "completed", "failed", "cancelled"
-    public DateTime StartedAt { get; init; } = DateTime.UtcNow;
-    public DateTimeOffset? CompletedAt { get; init; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public required string RunType { get; set; } // "backfill"
+    public required string Status { get; set; } // "running", "completed", "failed", "cancelled"
+    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? CompletedAt { get; set; }
 
-    // Window information for incremental runs
+    // Window information for collection runs
     public DateTime? WindowStart { get; set; }
     public DateTime? WindowEnd { get; set; }
     public int? WindowSizeHours { get; set; }
 
     // Statistics
-    public int ProjectsProcessed { get; init; }
-    public int CommitsCollected { get; init; }
-    public int MergeRequestsCollected { get; init; }
-    public int PipelinesCollected { get; init; }
-    public int ReviewEventsCollected { get; init; }
+    public int ProjectsProcessed { get; set; }
+    public int CommitsCollected { get; set; }
+    public int MergeRequestsCollected { get; set; }
+    public int PipelinesCollected { get; set; }
+    public int ReviewEventsCollected { get; set; }
 
     // Error information
-    public string? ErrorMessage { get; init; }
-    public string? ErrorDetails { get; init; }
+    public string? ErrorMessage { get; set; }
+    public string? ErrorDetails { get; set; }
 
     // Metadata
-    public string? TriggerSource { get; init; } // "manual", "scheduled", "api"
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public string? TriggerSource { get; set; } // "manual", "scheduled", "api"
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -38,12 +38,12 @@ public sealed class CollectionRun
 public sealed class StartCollectionRunRequest
 {
     /// <summary>
-    /// Type of collection run: "incremental" or "backfill"
+    /// Type of collection run: "backfill"
     /// </summary>
     public required string RunType { get; init; }
 
     /// <summary>
-    /// For incremental runs: size of the window in hours (optional, defaults to system setting)
+    /// Size of the window in hours (optional, defaults to system setting)
     /// </summary>
     public int? WindowSizeHours { get; init; }
 
