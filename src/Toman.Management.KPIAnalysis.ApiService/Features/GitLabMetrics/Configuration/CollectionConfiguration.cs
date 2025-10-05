@@ -25,7 +25,7 @@ public sealed class CollectionConfiguration
     /// <summary>
     /// Maximum number of projects to process in parallel
     /// </summary>
-    public int MaxParallelProjects { get; init; } = 3;
+    public int MaxParallelProjects { get; init; } = 1;
 
     /// <summary>
     /// Delay between processing projects (in milliseconds)

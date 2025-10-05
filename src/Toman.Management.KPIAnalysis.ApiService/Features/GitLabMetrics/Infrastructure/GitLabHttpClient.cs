@@ -133,6 +133,16 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of merge request notes</returns>
     Task<IReadOnlyList<GitLabMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets contribution events for a user.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="after">Optional date to filter events after this date</param>
+    /// <param name="before">Optional date to filter events before this date</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of user events</returns>
+    Task<IReadOnlyList<GitLabEvent>> GetUserEventsAsync(long userId, DateTimeOffset? after = null, DateTimeOffset? before = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -839,5 +849,76 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             _logger.LogError(ex, "Failed to get merge request notes for project {ProjectId}, MR {MergeRequestIid}", projectId, mergeRequestIid);
             return new List<GitLabMergeRequestNote>().AsReadOnly();
         }
+    }
+
+    public async Task<IReadOnlyList<GitLabEvent>> GetUserEventsAsync(long userId, DateTimeOffset? after = null, DateTimeOffset? before = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching events for user {UserId}", userId);
+
+            var queryParams = new Dictionary<string, string>
+            {
+                { "action", "pushed" } // Filter to only push events
+            };
+
+            if (after.HasValue)
+            {
+                queryParams.Add("after", after.Value.ToString("yyyy-MM-dd"));
+            }
+
+            if (before.HasValue)
+            {
+                queryParams.Add("before", before.Value.ToString("yyyy-MM-dd"));
+            }
+
+            var eventDtos = await GetPaginatedAsync<DTOs.GitLabEvent>($"users/{userId}/events", cancellationToken, queryParams);
+
+            // Filter to only push events and map to domain model
+            var events = eventDtos.Select(MapToEvent).ToList();
+
+            _logger.LogInformation("Successfully fetched {EventCount} push events for user {UserId}", events.Count, userId);
+            return events.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch events for user {UserId} via GitLab API", userId);
+            throw;
+        }
+    }
+
+    private static GitLabEvent MapToEvent(DTOs.GitLabEvent dto)
+    {
+        return new GitLabEvent
+        {
+            Id = dto.Id,
+            Project = dto.ProjectId.HasValue ? new GitLabEventProject
+            {
+                Id = dto.ProjectId.Value,
+                Name = string.Empty, // Not available in events API
+                Description = string.Empty,
+                WebUrl = string.Empty,
+                PathWithNamespace = string.Empty
+            } : null,
+            ActionName = dto.ActionName,
+            TargetType = dto.TargetType,
+            Author = dto.Author is not null ? new GitLabEventAuthor
+            {
+                Id = dto.Author.Id,
+                Username = dto.Author.Username,
+                Name = dto.Author.Name
+            } : null,
+            CreatedAt = dto.CreatedAt.DateTime,
+            PushData = dto.PushData is not null ? new GitLabPushData
+            {
+                CommitCount = dto.PushData.CommitCount,
+                Action = dto.PushData.Action,
+                RefType = dto.PushData.RefType,
+                CommitFrom = dto.PushData.CommitFrom,
+                CommitTo = dto.PushData.CommitTo,
+                Ref = dto.PushData.Ref,
+                CommitTitle = dto.PushData.CommitTitle
+            } : null
+        };
     }
 }

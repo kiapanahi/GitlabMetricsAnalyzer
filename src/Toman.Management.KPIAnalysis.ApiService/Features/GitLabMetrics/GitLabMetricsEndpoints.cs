@@ -14,6 +14,8 @@ public static class GitLabMetricsEndpoints
 
         app.MapMetricsExportEndpoints();
 
+        app.MapCommitTimeAnalysisEndpoints();
+
         return app;
     }
 }
