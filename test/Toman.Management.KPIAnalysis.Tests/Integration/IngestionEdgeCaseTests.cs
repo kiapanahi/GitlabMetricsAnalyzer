@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
@@ -21,14 +22,14 @@ public sealed class IngestionEdgeCaseTests : IDisposable
         var options = new DbContextOptionsBuilder<GitLabMetricsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        
+
         _dbContext = new GitLabMetricsDbContext(options);
-        
+
         var metricsConfig = Options.Create(new MetricsConfiguration
         {
-            Identity = new IdentityConfiguration 
-            { 
-                BotRegexPatterns = [".*bot.*", "deployment\\..*", ".*\\.bot"] 
+            Identity = new IdentityConfiguration
+            {
+                BotRegexPatterns = [".*bot.*", "deployment\\..*", ".*\\.bot"]
             },
             Excludes = new ExclusionConfiguration
             {
@@ -51,6 +52,9 @@ public sealed class IngestionEdgeCaseTests : IDisposable
         var pipelines = GitLabTestFixtures.CompleteFixture.Pipelines;
         var jobs = GitLabTestFixtures.CompleteFixture.Jobs;
         var notes = GitLabTestFixtures.CompleteFixture.Notes;
+
+        // Clear any existing change tracking
+        _dbContext.ChangeTracker.Clear();
 
         // Act - Store all fixture data to database
         await _dbContext.RawCommits.AddRangeAsync(commits, TestContext.Current.CancellationToken);
@@ -164,15 +168,15 @@ public sealed class IngestionEdgeCaseTests : IDisposable
 
         // Act & Assert
         Assert.Equal(2, flakyPipelines.Count);
-        
+
         var firstAttempt = flakyPipelines[0];
         var retryAttempt = flakyPipelines[1];
-        
+
         Assert.Equal("failed", firstAttempt.Status);
         Assert.Equal("success", retryAttempt.Status);
         Assert.Equal("push", firstAttempt.TriggerSource);
         Assert.Equal("web", retryAttempt.TriggerSource); // Manual retry
-        
+
         // Verify retry happened after initial failure
         Assert.True(retryAttempt.CreatedAt > firstAttempt.FinishedAt);
     }
@@ -189,10 +193,10 @@ public sealed class IngestionEdgeCaseTests : IDisposable
 
         // Act & Assert
         Assert.Equal(2, jobs.Count);
-        
+
         var failedJob = jobs[0];
         var retriedJob = jobs[1];
-        
+
         Assert.Equal("failed", failedJob.Status);
         Assert.Equal("success", retriedJob.Status);
         Assert.False(failedJob.RetriedFlag);
@@ -237,21 +241,21 @@ public sealed class IngestionEdgeCaseTests : IDisposable
 
         // Act & Assert
         Assert.Equal(4, notes.Count);
-        
+
         var reviewComment = notes[0];
         var approvalNote = notes[1];
         var authorResponse = notes[2];
         var resolvedComment = notes[3];
-        
+
         // Review flow validation
         Assert.False(reviewComment.System);
         Assert.True(reviewComment.Resolvable);
         Assert.False(reviewComment.Resolved);
-        
+
         // System approval note
         Assert.True(approvalNote.System);
         Assert.Contains("approved", approvalNote.Body);
-        
+
         // Final resolution
         Assert.True(resolvedComment.Resolved);
         Assert.NotNull(resolvedComment.ResolvedBy);
@@ -268,11 +272,11 @@ public sealed class IngestionEdgeCaseTests : IDisposable
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Users.Count, GitLabTestFixtures.CompleteFixture.Users.Count);
         Assert.Equal(GitLabTestFixtures.CompleteFixture.Commits.Count, GitLabTestFixtures.CompleteFixture.Commits.Count);
         Assert.Equal(GitLabTestFixtures.CompleteFixture.MergeRequests.Count, GitLabTestFixtures.CompleteFixture.MergeRequests.Count);
-        
+
         // Check specific values are identical
         var user1_1 = GitLabTestFixtures.CompleteFixture.Users.First(u => u.Id == 1);
         var user1_2 = GitLabTestFixtures.CompleteFixture.Users.First(u => u.Id == 1);
-        
+
         Assert.Equal(user1_1.Username, user1_2.Username);
         Assert.Equal(user1_1.Email, user1_2.Email);
         Assert.Equal(user1_1.CreatedAt, user1_2.CreatedAt);

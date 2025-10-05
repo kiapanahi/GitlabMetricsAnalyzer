@@ -24,7 +24,7 @@ public sealed class MetricCatalogServiceTests
         // Assert
         Assert.NotNull(catalog);
         Assert.Equal(SchemaVersion.Current, catalog.Version);
-        Assert.True((DateTimeOffset.UtcNow - catalog.GeneratedAt).TotalMinutes < 1);
+        Assert.True((DateTime.UtcNow - catalog.GeneratedAt).TotalMinutes < 1);
         Assert.NotEmpty(catalog.Description);
         Assert.NotEmpty(catalog.Metrics);
     }
@@ -37,12 +37,12 @@ public sealed class MetricCatalogServiceTests
 
         // Assert - Check for key PRD metrics
         var metricNames = catalog.Metrics.Select(m => m.Name).ToList();
-        
+
         Assert.Contains(nameof(PerDeveloperMetrics.MrCycleTimeP50H), metricNames);
         Assert.Contains(nameof(PerDeveloperMetrics.PipelineSuccessRate), metricNames);
         Assert.Contains(nameof(PerDeveloperMetrics.DeploymentFrequencyWk), metricNames);
         Assert.Contains(nameof(PerDeveloperMetrics.MrThroughputWk), metricNames);
-        
+
         // Verify all metrics have required properties
         foreach (var metric in catalog.Metrics)
         {
@@ -69,7 +69,7 @@ public sealed class MetricCatalogServiceTests
 
         // Assert
         Assert.Equal(2, exports.Count);
-        
+
         var firstExport = exports.First();
         Assert.Equal(SchemaVersion.Current, firstExport.SchemaVersion);
         Assert.Equal(1, firstExport.DeveloperId);
@@ -80,7 +80,7 @@ public sealed class MetricCatalogServiceTests
 
     private static PerDeveloperMetricsResult CreateTestMetricsResult(long developerId, string developerName)
     {
-        var windowEnd = DateTimeOffset.UtcNow.Date;
+        var windowEnd = DateTime.UtcNow.Date;
         var windowStart = windowEnd.AddDays(-14);
 
         return new PerDeveloperMetricsResult
@@ -88,7 +88,7 @@ public sealed class MetricCatalogServiceTests
             DeveloperId = developerId,
             DeveloperName = developerName,
             DeveloperEmail = $"user{developerId}@example.com",
-            ComputationDate = DateTimeOffset.UtcNow,
+            ComputationDate = DateTime.UtcNow,
             WindowStart = windowStart,
             WindowEnd = windowEnd,
             WindowDays = 14,

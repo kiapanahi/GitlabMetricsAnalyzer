@@ -23,32 +23,32 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
     public async Task<long> PersistAggregateAsync(PerDeveloperMetricsResult result, CancellationToken cancellationToken = default)
     {
         var aggregate = MapToAggregate(result);
-        
+
         _context.DeveloperMetricsAggregates.Add(aggregate);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         return aggregate.Id;
     }
 
     public async Task<IReadOnlyList<long>> PersistAggregatesAsync(IEnumerable<PerDeveloperMetricsResult> results, CancellationToken cancellationToken = default)
     {
         var aggregates = results.Select(MapToAggregate).ToList();
-        
+
         _context.DeveloperMetricsAggregates.AddRange(aggregates);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         return aggregates.Select(a => a.Id).ToList();
     }
 
-    public async Task<PerDeveloperMetricsResult?> GetAggregateAsync(long developerId, int windowDays, DateTimeOffset windowEnd, CancellationToken cancellationToken = default)
+    public async Task<PerDeveloperMetricsResult?> GetAggregateAsync(long developerId, int windowDays, DateTime windowEnd, CancellationToken cancellationToken = default)
     {
         var windowStart = windowEnd.AddDays(-windowDays);
-        
+
         var aggregate = await _context.DeveloperMetricsAggregates
             .Include(a => a.Developer)
-            .FirstOrDefaultAsync(a => 
-                a.DeveloperId == developerId && 
-                a.WindowDays == windowDays && 
+            .FirstOrDefaultAsync(a =>
+                a.DeveloperId == developerId &&
+                a.WindowDays == windowDays &&
                 a.WindowEnd == windowEnd &&
                 a.WindowStart == windowStart,
                 cancellationToken);
@@ -56,16 +56,16 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
         return aggregate is null ? null : MapFromAggregate(aggregate);
     }
 
-    public async Task<IReadOnlyList<PerDeveloperMetricsResult>> GetAggregatesAsync(IEnumerable<long> developerIds, int windowDays, DateTimeOffset windowEnd, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PerDeveloperMetricsResult>> GetAggregatesAsync(IEnumerable<long> developerIds, int windowDays, DateTime windowEnd, CancellationToken cancellationToken = default)
     {
         var windowStart = windowEnd.AddDays(-windowDays);
         var developerIdsList = developerIds.ToList();
-        
+
         var aggregates = await _context.DeveloperMetricsAggregates
             .Include(a => a.Developer)
-            .Where(a => 
-                developerIdsList.Contains(a.DeveloperId) && 
-                a.WindowDays == windowDays && 
+            .Where(a =>
+                developerIdsList.Contains(a.DeveloperId) &&
+                a.WindowDays == windowDays &&
                 a.WindowEnd == windowEnd &&
                 a.WindowStart == windowStart)
             .ToListAsync(cancellationToken);
@@ -73,14 +73,14 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
         return aggregates.Select(MapFromAggregate).ToList();
     }
 
-    public async Task<bool> AggregateExistsAsync(long developerId, int windowDays, DateTimeOffset windowEnd, CancellationToken cancellationToken = default)
+    public async Task<bool> AggregateExistsAsync(long developerId, int windowDays, DateTime windowEnd, CancellationToken cancellationToken = default)
     {
         var windowStart = windowEnd.AddDays(-windowDays);
-        
+
         return await _context.DeveloperMetricsAggregates
-            .AnyAsync(a => 
-                a.DeveloperId == developerId && 
-                a.WindowDays == windowDays && 
+            .AnyAsync(a =>
+                a.DeveloperId == developerId &&
+                a.WindowDays == windowDays &&
                 a.WindowEnd == windowEnd &&
                 a.WindowStart == windowStart,
                 cancellationToken);
@@ -89,7 +89,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
     private static DeveloperMetricsAggregate MapToAggregate(PerDeveloperMetricsResult result)
     {
         var auditJson = JsonSerializer.SerializeToDocument(result.Audit);
-        var nullReasonsJson = result.Audit.NullReasons.Count > 0 
+        var nullReasonsJson = result.Audit.NullReasons.Count > 0
             ? JsonSerializer.SerializeToDocument(result.Audit.NullReasons)
             : null;
 
@@ -100,7 +100,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
             WindowEnd = result.WindowEnd,
             WindowDays = result.WindowDays,
             SchemaVersion = SchemaVersion.Current,
-            
+
             // PRD Metrics
             MrCycleTimeP50H = result.Metrics.MrCycleTimeP50H,
             TimeToFirstReviewP50H = result.Metrics.TimeToFirstReviewP50H,
@@ -109,7 +109,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
             WipAgeP90H = result.Metrics.WipAgeP90H,
             BranchTtlP50H = result.Metrics.BranchTtlP50H,
             BranchTtlP90H = result.Metrics.BranchTtlP90H,
-            
+
             PipelineSuccessRate = result.Metrics.PipelineSuccessRate,
             ApprovalBypassRatio = result.Metrics.ApprovalBypassRatio,
             ReworkRate = result.Metrics.ReworkRate,
@@ -118,7 +118,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
             IssueSlaBreachRate = result.Metrics.IssueSlaBreachRate,
             ReopenedIssueRate = result.Metrics.ReopenedIssueRate,
             DefectEscapeRate = result.Metrics.DefectEscapeRate,
-            
+
             DeploymentFrequencyWk = result.Metrics.DeploymentFrequencyWk,
             MrThroughputWk = result.Metrics.MrThroughputWk,
             WipMrCount = result.Metrics.WipMrCount,
@@ -126,10 +126,10 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
             RollbackIncidence = result.Metrics.RollbackIncidence,
             DirectPushesDefault = result.Metrics.DirectPushesDefault,
             ForcePushesProtected = result.Metrics.ForcePushesProtected,
-            
+
             MeanTimeToGreenSec = result.Metrics.MeanTimeToGreenSec,
             AvgPipelineDurationSec = result.Metrics.AvgPipelineDurationSec,
-            
+
             AuditMetadata = auditJson,
             NullReasons = nullReasonsJson,
             CalculatedAt = result.ComputationDate
@@ -138,10 +138,10 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
 
     private static PerDeveloperMetricsResult MapFromAggregate(DeveloperMetricsAggregate aggregate)
     {
-        var audit = aggregate.AuditMetadata is not null 
-            ? JsonSerializer.Deserialize<MetricsAudit>(aggregate.AuditMetadata.RootElement) 
+        var audit = aggregate.AuditMetadata is not null
+            ? JsonSerializer.Deserialize<MetricsAudit>(aggregate.AuditMetadata.RootElement)
             : new MetricsAudit();
-            
+
         var nullReasons = aggregate.NullReasons is not null
             ? JsonSerializer.Deserialize<Dictionary<string, string>>(aggregate.NullReasons.RootElement) ?? new()
             : new Dictionary<string, string>();
@@ -161,7 +161,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
             WindowStart = aggregate.WindowStart,
             WindowEnd = aggregate.WindowEnd,
             WindowDays = aggregate.WindowDays,
-            
+
             Metrics = new PerDeveloperMetrics
             {
                 MrCycleTimeP50H = aggregate.MrCycleTimeP50H,
@@ -171,7 +171,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
                 WipAgeP90H = aggregate.WipAgeP90H,
                 BranchTtlP50H = aggregate.BranchTtlP50H,
                 BranchTtlP90H = aggregate.BranchTtlP90H,
-                
+
                 PipelineSuccessRate = aggregate.PipelineSuccessRate,
                 ApprovalBypassRatio = aggregate.ApprovalBypassRatio,
                 ReworkRate = aggregate.ReworkRate,
@@ -180,7 +180,7 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
                 IssueSlaBreachRate = aggregate.IssueSlaBreachRate,
                 ReopenedIssueRate = aggregate.ReopenedIssueRate,
                 DefectEscapeRate = aggregate.DefectEscapeRate,
-                
+
                 DeploymentFrequencyWk = aggregate.DeploymentFrequencyWk,
                 MrThroughputWk = aggregate.MrThroughputWk,
                 WipMrCount = aggregate.WipMrCount,
@@ -188,11 +188,11 @@ public sealed class MetricsAggregatesPersistenceService : IMetricsAggregatesPers
                 RollbackIncidence = aggregate.RollbackIncidence,
                 DirectPushesDefault = aggregate.DirectPushesDefault,
                 ForcePushesProtected = aggregate.ForcePushesProtected,
-                
+
                 MeanTimeToGreenSec = aggregate.MeanTimeToGreenSec,
                 AvgPipelineDurationSec = aggregate.AvgPipelineDurationSec
             },
-            
+
             Audit = audit ?? new MetricsAudit()
         };
     }

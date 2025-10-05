@@ -12,13 +12,13 @@ public sealed class RawPipeline
     public required long AuthorUserId { get; init; }
     public required string AuthorName { get; init; }
     public required string TriggerSource { get; init; } // push, web, schedule, api, etc.
-    public DateTimeOffset CreatedAt { get; init; }
-    public DateTimeOffset UpdatedAt { get; init; }
-    public DateTimeOffset? StartedAt { get; init; }
-    public DateTimeOffset? FinishedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+    public DateTime? StartedAt { get; init; }
+    public DateTime? FinishedAt { get; init; }
     public int DurationSec { get; init; }
     public string? Environment { get; init; }
-    public DateTimeOffset IngestedAt { get; init; }
+    public DateTime IngestedAt { get; init; }
 
     // Calculated success rate helper
     public bool IsSuccessful => Status.Equals("success", StringComparison.OrdinalIgnoreCase);

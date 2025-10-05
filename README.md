@@ -4,8 +4,7 @@ A .NET 9 application that collects developer productivity metrics from GitLab an
 
 ## Features
 
-- **Data Collection**: Automatically collects commits, merge requests, and pipeline data from GitLab API
-- **Incremental Sync**: Only fetches new data since last collection to optimize performance
+- **Data Collection**: Collects commits, merge requests, and pipeline data from GitLab API
 - **Resilient Design**: Built-in retry logic and error handling for API failures
 - **Analytics**: Calculates developer productivity metrics like commit frequency, merge request cycle time, and pipeline success rates
 - **Real-time Monitoring**: Comprehensive logging and telemetry with Serilog
@@ -108,15 +107,6 @@ dotnet ef database update
 
 The system operates through manual trigger workflows instead of automatic scheduling:
 
-### Incremental Collection
-Collect only new/updated data since the last collection:
-
-```bash
-curl -X POST "http://localhost:5000/gitlab-metrics/collect/incremental" \
-  -H "Content-Type: application/json" \
-  -d '{"triggerSource": "manual"}'
-```
-
 ### Backfill Collection
 Perform a complete data backfill (last 180 days by default):
 
@@ -143,12 +133,6 @@ curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
 - `GET /health` - Application health status
 - `GET /alive` - Liveness check
 
-### Data Collection (Manual Triggers)
-- `POST /gitlab-metrics/collect/incremental` - Run incremental collection
-- `POST /gitlab-metrics/collect/backfill` - Run full backfill collection
-- `GET /gitlab-metrics/collect/runs/{runId}` - Check collection run status
-- `GET /gitlab-metrics/collect/runs` - List recent collection runs
-
 ### Developer Metrics API (v1)
 - `GET /api/v1/metrics/developers` - Paginated developer metrics with filtering
 - `GET /api/v1/metrics/developers/{id}` - Individual developer metrics with history
@@ -158,9 +142,6 @@ curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
 - `GET /api/data-quality/reports` - Data quality assessment reports
 - `GET /api/exports/developers` - Export developer metrics to various formats
 - `GET /api/exports/runs/{runId}/download` - Download specific export run results
-
-### Legacy Endpoints (Deprecated)
-- `GET /api/users/{userId}/metrics` - Legacy user metrics endpoint
 
 ## Data Models
 
@@ -297,7 +278,6 @@ The current v1 system uses manual triggers. Future versions will include:
 - **Hangfire Integration**: Automated background job scheduling
 - **Aspire Scheduling**: Cloud-native job orchestration
 - **Configurable Schedules**: Flexible collection timing (daily, weekly, custom)
-- **Smart Incremental Windows**: Dynamic window sizing based on activity patterns
 - **Rate Limit Optimization**: Intelligent throttling based on GitLab API limits
 
 ### Advanced Features in Development
@@ -323,7 +303,6 @@ The current v1 system uses manual triggers. Future versions will include:
 
 3. **Missing Data**:
    - Verify project access permissions in GitLab
-   - Check incremental sync date ranges
    - Review application logs for API errors
 
 ### Logging

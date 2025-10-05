@@ -1,7 +1,4 @@
-using System.Text.Json;
-
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
@@ -41,10 +38,10 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
 
         // Assert
         Assert.True(aggregateId > 0);
-        
+
         var persisted = await _context.DeveloperMetricsAggregates
             .FirstOrDefaultAsync(a => a.Id == aggregateId);
-            
+
         Assert.NotNull(persisted);
         Assert.Equal(result.DeveloperId, persisted.DeveloperId);
         Assert.Equal(SchemaVersion.Current, persisted.SchemaVersion);
@@ -61,8 +58,8 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
 
         // Act
         var retrieved = await _service.GetAggregateAsync(
-            result.DeveloperId, 
-            result.WindowDays, 
+            result.DeveloperId,
+            result.WindowDays,
             result.WindowEnd);
 
         // Assert
@@ -81,8 +78,8 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
 
         // Act
         var exists = await _service.AggregateExistsAsync(
-            result.DeveloperId, 
-            result.WindowDays, 
+            result.DeveloperId,
+            result.WindowDays,
             result.WindowEnd);
 
         // Assert
@@ -93,7 +90,7 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
     public async Task AggregateExistsAsync_ShouldReturnFalseForNonExistingAggregate()
     {
         // Act
-        var exists = await _service.AggregateExistsAsync(999, 14, DateTimeOffset.UtcNow);
+        var exists = await _service.AggregateExistsAsync(999, 14, DateTime.UtcNow);
 
         // Assert
         Assert.False(exists);
@@ -116,7 +113,7 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
 
     private static PerDeveloperMetricsResult CreateTestMetricsResult()
     {
-        var windowEnd = DateTimeOffset.UtcNow.Date;
+        var windowEnd = DateTime.UtcNow.Date;
         var windowStart = windowEnd.AddDays(-14);
 
         return new PerDeveloperMetricsResult
@@ -124,7 +121,7 @@ public sealed class MetricsAggregatesPersistenceServiceTests : IDisposable
             DeveloperId = 1,
             DeveloperName = "Test User",
             DeveloperEmail = "test@example.com",
-            ComputationDate = DateTimeOffset.UtcNow,
+            ComputationDate = DateTime.UtcNow,
             WindowStart = windowStart,
             WindowEnd = windowEnd,
             WindowDays = 14,

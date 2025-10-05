@@ -294,7 +294,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("numeric(10,2)")
                         .HasColumnName("branch_ttl_p90h");
 
-                    b.Property<DateTimeOffset>("CalculatedAt")
+                    b.Property<DateTime>("CalculatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("calculated_at");
 
@@ -395,11 +395,11 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("window_days");
 
-                    b.Property<DateTimeOffset>("WindowEnd")
+                    b.Property<DateTime>("WindowEnd")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("window_end");
 
-                    b.Property<DateTimeOffset>("WindowStart")
+                    b.Property<DateTime>("WindowStart")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("window_start");
 
@@ -563,7 +563,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
@@ -579,7 +579,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("duration_seconds");
 
-                    b.Property<DateTimeOffset?>("FinishedAt")
+                    b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("finished_at");
 
@@ -612,7 +612,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("source");
 
-                    b.Property<DateTimeOffset?>("StartedAt")
+                    b.Property<DateTime?>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
 
@@ -887,7 +887,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("collaboration_score");
 
-                    b.Property<DateTimeOffset>("CollectedAt")
+                    b.Property<DateTime>("CollectedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("collected_at");
 
@@ -1041,11 +1041,11 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("commits_collected");
 
-                    b.Property<DateTimeOffset?>("CompletedAt")
+                    b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
@@ -1074,13 +1074,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("review_events_collected");
 
-                    b.Property<string>("RunType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("run_type");
-
-                    b.Property<DateTimeOffset>("StartedAt")
+                    b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
 
@@ -1095,7 +1089,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("trigger_source");
 
-                    b.Property<DateTimeOffset?>("WindowEnd")
+                    b.Property<DateTime?>("WindowEnd")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("window_end");
 
@@ -1103,23 +1097,17 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("window_size_hours");
 
-                    b.Property<DateTimeOffset?>("WindowStart")
+                    b.Property<DateTime?>("WindowStart")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("window_start");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RunType")
-                        .HasDatabaseName("idx_collection_runs_run_type");
 
                     b.HasIndex("StartedAt")
                         .HasDatabaseName("idx_collection_runs_started_at");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("idx_collection_runs_status");
-
-                    b.HasIndex("RunType", "StartedAt")
-                        .HasDatabaseName("idx_collection_runs_type_started");
 
                     b.ToTable("collection_runs", (string)null);
                 });
@@ -1138,15 +1126,15 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("entity");
 
-                    b.Property<DateTimeOffset>("LastRunAt")
+                    b.Property<DateTime>("LastRunAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_run_at");
 
-                    b.Property<DateTimeOffset>("LastSeenUpdatedAt")
+                    b.Property<DateTime>("LastSeenUpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_seen_updated_at");
 
-                    b.Property<DateTimeOffset?>("LastWindowEnd")
+                    b.Property<DateTime?>("LastWindowEnd")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_window_end");
 
@@ -1202,7 +1190,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("commit_id");
 
-                    b.Property<DateTimeOffset>("CommittedAt")
+                    b.Property<DateTime>("CommittedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("committed_at");
 
@@ -1222,7 +1210,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("files_changed_excluded");
 
-                    b.Property<DateTimeOffset>("IngestedAt")
+                    b.Property<DateTime>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
 
@@ -1298,7 +1286,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("duration_sec");
 
-                    b.Property<DateTimeOffset?>("FinishedAt")
+                    b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("finished_at");
 
@@ -1324,7 +1312,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("retried_flag");
 
-                    b.Property<DateTimeOffset?>("StartedAt")
+                    b.Property<DateTime?>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
 
@@ -1374,7 +1362,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("changes_count");
 
-                    b.Property<DateTimeOffset?>("ClosedAt")
+                    b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("closed_at");
 
@@ -1382,11 +1370,11 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("commits_count");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTimeOffset?>("FirstCommitAt")
+                    b.Property<DateTime?>("FirstCommitAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("first_commit_at");
 
@@ -1399,7 +1387,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("first_commit_sha");
 
-                    b.Property<DateTimeOffset?>("FirstReviewAt")
+                    b.Property<DateTime?>("FirstReviewAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("first_review_at");
 
@@ -1407,7 +1395,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("has_conflicts");
 
-                    b.Property<DateTimeOffset>("IngestedAt")
+                    b.Property<DateTime>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
 
@@ -1435,7 +1423,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("lines_deleted");
 
-                    b.Property<DateTimeOffset?>("MergedAt")
+                    b.Property<DateTime?>("MergedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("merged_at");
 
@@ -1534,11 +1522,11 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("text")
                         .HasColumnName("body");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTimeOffset>("IngestedAt")
+                    b.Property<DateTime>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
 
@@ -1586,7 +1574,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("system");
 
-                    b.Property<DateTimeOffset?>("UpdatedAt")
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
@@ -1627,7 +1615,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("author_user_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
@@ -1640,11 +1628,11 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("environment");
 
-                    b.Property<DateTimeOffset?>("FinishedAt")
+                    b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("finished_at");
 
-                    b.Property<DateTimeOffset>("IngestedAt")
+                    b.Property<DateTime>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
 
@@ -1674,7 +1662,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("sha");
 
-                    b.Property<DateTimeOffset?>("StartedAt")
+                    b.Property<DateTime?>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
 
@@ -1690,7 +1678,7 @@ namespace Toman.Management.KPIAnalysis.ApiService.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("trigger_source");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 

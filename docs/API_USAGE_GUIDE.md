@@ -6,7 +6,6 @@ This guide provides comprehensive examples for using the GitLab Metrics Analyzer
 - [API Overview](#api-overview)
 - [Authentication](#authentication)
 - [Versioning Strategy](#versioning-strategy)
-- [Collection Management APIs](#collection-management-apis)
 - [Developer Metrics APIs](#developer-metrics-apis)
 - [Export APIs](#export-apis)
 - [Data Quality APIs](#data-quality-apis)
@@ -27,7 +26,6 @@ The GitLab Metrics Analyzer exposes RESTful APIs for:
 
 **API Versions**: 
 - `v1` (current): `/api/v1/*` - Stable, production-ready endpoints
-- Legacy endpoints: Deprecated, use v1 equivalents
 
 ## Authentication
 
@@ -54,169 +52,12 @@ All API responses include schema version information:
 ### API Evolution
 - **v1**: Current stable version
 - **v2**: Future version (backward compatibility maintained)
-- **Legacy**: Deprecated endpoints (marked for removal)
 
 ### Version Headers
 ```bash
 # Request specific API version
 curl -H "Accept: application/vnd.gitlab-metrics.v1+json" \
      "http://localhost:5000/api/v1/metrics/developers"
-```
-
-## Collection Management APIs
-
-### Start Incremental Collection
-
-**Endpoint**: `POST /gitlab-metrics/collect/incremental`
-
-Triggers collection of new/updated data since the last successful run.
-
-```bash
-curl -X POST "http://localhost:5000/gitlab-metrics/collect/incremental" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "triggerSource": "api",
-    "runType": "incremental"
-  }'
-```
-
-**Response**:
-```json
-{
-  "runId": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "Running",
-  "runType": "incremental",
-  "triggerSource": "api",
-  "startedAt": "2024-01-15T10:30:00Z",
-  "estimatedDurationMinutes": 5,
-  "message": "Incremental collection started successfully"
-}
-```
-
-### Start Backfill Collection
-
-**Endpoint**: `POST /gitlab-metrics/collect/backfill`
-
-Performs complete data backfill for the configured time period (default: 180 days).
-
-```bash
-curl -X POST "http://localhost:5000/gitlab-metrics/collect/backfill" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "triggerSource": "api",
-    "runType": "backfill"
-  }'
-```
-
-**Response**:
-```json
-{
-  "runId": "660f8500-f39c-52e5-b827-557766551111",
-  "status": "Running", 
-  "runType": "backfill",
-  "triggerSource": "api",
-  "startedAt": "2024-01-15T10:30:00Z",
-  "estimatedDurationMinutes": 45,
-  "message": "Backfill collection started for last 180 days"
-}
-```
-
-### Get Collection Run Status
-
-**Endpoint**: `GET /gitlab-metrics/collect/runs/{runId}`
-
-Retrieves the current status and progress of a collection run.
-
-```bash
-curl "http://localhost:5000/gitlab-metrics/collect/runs/550e8400-e29b-41d4-a716-446655440000"
-```
-
-**Response (Running)**:
-```json
-{
-  "runId": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "Running",
-  "runType": "incremental",
-  "triggerSource": "api",
-  "startedAt": "2024-01-15T10:30:00Z",
-  "progress": {
-    "projectsProcessed": 45,
-    "totalProjects": 120,
-    "commitsCollected": 1250,
-    "mergeRequestsCollected": 340,
-    "pipelinesCollected": 890,
-    "reviewEventsCollected": 670,
-    "currentPhase": "Processing merge requests"
-  },
-  "estimatedCompletion": "2024-01-15T10:35:00Z"
-}
-```
-
-**Response (Completed)**:
-```json
-{
-  "runId": "550e8400-e29b-41d4-a716-446655440000", 
-  "status": "Completed",
-  "runType": "incremental",
-  "triggerSource": "api",
-  "startedAt": "2024-01-15T10:30:00Z",
-  "completedAt": "2024-01-15T10:34:22Z",
-  "durationSeconds": 262,
-  "summary": {
-    "projectsProcessed": 120,
-    "commitsCollected": 1250,
-    "mergeRequestsCollected": 340,
-    "pipelinesCollected": 890,
-    "reviewEventsCollected": 670,
-    "developersUpdated": 25
-  },
-  "dataQuality": {
-    "completenessScore": 0.95,
-    "consistencyScore": 0.98,
-    "accuracyScore": 0.97
-  }
-}
-```
-
-### List Recent Collection Runs
-
-**Endpoint**: `GET /gitlab-metrics/collect/runs`
-
-Retrieves recent collection runs with filtering options.
-
-```bash
-# Get last 10 runs
-curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
-
-# Filter by run type
-curl "http://localhost:5000/gitlab-metrics/collect/runs?runType=incremental&limit=5"
-
-# Get runs from specific date range  
-curl "http://localhost:5000/gitlab-metrics/collect/runs?fromDate=2024-01-01&toDate=2024-01-31"
-```
-
-**Response**:
-```json
-{
-  "runs": [
-    {
-      "runId": "550e8400-e29b-41d4-a716-446655440000",
-      "status": "Completed", 
-      "runType": "incremental",
-      "startedAt": "2024-01-15T10:30:00Z",
-      "completedAt": "2024-01-15T10:34:22Z",
-      "durationSeconds": 262,
-      "summary": {
-        "commitsCollected": 1250,
-        "mergeRequestsCollected": 340,
-        "developersUpdated": 25
-      }
-    }
-  ],
-  "totalRuns": 45,
-  "page": 1,
-  "pageSize": 10
-}
 ```
 
 ## Developer Metrics APIs
@@ -841,17 +682,22 @@ if (data.schemaVersion !== '1.0.0') {
 
 #### Handle Async Operations
 ```bash
-# Start collection and poll for completion
-RUN_ID=$(curl -s -X POST "http://localhost:5000/gitlab-metrics/collect/incremental" | jq -r .runId)
-
-# Poll status until complete
+# Example: Get developer metrics with pagination
+PAGE=1
 while true; do
-  STATUS=$(curl -s "http://localhost:5000/gitlab-metrics/collect/runs/$RUN_ID" | jq -r .status)
-  if [ "$STATUS" = "Completed" ] || [ "$STATUS" = "Failed" ]; then
+  RESPONSE=$(curl -s "http://localhost:5000/api/v1/metrics/developers?page=$PAGE&pageSize=50")
+  
+  # Check if we have more data
+  HAS_MORE=$(echo "$RESPONSE" | jq -r '.pagination.hasMore')
+  
+  # Process the data
+  echo "$RESPONSE" | jq -r '.data[]'
+  
+  if [ "$HAS_MORE" = "false" ]; then
     break
   fi
-  echo "Status: $STATUS, waiting..."
-  sleep 10
+  
+  PAGE=$((PAGE + 1))
 done
 ```
 
@@ -906,18 +752,28 @@ fi
 echo "API is healthy"
 ```
 
-#### Collection Monitoring
+#### API Monitoring
 ```bash
 #!/bin/bash
-# monitor-collections.sh - Check collection status
+# monitor-api.sh - Check API endpoint health
 
-FAILED_RUNS=$(curl -s "http://localhost:5000/gitlab-metrics/collect/runs?limit=10" | \
-  jq '[.runs[] | select(.status == "Failed")] | length')
+# Check catalog endpoint
+CATALOG_STATUS=$(curl -s -w "%{http_code}" "http://localhost:5000/api/v1/catalog" -o /dev/null)
 
-if [ "$FAILED_RUNS" -gt 0 ]; then
-  echo "Warning: $FAILED_RUNS failed collection runs detected"
+if [ "$CATALOG_STATUS" != "200" ]; then
+  echo "Warning: API catalog endpoint returned $CATALOG_STATUS"
   # Send alert notification
 fi
+
+# Check developer metrics endpoint
+METRICS_STATUS=$(curl -s -w "%{http_code}" "http://localhost:5000/api/v1/metrics/developers?pageSize=1" -o /dev/null)
+
+if [ "$METRICS_STATUS" != "200" ]; then
+  echo "Warning: Developer metrics endpoint returned $METRICS_STATUS"
+  # Send alert notification
+fi
+
+echo "API endpoints are responding correctly"
 ```
 
 This guide should be updated as the API evolves and new features are added.

@@ -64,9 +64,9 @@ internal static class MetricsExportEndpoints
         try
         {
             var result = await exportService.ExportPerDeveloperMetricsAsync(
-                request.DeveloperIds, 
-                request.WindowDays, 
-                request.WindowEnd ?? DateTimeOffset.UtcNow,
+                request.DeveloperIds,
+                request.WindowDays,
+                request.WindowEnd ?? DateTime.UtcNow,
                 cancellationToken);
 
             return Results.Ok(new ExportPerDeveloperMetricsResponse
@@ -121,7 +121,7 @@ internal static class MetricsExportEndpoints
             var options = new MetricsComputationOptions
             {
                 WindowDays = request.WindowDays,
-                EndDate = request.EndDate ?? DateTimeOffset.UtcNow,
+                EndDate = request.EndDate ?? DateTime.UtcNow,
                 ProjectIds = request.ProjectIds ?? Array.Empty<long>(),
                 ApplyWinsorization = request.ApplyWinsorization ?? true,
                 ApplyFileExclusions = request.ApplyFileExclusions ?? true
@@ -154,7 +154,7 @@ internal static class MetricsExportEndpoints
     private static async Task<IResult> GetPersistedAggregates(
         [FromQuery] long[] developerIds,
         [FromQuery] int windowDays,
-        [FromQuery] DateTimeOffset? windowEnd,
+        [FromQuery] DateTime? windowEnd,
         IMetricsAggregatesPersistenceService persistenceService,
         CancellationToken cancellationToken)
     {
@@ -164,9 +164,9 @@ internal static class MetricsExportEndpoints
                 return Results.BadRequest(new { Error = "At least one developer ID is required" });
 
             var results = await persistenceService.GetAggregatesAsync(
-                developerIds, 
-                windowDays, 
-                windowEnd ?? DateTimeOffset.UtcNow, 
+                developerIds,
+                windowDays,
+                windowEnd ?? DateTime.UtcNow,
                 cancellationToken);
 
             return Results.Ok(new GetPersistedAggregatesResponse
@@ -210,7 +210,7 @@ internal static class MetricsExportEndpoints
                 WipAgeP90H = result.Metrics.WipAgeP90H,
                 BranchTtlP50H = result.Metrics.BranchTtlP50H,
                 BranchTtlP90H = result.Metrics.BranchTtlP90H,
-                
+
                 PipelineSuccessRate = result.Metrics.PipelineSuccessRate,
                 ApprovalBypassRatio = result.Metrics.ApprovalBypassRatio,
                 ReworkRate = result.Metrics.ReworkRate,
@@ -219,7 +219,7 @@ internal static class MetricsExportEndpoints
                 IssueSlaBreachRate = result.Metrics.IssueSlaBreachRate,
                 ReopenedIssueRate = result.Metrics.ReopenedIssueRate,
                 DefectEscapeRate = result.Metrics.DefectEscapeRate,
-                
+
                 DeploymentFrequencyWk = result.Metrics.DeploymentFrequencyWk,
                 MrThroughputWk = result.Metrics.MrThroughputWk,
                 WipMrCount = result.Metrics.WipMrCount,
@@ -227,7 +227,7 @@ internal static class MetricsExportEndpoints
                 RollbackIncidence = result.Metrics.RollbackIncidence,
                 DirectPushesDefault = result.Metrics.DirectPushesDefault,
                 ForcePushesProtected = result.Metrics.ForcePushesProtected,
-                
+
                 MeanTimeToGreenSec = result.Metrics.MeanTimeToGreenSec,
                 AvgPipelineDurationSec = result.Metrics.AvgPipelineDurationSec
             },
@@ -260,14 +260,14 @@ public sealed class ExportPerDeveloperMetricsRequest
 {
     public required IReadOnlyList<long> DeveloperIds { get; init; }
     public required int WindowDays { get; init; }
-    public DateTimeOffset? WindowEnd { get; init; }
+    public DateTime? WindowEnd { get; init; }
 }
 
 public sealed class PersistMetricsRequest
 {
     public required IReadOnlyList<long> DeveloperIds { get; init; }
     public required int WindowDays { get; init; }
-    public DateTimeOffset? EndDate { get; init; }
+    public DateTime? EndDate { get; init; }
     public IReadOnlyList<long>? ProjectIds { get; init; }
     public bool? ApplyWinsorization { get; init; }
     public bool? ApplyFileExclusions { get; init; }
@@ -284,7 +284,7 @@ public sealed class ExportPerDeveloperMetricsResponse
     public required string CatalogFilePath { get; init; }
     public required IReadOnlyList<string> DataFilePaths { get; init; }
     public required int ExportedCount { get; init; }
-    public required DateTimeOffset ExportedAt { get; init; }
+    public required DateTime ExportedAt { get; init; }
     public required string SchemaVersion { get; init; }
     public required bool Success { get; init; }
 }
@@ -315,9 +315,9 @@ public sealed class PersistedAggregateResponse
     public required long DeveloperId { get; init; }
     public required string DeveloperName { get; init; }
     public required string DeveloperEmail { get; init; }
-    public required DateTimeOffset ComputationDate { get; init; }
-    public required DateTimeOffset WindowStart { get; init; }
-    public required DateTimeOffset WindowEnd { get; init; }
+    public required DateTime ComputationDate { get; init; }
+    public required DateTime WindowStart { get; init; }
+    public required DateTime WindowEnd { get; init; }
     public required int WindowDays { get; init; }
     public required PerDeveloperMetricsDto Metrics { get; init; }
     public required MetricsAuditDto Audit { get; init; }

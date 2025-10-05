@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 
 using Moq;
 
-using Xunit;
-
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.DataQuality;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Entities;
@@ -60,7 +58,7 @@ public class DataQualityServiceTests
             Id = 1,
             Name = "Test Project",
             PathWithNamespace = "test/project",
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTime.UtcNow
         };
         dbContext.Projects.Add(project);
 
@@ -73,9 +71,9 @@ public class DataQualityServiceTests
             AuthorUserId = 1,
             AuthorName = "Test Author",
             AuthorEmail = "test@example.com",
-            CommittedAt = DateTimeOffset.UtcNow,
+            CommittedAt = DateTime.UtcNow,
             Message = "Test commit",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
         dbContext.RawCommits.Add(commit);
         await dbContext.SaveChangesAsync();
@@ -108,9 +106,9 @@ public class DataQualityServiceTests
             AuthorUserId = 1,
             AuthorName = "Test Author",
             AuthorEmail = "test@example.com",
-            CommittedAt = DateTimeOffset.UtcNow,
+            CommittedAt = DateTime.UtcNow,
             Message = "Test commit",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
         dbContext.RawCommits.Add(commit);
         await dbContext.SaveChangesAsync();
@@ -143,9 +141,9 @@ public class DataQualityServiceTests
             AuthorUserId = 1,
             AuthorName = "Test Author",
             AuthorEmail = "test@example.com",
-            CommittedAt = DateTimeOffset.UtcNow.AddHours(-1), // Recent
+            CommittedAt = DateTime.UtcNow.AddHours(-1), // Recent
             Message = "Test commit message",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
         dbContext.RawCommits.Add(commit);
 
@@ -158,11 +156,11 @@ public class DataQualityServiceTests
             AuthorUserId = 1,
             AuthorName = "Test Author",
             Title = "Test MR",
-            CreatedAt = DateTimeOffset.UtcNow.AddHours(-1), // Recent
+            CreatedAt = DateTime.UtcNow.AddHours(-1), // Recent
             State = "opened",
             SourceBranch = "feature",
             TargetBranch = "main",
-            IngestedAt = DateTimeOffset.UtcNow
+            IngestedAt = DateTime.UtcNow
         };
         dbContext.RawMergeRequests.Add(mr);
         await dbContext.SaveChangesAsync();
@@ -189,9 +187,9 @@ public class DataQualityServiceTests
         var ingestionState = new ApiService.Features.GitLabMetrics.Models.Operational.IngestionState
         {
             Id = 1,
-            Entity = "incremental",
-            LastSeenUpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-30),
-            LastRunAt = DateTimeOffset.UtcNow.AddMinutes(-30) // 30 minutes ago - fresh
+            Entity = "backfill",
+            LastSeenUpdatedAt = DateTime.UtcNow.AddMinutes(-30),
+            LastRunAt = DateTime.UtcNow.AddMinutes(-30) // 30 minutes ago - fresh
         };
         dbContext.IngestionStates.Add(ingestionState);
         await dbContext.SaveChangesAsync();
@@ -220,7 +218,7 @@ public class DataQualityServiceTests
             },
             new()
             {
-                CheckType = "test2", 
+                CheckType = "test2",
                 Status = "warning",
                 Score = 0.7,
                 Description = "Test 2"
@@ -228,7 +226,7 @@ public class DataQualityServiceTests
             new()
             {
                 CheckType = "test3",
-                Status = "passed", 
+                Status = "passed",
                 Score = 0.95,
                 Description = "Test 3"
             }

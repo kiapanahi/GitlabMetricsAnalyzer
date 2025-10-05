@@ -28,7 +28,7 @@ internal static class PerDeveloperMetricsEndpoints
             .WithDescription("Computes metrics for multiple developers in a single request");
     }
 
-    private static async Task<IResult> GetSupportedWindows(IPerDeveloperMetricsComputationService service)
+    private static IResult GetSupportedWindows(IPerDeveloperMetricsComputationService service)
     {
         var windows = service.GetSupportedWindowDays();
         return Results.Ok(new SupportedWindowsResponse(windows));
@@ -45,7 +45,7 @@ internal static class PerDeveloperMetricsEndpoints
             var options = new MetricsComputationOptions
             {
                 WindowDays = request.WindowDays,
-                EndDate = request.EndDate ?? DateTimeOffset.UtcNow,
+                EndDate = request.EndDate ?? DateTime.UtcNow,
                 ProjectIds = request.ProjectIds ?? Array.Empty<long>(),
                 ApplyWinsorization = request.ApplyWinsorization ?? true,
                 ApplyFileExclusions = request.ApplyFileExclusions ?? true
@@ -77,14 +77,14 @@ internal static class PerDeveloperMetricsEndpoints
             var options = new MetricsComputationOptions
             {
                 WindowDays = request.WindowDays,
-                EndDate = request.EndDate ?? DateTimeOffset.UtcNow,
+                EndDate = request.EndDate ?? DateTime.UtcNow,
                 ProjectIds = request.ProjectIds ?? Array.Empty<long>(),
                 ApplyWinsorization = request.ApplyWinsorization ?? true,
                 ApplyFileExclusions = request.ApplyFileExclusions ?? true
             };
 
             var results = await service.ComputeMetricsAsync(request.DeveloperIds, options, cancellationToken);
-            
+
             var response = new ComputeBatchMetricsResponse
             {
                 Results = results.Values.Select(MapToResponse).ToList(),
@@ -188,7 +188,7 @@ public sealed class ComputeMetricsRequest
     /// <summary>
     /// End date for the computation window. If not provided, uses current date.
     /// </summary>
-    public DateTimeOffset? EndDate { get; init; }
+    public DateTime? EndDate { get; init; }
 
     /// <summary>
     /// Optional project IDs to scope the computation to
@@ -221,7 +221,7 @@ public sealed class ComputeBatchMetricsRequest
     /// <summary>
     /// End date for the computation window. If not provided, uses current date.
     /// </summary>
-    public DateTimeOffset? EndDate { get; init; }
+    public DateTime? EndDate { get; init; }
 
     /// <summary>
     /// Optional project IDs to scope the computation to
@@ -257,9 +257,9 @@ public sealed class PerDeveloperMetricsResponse
     public required long DeveloperId { get; init; }
     public required string DeveloperName { get; init; }
     public required string DeveloperEmail { get; init; }
-    public required DateTimeOffset ComputationDate { get; init; }
-    public required DateTimeOffset WindowStart { get; init; }
-    public required DateTimeOffset WindowEnd { get; init; }
+    public required DateTime ComputationDate { get; init; }
+    public required DateTime WindowStart { get; init; }
+    public required DateTime WindowEnd { get; init; }
     public required int WindowDays { get; init; }
     public required PerDeveloperMetricsDto Metrics { get; init; }
     public required MetricsAuditDto Audit { get; init; }

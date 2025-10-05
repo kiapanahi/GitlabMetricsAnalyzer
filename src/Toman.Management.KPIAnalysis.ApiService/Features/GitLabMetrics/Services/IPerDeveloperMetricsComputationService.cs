@@ -35,7 +35,7 @@ public sealed record MetricsComputationOptions
     /// <summary>
     /// End date for the computation window (start date is computed as EndDate - WindowDays)
     /// </summary>
-    public required DateTimeOffset EndDate { get; init; }
+    public required DateTime EndDate { get; init; }
 
     /// <summary>
     /// Optional project IDs to scope the computation to. If empty, uses all accessible projects.
@@ -61,14 +61,14 @@ public sealed record PerDeveloperMetricsResult
     public required long DeveloperId { get; init; }
     public required string DeveloperName { get; init; }
     public required string DeveloperEmail { get; init; }
-    public required DateTimeOffset ComputationDate { get; init; }
-    public required DateTimeOffset WindowStart { get; init; }
-    public required DateTimeOffset WindowEnd { get; init; }
+    public required DateTime ComputationDate { get; init; }
+    public required DateTime WindowStart { get; init; }
+    public required DateTime WindowEnd { get; init; }
     public required int WindowDays { get; init; }
-    
+
     // Computed metrics matching MetricsData structure
     public required PerDeveloperMetrics Metrics { get; init; }
-    
+
     // Audit information
     public required MetricsAudit Audit { get; init; }
 }

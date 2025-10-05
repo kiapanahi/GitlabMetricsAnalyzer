@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Export;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -17,7 +16,7 @@ public sealed class MetricsExportService : IMetricsExportService
     private readonly IMetricCatalogService _catalogService;
     private readonly IMetricsAggregatesPersistenceService _persistenceService;
     private readonly ExportsConfiguration _configuration;
-    
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -40,19 +39,19 @@ public sealed class MetricsExportService : IMetricsExportService
         var catalog = await _catalogService.GenerateCatalogAsync();
         var fileName = GenerateCatalogFileName();
         var filePath = Path.Combine(_configuration.Directory, fileName);
-        
+
         await EnsureDirectoryExistsAsync();
-        
+
         var json = JsonSerializer.Serialize(catalog, JsonOptions);
         await File.WriteAllTextAsync(filePath, json, cancellationToken);
-        
+
         return filePath;
     }
 
     public async Task<ExportResult> ExportPerDeveloperMetricsAsync(
-        IEnumerable<long> developerIds, 
-        int windowDays, 
-        DateTimeOffset windowEnd,
+        IEnumerable<long> developerIds,
+        int windowDays,
+        DateTime windowEnd,
         CancellationToken cancellationToken = default)
     {
         var results = await _persistenceService.GetAggregatesAsync(developerIds, windowDays, windowEnd, cancellationToken);
@@ -64,28 +63,28 @@ public sealed class MetricsExportService : IMetricsExportService
         CancellationToken cancellationToken = default)
     {
         var resultsList = results.ToList();
-        var exportedAt = DateTimeOffset.UtcNow;
-        
+        var exportedAt = DateTime.UtcNow;
+
         // Generate catalog
         var catalogPath = await ExportCatalogAsync(cancellationToken);
-        
+
         // Export per-developer metrics
         var exports = _catalogService.GeneratePerDeveloperExportsFromResults(resultsList);
         var dataFilePaths = new List<string>();
-        
+
         await EnsureDirectoryExistsAsync();
-        
+
         foreach (var export in exports)
         {
             var fileName = GeneratePerDeveloperFileName(export.DeveloperId, export.WindowDays, export.WindowEnd);
             var filePath = Path.Combine(_configuration.Directory, fileName);
-            
+
             var json = JsonSerializer.Serialize(export, JsonOptions);
             await File.WriteAllTextAsync(filePath, json, cancellationToken);
-            
+
             dataFilePaths.Add(filePath);
         }
-        
+
         return new ExportResult
         {
             CatalogFilePath = catalogPath,
@@ -100,17 +99,17 @@ public sealed class MetricsExportService : IMetricsExportService
     {
         if (!Directory.Exists(_configuration.Directory))
             return Array.Empty<ExportFileInfo>();
-            
+
         var files = Directory.GetFiles(_configuration.Directory, "*.json");
         var exportFiles = new List<ExportFileInfo>();
-        
+
         foreach (var filePath in files)
         {
             try
             {
                 var fileInfo = new FileInfo(filePath);
                 var fileName = fileInfo.Name;
-                
+
                 var exportFileInfo = new ExportFileInfo
                 {
                     FilePath = filePath,
@@ -122,7 +121,7 @@ public sealed class MetricsExportService : IMetricsExportService
                     WindowDays = ExtractWindowDays(fileName),
                     WindowEnd = ExtractWindowEnd(fileName)
                 };
-                
+
                 exportFiles.Add(exportFileInfo);
             }
             catch
@@ -131,20 +130,20 @@ public sealed class MetricsExportService : IMetricsExportService
                 continue;
             }
         }
-        
+
         return exportFiles.OrderByDescending(f => f.CreatedAt).ToList();
     }
 
     private static string GenerateCatalogFileName()
     {
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
         var version = SchemaVersion.Current.Replace(".", "-");
         return $"metric_catalog_{version}_{timestamp}.json";
     }
 
-    private static string GeneratePerDeveloperFileName(long developerId, int windowDays, DateTimeOffset windowEnd)
+    private static string GeneratePerDeveloperFileName(long developerId, int windowDays, DateTime windowEnd)
     {
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
         var version = SchemaVersion.Current.Replace(".", "-");
         var windowEndFormatted = windowEnd.ToString("yyyyMMdd");
         return $"per_developer_metrics_{version}_dev{developerId}_w{windowDays}d_end{windowEndFormatted}_{timestamp}.json";
@@ -165,7 +164,7 @@ public sealed class MetricsExportService : IMetricsExportService
         {
             var json = await File.ReadAllTextAsync(filePath, cancellationToken);
             using var document = JsonDocument.Parse(json);
-            
+
             if (document.RootElement.TryGetProperty("version", out var versionElement) ||
                 document.RootElement.TryGetProperty("schemaVersion", out versionElement))
             {
@@ -176,7 +175,7 @@ public sealed class MetricsExportService : IMetricsExportService
         {
             // Ignore errors and return current version
         }
-        
+
         return SchemaVersion.Current;
     }
 
@@ -188,13 +187,13 @@ public sealed class MetricsExportService : IMetricsExportService
         return null;
     }
 
-    private static DateTimeOffset? ExtractWindowEnd(string fileName)
+    private static DateTime? ExtractWindowEnd(string fileName)
     {
         var match = System.Text.RegularExpressions.Regex.Match(fileName, @"_end(\d{8})_");
-        if (match.Success && DateTime.TryParseExact(match.Groups[1].Value, "yyyyMMdd", null, 
+        if (match.Success && DateTime.TryParseExact(match.Groups[1].Value, "yyyyMMdd", null,
             System.Globalization.DateTimeStyles.None, out var date))
         {
-            return new DateTimeOffset(date, TimeSpan.Zero);
+            return new DateTime(date.Ticks, DateTimeKind.Utc);
         }
         return null;
     }
@@ -205,7 +204,7 @@ public sealed class MetricsExportService : IMetricsExportService
         {
             Directory.CreateDirectory(_configuration.Directory);
         }
-        
+
         await Task.CompletedTask;
     }
 }

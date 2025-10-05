@@ -3,12 +3,12 @@ using System.Text.Json;
 
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-using GitLabProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
-using GitLabUser = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
 using GitLabCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
+using GitLabCommitStats = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommitStats;
 using GitLabMergeRequest = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequest;
 using GitLabPipeline = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipeline;
-using GitLabCommitStats = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommitStats;
+using GitLabProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
+using GitLabUser = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
@@ -133,6 +133,16 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of merge request notes</returns>
     Task<IReadOnlyList<GitLabMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets contribution events for a user.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="after">Optional date to filter events after this date</param>
+    /// <param name="before">Optional date to filter events before this date</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of user events</returns>
+    Task<IReadOnlyList<GitLabEvent>> GetUserEventsAsync(long userId, DateTimeOffset? after = null, DateTimeOffset? before = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -160,7 +170,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         while (true)
         {
             var url = $"{endpoint}?page={page}&per_page={perPage}";
-            
+
             if (queryParams is not null)
             {
                 foreach (var kvp in queryParams)
@@ -172,7 +182,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             _logger.LogDebug("Making paginated request to: {Url}", url);
 
             var response = await _httpClient.GetAsync(url, cancellationToken);
-            
+
             // Check for rate limiting
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
@@ -181,7 +191,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
                 await Task.Delay(retryAfter, cancellationToken);
                 continue; // Retry the same page
             }
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -196,7 +206,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             var items = JsonSerializer.Deserialize<List<T>>(content, JsonOptions) ?? new List<T>();
 
             _logger.LogTrace("Retrieved {ItemCount} items from page {Page}", items.Count, page);
-            
+
             allItems.AddRange(items);
 
             // Check if we've reached the last page
@@ -206,7 +216,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             }
 
             page++;
-            
+
             // Add a small delay between requests to be respectful of GitLab API
             await Task.Delay(50, cancellationToken);
         }
@@ -227,10 +237,10 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             var limit = limitValues.FirstOrDefault();
             var remaining = remainingValues.FirstOrDefault();
             var reset = resetValues.FirstOrDefault();
-            
+
             _logger.LogDebug("GitLab API Rate Limit: {Remaining}/{Limit} requests remaining, resets at {Reset}",
                 remaining, limit, reset);
-                
+
             // Warn when getting close to rate limit
             if (int.TryParse(remaining, out var remainingInt) && remainingInt < 10)
             {
@@ -429,7 +439,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
 
             // Use GitLab API version endpoint to test connectivity
             var response = await _httpClient.GetAsync("version", cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -453,19 +463,17 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
     {
         try
         {
-            _logger.LogDebug("Fetching all accessible projects via GitLab API");
+            _logger.LogDebug("Fetching ALL projects (including archived) via GitLab API");
 
-            var projectDtos = await GetPaginatedAsync<DTOs.GitLabProject>("projects", cancellationToken, 
+            var projectDtos = await GetPaginatedAsync<DTOs.GitLabProject>("projects", cancellationToken,
                 new Dictionary<string, string>
                 {
-                    {"simple", "true"},
-                    {"membership", "true"}, // Only projects where user is a member
-                    {"archived", "false"} // Exclude archived projects by default
+                    {"simple", "true"}
                 });
 
             var projects = projectDtos.Select(MapToProject).ToList();
 
-            _logger.LogInformation("Successfully fetched {ProjectCount} projects via GitLab API", projects.Count);
+            _logger.LogInformation("Successfully fetched {ProjectCount} projects (including archived) via GitLab API", projects.Count);
             return projects.AsReadOnly();
         }
         catch (Exception ex)
@@ -496,14 +504,14 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch projects for group {GroupId} via GitLab API", groupId);
-            
+
             // If group not found or no access, return empty list instead of throwing
             if (ex is HttpRequestException httpEx && httpEx.Message.Contains("404"))
             {
                 _logger.LogWarning("Group {GroupId} not found or no access", groupId);
                 return new List<GitLabProject>().AsReadOnly();
             }
-            
+
             throw;
         }
     }
@@ -633,18 +641,18 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             _logger.LogDebug("Fetching user {UserId} via GitLab API", userId);
 
             var response = await _httpClient.GetAsync($"users/{userId}", cancellationToken);
-            
+
             // Handle rate limiting
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(60);
                 _logger.LogWarning("GitLab API rate limit hit for user {UserId}. Waiting {RetryAfter} seconds", userId, retryAfter.TotalSeconds);
                 await Task.Delay(retryAfter, cancellationToken);
-                
+
                 // Retry the request
                 response = await _httpClient.GetAsync($"users/{userId}", cancellationToken);
             }
-            
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 _logger.LogWarning("User {UserId} not found", userId);
@@ -652,7 +660,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             }
 
             response.EnsureSuccessStatusCode();
-            
+
             // Log rate limit headers
             LogRateLimitHeaders(response);
 
@@ -691,7 +699,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
                 try
                 {
                     // For each project, get commits by this user's email
-                    var commits = userEmail is not null 
+                    var commits = userEmail is not null
                         ? await GetCommitsByUserEmailAsync(project.Id, userEmail, null, cancellationToken)
                         : new List<GitLabCommit>().AsReadOnly();
 
@@ -841,5 +849,76 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             _logger.LogError(ex, "Failed to get merge request notes for project {ProjectId}, MR {MergeRequestIid}", projectId, mergeRequestIid);
             return new List<GitLabMergeRequestNote>().AsReadOnly();
         }
+    }
+
+    public async Task<IReadOnlyList<GitLabEvent>> GetUserEventsAsync(long userId, DateTimeOffset? after = null, DateTimeOffset? before = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching events for user {UserId}", userId);
+
+            var queryParams = new Dictionary<string, string>
+            {
+                { "action", "pushed" } // Filter to only push events
+            };
+
+            if (after.HasValue)
+            {
+                queryParams.Add("after", after.Value.ToString("yyyy-MM-dd"));
+            }
+
+            if (before.HasValue)
+            {
+                queryParams.Add("before", before.Value.ToString("yyyy-MM-dd"));
+            }
+
+            var eventDtos = await GetPaginatedAsync<DTOs.GitLabEvent>($"users/{userId}/events", cancellationToken, queryParams);
+
+            // Filter to only push events and map to domain model
+            var events = eventDtos.Select(MapToEvent).ToList();
+
+            _logger.LogInformation("Successfully fetched {EventCount} push events for user {UserId}", events.Count, userId);
+            return events.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch events for user {UserId} via GitLab API", userId);
+            throw;
+        }
+    }
+
+    private static GitLabEvent MapToEvent(DTOs.GitLabEvent dto)
+    {
+        return new GitLabEvent
+        {
+            Id = dto.Id,
+            Project = dto.ProjectId.HasValue ? new GitLabEventProject
+            {
+                Id = dto.ProjectId.Value,
+                Name = string.Empty, // Not available in events API
+                Description = string.Empty,
+                WebUrl = string.Empty,
+                PathWithNamespace = string.Empty
+            } : null,
+            ActionName = dto.ActionName,
+            TargetType = dto.TargetType,
+            Author = dto.Author is not null ? new GitLabEventAuthor
+            {
+                Id = dto.Author.Id,
+                Username = dto.Author.Username,
+                Name = dto.Author.Name
+            } : null,
+            CreatedAt = dto.CreatedAt.DateTime,
+            PushData = dto.PushData is not null ? new GitLabPushData
+            {
+                CommitCount = dto.PushData.CommitCount,
+                Action = dto.PushData.Action,
+                RefType = dto.PushData.RefType,
+                CommitFrom = dto.PushData.CommitFrom,
+                CommitTo = dto.PushData.CommitTo,
+                Ref = dto.PushData.Ref,
+                CommitTitle = dto.PushData.CommitTitle
+            } : null
+        };
     }
 }

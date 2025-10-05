@@ -205,6 +205,67 @@ public sealed class MockGitLabHttpClient : IGitLabHttpClient
         return Task.FromResult(new List<GitLabMergeRequestNote>().AsReadOnly() as IReadOnlyList<GitLabMergeRequestNote>);
     }
 
+    /// <summary>
+    /// Gets contribution events for a user.
+    /// </summary>
+    public Task<IReadOnlyList<GitLabEvent>> GetUserEventsAsync(long userId, DateTimeOffset? after = null, DateTimeOffset? before = null, CancellationToken cancellationToken = default)
+    {
+        // Create mock push events for testing
+        var now = DateTime.UtcNow;
+        var events = new List<GitLabEvent>();
+
+        // Generate some mock push events spread across different hours
+        var user = _users.FirstOrDefault(u => u.Id == userId);
+        if (user is not null)
+        {
+            var random = new Random((int)userId);
+            var startDate = after?.DateTime ?? now.AddDays(-30);
+            var endDate = before?.DateTime ?? now;
+
+            // Create 20-50 push events spread across the time period
+            var eventCount = random.Next(20, 51);
+            for (var i = 0; i < eventCount; i++)
+            {
+                var eventDate = startDate.AddMinutes(random.Next(0, (int)(endDate - startDate).TotalMinutes));
+                var project = _projects[random.Next(_projects.Count)];
+
+                events.Add(new GitLabEvent
+                {
+                    Id = i + 1,
+                    ActionName = "pushed",
+                    TargetType = null,
+                    CreatedAt = eventDate,
+                    Project = new GitLabEventProject
+                    {
+                        Id = project.Id,
+                        Name = project.Name,
+                        Description = project.Description,
+                        WebUrl = project.WebUrl,
+                        PathWithNamespace = project.PathWithNamespace
+                    },
+                    Author = new GitLabEventAuthor
+                    {
+                        Id = userId,
+                        Username = user.Username,
+                        Name = user.Name
+                    },
+                    PushData = new GitLabPushData
+                    {
+                        CommitCount = random.Next(1, 6), // 1-5 commits per push
+                        Action = "pushed",
+                        RefType = "branch",
+                        CommitFrom = Guid.NewGuid().ToString()[..8],
+                        CommitTo = Guid.NewGuid().ToString()[..8],
+                        Ref = "main",
+                        CommitTitle = $"Mock commit {i + 1}"
+                    }
+                });
+            }
+        }
+
+        return Task.FromResult(events.AsReadOnly() as IReadOnlyList<GitLabEvent>);
+    }
+
     #region Mock Data Creation
 
     private List<GitLabUser> CreateMockUsers()

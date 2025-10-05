@@ -13,15 +13,15 @@ public sealed class RawMergeRequestNote
     public required long AuthorId { get; init; }
     public required string AuthorName { get; init; }
     public required string Body { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
-    public DateTimeOffset? UpdatedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
     public bool System { get; init; } // System-generated notes (auto comments)
     public bool Resolvable { get; init; } // Can be resolved (code review comments)
     public bool Resolved { get; init; } // Is resolved
     public long? ResolvedById { get; init; }
     public string? ResolvedBy { get; init; }
     public string? NoteableType { get; init; } // "MergeRequest" 
-    public DateTimeOffset IngestedAt { get; init; }
+    public DateTime IngestedAt { get; init; }
 
     // Helper properties
     public bool IsUserComment => !System; // Not a system-generated comment

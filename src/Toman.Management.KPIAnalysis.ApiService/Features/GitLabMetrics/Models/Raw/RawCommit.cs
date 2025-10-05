@@ -9,13 +9,13 @@ public sealed class RawCommit
     public required long AuthorUserId { get; init; }
     public required string AuthorName { get; init; }
     public required string AuthorEmail { get; init; }
-    public DateTimeOffset CommittedAt { get; init; }
+    public DateTime CommittedAt { get; init; }
     public required string Message { get; init; }
     public int Additions { get; init; }
     public int Deletions { get; init; }
     public bool IsSigned { get; init; }
-    public DateTimeOffset IngestedAt { get; init; }
-    
+    public DateTime IngestedAt { get; init; }
+
     // Enhanced fields for commit analysis
     public int FilesChanged { get; init; }
     public int AdditionsExcluded { get; init; } // Lines added excluding filtered files

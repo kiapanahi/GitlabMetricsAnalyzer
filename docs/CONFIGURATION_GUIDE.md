@@ -114,12 +114,7 @@ The GitLab Metrics Analyzer uses a hierarchical configuration system based on .N
   "GitLab": {
     "BaseUrl": "https://your-gitlab-instance.com/",
     "Token": "glpat-xxxxxxxxxxxxxxxxxxxx",
-    "ApiVersion": "v4",
-    "TimeoutSeconds": 30,
-    "RetryCount": 3,
-    "RetryDelaySeconds": 5,
-    "MaxPageSize": 100,
-    "RateLimitPerSecond": 10
+    "UseMockClient": false
   }
 }
 ```
@@ -130,12 +125,33 @@ The GitLab Metrics Analyzer uses a hierarchical configuration system based on .N
 |---------|-------------|----------|---------|---------|
 | `BaseUrl` | GitLab instance URL | ✅ | - | `https://gitlab.company.com/` |
 | `Token` | Personal Access Token | ✅ | - | `glpat-xxxxxxxxxxxxxxxxxxxx` |
-| `ApiVersion` | GitLab API version | ❌ | `v4` | `v4` |
-| `TimeoutSeconds` | Request timeout | ❌ | `30` | `60` |
-| `RetryCount` | Retry attempts | ❌ | `3` | `5` |
-| `RetryDelaySeconds` | Delay between retries | ❌ | `5` | `10` |
-| `MaxPageSize` | API pagination size | ❌ | `100` | `50` |
-| `RateLimitPerSecond` | Client-side rate limiting | ❌ | `10` | `5` |
+| `UseMockClient` | Use mock client for testing | ❌ | `false` | `true` |
+
+#### Mock Client Configuration
+
+The `UseMockClient` setting allows you to switch between the real GitLab API client and a mock implementation for testing and development:
+
+- **`false` (default)**: Uses the actual GitLab API client. This fetches **ALL projects** from your GitLab instance, including archived projects, regardless of whether your token is a member of them. This requires appropriate GitLab admin permissions.
+  
+- **`true`**: Uses a mock GitLab HTTP client that returns predefined test data. Useful for:
+  - Development without a GitLab instance
+  - Integration testing
+  - Demonstrations and training
+  - Situations where you don't have access to actual GitLab data
+
+**Example - Enable mock client for development:**
+
+```json
+{
+  "GitLab": {
+    "BaseUrl": "https://localhost/",
+    "Token": "mock-token",
+    "UseMockClient": true
+  }
+}
+```
+
+**Note:** When using the actual GitLab client (`UseMockClient: false`), the token must have sufficient permissions to access all projects in the instance. The client will fetch all projects including archived ones, which is useful for comprehensive metrics analysis but may take longer for large GitLab instances.
 
 ### Creating GitLab Personal Access Token
 

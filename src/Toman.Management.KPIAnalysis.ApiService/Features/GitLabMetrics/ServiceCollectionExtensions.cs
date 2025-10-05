@@ -1,10 +1,6 @@
 using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
-
-using Polly;
-using Polly.CircuitBreaker;
 
 using Quartz;
 
@@ -23,7 +19,11 @@ internal static class ServiceCollectionExtensions
     internal static IHostApplicationBuilder AddGitLabMetricsServices(this IHostApplicationBuilder builder)
     {
         builder.Services.AddOpenTelemetry()
-        .WithTracing(tracing => tracing.AddSource(Diagnostics.ActivitySource.Name));
+        .WithTracing(tracing => tracing.AddSource(Diagnostics.ActivitySource.Name))
+        .WithMetrics(metrics => metrics.AddMeter("Toman.Management.KPIAnalysis.GitLabMetrics"));
+
+        // Add GitLab health check
+        builder.Services.AddHealthChecks().AddGitLabHealthCheck();
 
         // Add configurations
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
@@ -38,30 +38,38 @@ internal static class ServiceCollectionExtensions
             options.EnableDetailedErrors();
         });
 
+        // Add DbContextFactory for parallel operations
+        builder.Services.AddDbContextFactory<GitLabMetricsDbContext>();
+
         builder.Services.AddHostedService<MigratorBackgroundService>();
 
         // Add services
         builder.Services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();
         builder.Services.AddScoped<IGitLabService, GitLabService>();
         builder.Services.AddScoped<IMetricsCalculationService, MetricsCalculationService>();
-        builder.Services.AddScoped<IUserMetricsService, UserMetricsService>();
-        builder.Services.AddScoped<IUserMetricsCollectionService, UserMetricsCollectionService>();
         builder.Services.AddScoped<IUserSyncService, UserSyncService>();
         builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
         builder.Services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
         builder.Services.AddScoped<IPerDeveloperMetricsComputationService, PerDeveloperMetricsComputationService>();
-        
+
         // Add new metrics persistence and export services
         builder.Services.AddScoped<IMetricsAggregatesPersistenceService, MetricsAggregatesPersistenceService>();
         builder.Services.AddScoped<IMetricCatalogService, MetricCatalogService>();
         builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
-        
+
+        // Add data reset service
+        builder.Services.AddScoped<IDataResetService, DataResetService>();
+
         // Add observability and data quality services
         builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
         builder.Services.AddScoped<IDataQualityService, DataQualityService>();
 
-        // Add HTTP client for GitLab API calls (mock in development, real in production)
-        if (builder.Environment.IsDevelopment())
+        // Add commit time analysis service
+        builder.Services.AddScoped<ICommitTimeAnalysisService, CommitTimeAnalysisService>();
+
+        // Add HTTP client for GitLab API calls (configurable via GitLab:UseMockClient)
+        var gitLabConfig = builder.Configuration.GetSection(GitLabConfiguration.SectionName).Get<GitLabConfiguration>();
+        if (gitLabConfig?.UseMockClient == true)
         {
             builder.Services.AddSingleton<IGitLabHttpClient, MockGitLabHttpClient>();
         }
@@ -74,10 +82,10 @@ internal static class ServiceCollectionExtensions
                 var configuration = options.Value;
                 client.BaseAddress = new Uri(configuration.BaseUrl.TrimEnd('/') + "/api/v4/");
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration.Token);
-                
+
                 // Add GitLab-specific headers
                 client.DefaultRequestHeaders.Add("User-Agent", "GitLabMetricsAnalyzer/1.0");
-                
+
                 // Set reasonable timeout for GitLab API calls
                 client.Timeout = TimeSpan.FromMinutes(2);
             })
@@ -88,12 +96,12 @@ internal static class ServiceCollectionExtensions
                 options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
                 options.Retry.UseJitter = true;
                 options.Retry.Delay = TimeSpan.FromSeconds(1);
-                
+
                 // Configure circuit breaker for GitLab API  
                 options.CircuitBreaker.FailureRatio = 0.3; // Break if 30% of requests fail
                 options.CircuitBreaker.MinimumThroughput = 10; // At least 10 requests needed
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
-                
+
                 // Configure total request timeout
                 options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
             });
@@ -107,14 +115,6 @@ internal static class ServiceCollectionExtensions
             {
                 q.UseSimpleTypeLoader();
                 q.UseInMemoryStore();
-
-                // Incremental collection job (hourly at :15)
-                var incrementalJobKey = new JobKey("IncrementalCollection");
-                q.AddJob<IncrementalCollectionJob>(opts => opts.WithIdentity(incrementalJobKey));
-                q.AddTrigger(opts => opts
-                    .ForJob(incrementalJobKey)
-                    .WithIdentity("IncrementalCollection-trigger")
-                    .WithCronSchedule("0 15 * * * ?")); // Every hour at :15
 
                 // Nightly processing job (daily at 02:00)
                 var nightlyJobKey = new JobKey("NightlyProcessing");

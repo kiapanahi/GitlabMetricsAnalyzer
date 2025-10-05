@@ -15,11 +15,6 @@ builder.Services.AddProblemDetails();
 
 builder.AddGitLabMetricsServices();
 
-// Add GitLab health check
-builder.Services.AddHealthChecks()
-    .AddGitLabHealthCheck();
-
-builder.Services.Configure<ProcessingConfiguration>(builder.Configuration.GetSection(ProcessingConfiguration.SectionName));
 builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
 
 var app = builder.Build();
@@ -37,11 +32,7 @@ if (app.Environment.IsDevelopment())
 // Map endpoints
 app.MapDefaultEndpoints();
 
-// Map v1 API endpoints first
-app.MapApiV1Endpoints();
-
-// Map legacy endpoints (to be removed later)
-app.MapGitlabCollectorEndpoints();
+app.MapGitlabMetricsEndpoints();
 
 app.Run();
 

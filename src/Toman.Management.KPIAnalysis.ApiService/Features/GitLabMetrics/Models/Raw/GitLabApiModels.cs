@@ -577,3 +577,137 @@ public class GitLabMergeRequestNote
     /// </summary>
     public bool NoteOnCommit { get; set; }
 }
+
+/// <summary>
+/// Represents a GitLab user event (contribution event).
+/// </summary>
+public class GitLabEvent
+{
+    /// <summary>
+    /// The event ID.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The project associated with the event.
+    /// </summary>
+    public GitLabEventProject? Project { get; set; }
+
+    /// <summary>
+    /// The action name (e.g., "pushed", "opened", "closed", etc.).
+    /// </summary>
+    public string? ActionName { get; set; }
+
+    /// <summary>
+    /// The target type (e.g., "MergeRequest", "Issue", etc.).
+    /// </summary>
+    public string? TargetType { get; set; }
+
+    /// <summary>
+    /// The author (user who performed the action).
+    /// </summary>
+    public GitLabEventAuthor? Author { get; set; }
+
+    /// <summary>
+    /// When the event was created.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Push data (only present for push events).
+    /// </summary>
+    public GitLabPushData? PushData { get; set; }
+}
+
+/// <summary>
+/// Represents push data in a GitLab event.
+/// </summary>
+public class GitLabPushData
+{
+    /// <summary>
+    /// Number of commits in the push.
+    /// </summary>
+    public int CommitCount { get; set; }
+
+    /// <summary>
+    /// The action (e.g., "pushed").
+    /// </summary>
+    public string? Action { get; set; }
+
+    /// <summary>
+    /// The reference type (e.g., "branch").
+    /// </summary>
+    public string? RefType { get; set; }
+
+    /// <summary>
+    /// The commit SHA before the push.
+    /// </summary>
+    public string? CommitFrom { get; set; }
+
+    /// <summary>
+    /// The commit SHA after the push.
+    /// </summary>
+    public string? CommitTo { get; set; }
+
+    /// <summary>
+    /// The reference (branch name).
+    /// </summary>
+    public string? Ref { get; set; }
+
+    /// <summary>
+    /// The commit title.
+    /// </summary>
+    public string? CommitTitle { get; set; }
+}
+
+/// <summary>
+/// Represents a simplified project in an event.
+/// </summary>
+public class GitLabEventProject
+{
+    /// <summary>
+    /// The project ID.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The project name.
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// The project description.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// The project web URL.
+    /// </summary>
+    public string? WebUrl { get; set; }
+
+    /// <summary>
+    /// The project path with namespace.
+    /// </summary>
+    public string? PathWithNamespace { get; set; }
+}
+
+/// <summary>
+/// Represents a simplified author in an event.
+/// </summary>
+public class GitLabEventAuthor
+{
+    /// <summary>
+    /// The author ID.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The author username.
+    /// </summary>
+    public string? Username { get; set; }
+
+    /// <summary>
+    /// The author name.
+    /// </summary>
+    public string? Name { get; set; }
+}
