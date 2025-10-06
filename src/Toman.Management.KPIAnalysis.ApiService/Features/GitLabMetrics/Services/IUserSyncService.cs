@@ -14,7 +14,6 @@ public interface IUserSyncService
 
     /// <summary>
     /// Ensures that users referenced in raw data exist in DimUsers table
-    /// Extracts unique user IDs from raw data and fetches missing user details from GitLab
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of users synchronized</returns>
