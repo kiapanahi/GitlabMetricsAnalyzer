@@ -7,253 +7,153 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Service
 /// </summary>
 public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
 {
-    private readonly IGitLabHttpClient _gitLabHttpClient;
+    private readonly IGitLabService _gitLabService;
     private readonly ILogger<PerDeveloperMetricsService> _logger;
 
     public PerDeveloperMetricsService(
-        IGitLabHttpClient gitLabHttpClient,
+        IGitLabService gitLabService,
         ILogger<PerDeveloperMetricsService> logger)
     {
-        _gitLabHttpClient = gitLabHttpClient;
+        _gitLabService = gitLabService;
         _logger = logger;
     }
 
-    public async Task<MrCycleTimeResult> CalculateMrCycleTimeAsync(
+    public async Task<PipelineSuccessRateResult> GetPipelineSuccessRateAsync(
         long userId,
-        int windowDays = 30,
+        int lookbackDays = 30,
         CancellationToken cancellationToken = default)
     {
-        if (windowDays <= 0)
+        if (lookbackDays <= 0)
         {
-            throw new ArgumentException("Window days must be greater than 0", nameof(windowDays));
+            throw new ArgumentException("Lookback days must be greater than 0", nameof(lookbackDays));
         }
 
-        _logger.LogInformation("Calculating MR cycle time for user {UserId} over {WindowDays} days", userId, windowDays);
+        _logger.LogInformation("Calculating pipeline success rate for user {UserId} over {LookbackDays} days", userId, lookbackDays);
 
         // Get user details
-        var user = await _gitLabHttpClient.GetUserByIdAsync(userId, cancellationToken);
+        var user = await _gitLabService.GetUserByIdAsync(userId, cancellationToken);
         if (user is null)
         {
             throw new InvalidOperationException($"User with ID {userId} not found");
         }
 
-        var windowEnd = DateTime.UtcNow;
-        var windowStart = windowEnd.AddDays(-windowDays);
+        var endDate = DateTime.UtcNow;
+        var startDate = endDate.AddDays(-lookbackDays);
 
-        _logger.LogDebug("Fetching merge requests for user {UserId} from {WindowStart} to {WindowEnd}", 
-            userId, windowStart, windowEnd);
+        _logger.LogDebug("Fetching pipeline data for user {UserId} from {StartDate} to {EndDate}", userId, startDate, endDate);
 
-        // Get projects the user has contributed to
-        var contributedProjects = await _gitLabHttpClient.GetUserContributedProjectsAsync(userId, cancellationToken);
+        // Get projects where user has contributed
+        var projects = await _gitLabService.GetUserContributedProjectsAsync(userId, cancellationToken);
 
-        if (!contributedProjects.Any())
+        if (!projects.Any())
         {
-            _logger.LogWarning("No contributed projects found for user {UserId}", userId);
-            return CreateEmptyResult(user, windowDays, windowStart, windowEnd);
+            _logger.LogWarning("No projects found for user {UserId}", userId);
+            return CreateEmptyResult(user, lookbackDays, startDate, endDate);
         }
 
-        _logger.LogInformation("Found {ProjectCount} contributed projects for user {UserId}", 
-            contributedProjects.Count, userId);
+        _logger.LogInformation("Found {ProjectCount} projects for user {UserId}", projects.Count, userId);
 
-        // Fetch MRs from all contributed projects in parallel
-        var fetchMrTasks = contributedProjects.Select(async project =>
+        // Fetch pipelines from all projects
+        var allPipelines = new List<Models.Raw.RawPipeline>();
+        var projectSummaries = new List<ProjectPipelineSummary>();
+
+        foreach (var project in projects)
         {
             try
             {
-                var mergeRequests = await _gitLabHttpClient.GetMergeRequestsAsync(
-                    project.Id,
-                    new DateTimeOffset(windowStart),
-                    cancellationToken);
+                _logger.LogDebug("Fetching pipelines for project {ProjectId} ({ProjectName})", project.Id, project.Name);
 
-                // Filter MRs by author and within time window
-                var userMergeRequests = mergeRequests
-                    .Where(mr => mr.Author?.Id == userId)
-                    .Where(mr => mr.MergedAt.HasValue && mr.MergedAt.Value >= windowStart && mr.MergedAt.Value <= windowEnd)
+                var pipelines = await _gitLabService.GetPipelinesAsync(project.Id, startDate, cancellationToken);
+
+                // Filter pipelines by author (user who triggered the pipeline)
+                var userPipelines = pipelines
+                    .Where(p => p.AuthorUserId == userId && p.CreatedAt >= startDate && p.CreatedAt < endDate)
                     .ToList();
 
-                if (userMergeRequests.Any())
+                if (userPipelines.Any())
                 {
-                    _logger.LogDebug("Found {MrCount} merged MRs for user {UserId} in project {ProjectId}", 
-                        userMergeRequests.Count, userId, project.Id);
+                    allPipelines.AddRange(userPipelines);
 
-                    return (
-                        MergeRequests: userMergeRequests,
-                        Summary: new ProjectMrSummary
-                        {
-                            ProjectId = project.Id,
-                            ProjectName = project.Name ?? "Unknown",
-                            MergedMrCount = userMergeRequests.Count
-                        }
-                    );
-                }
+                    var successful = userPipelines.Count(p => p.Status.Equals("success", StringComparison.OrdinalIgnoreCase));
+                    var failed = userPipelines.Count(p => p.Status.Equals("failed", StringComparison.OrdinalIgnoreCase));
 
-                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to fetch merge requests for project {ProjectId}", project.Id);
-                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
-            }
-        });
-
-        var projectResults = await Task.WhenAll(fetchMrTasks);
-
-        var allMergeRequests = projectResults
-            .SelectMany(r => r.MergeRequests)
-            .ToList();
-
-        var projectSummaries = projectResults
-            .Where(r => r.Summary is not null)
-            .Select(r => r.Summary!)
-            .ToList();
-
-        if (!allMergeRequests.Any())
-        {
-            _logger.LogWarning("No merged MRs found for user {UserId} in the specified time window", userId);
-            return CreateEmptyResult(user, windowDays, windowStart, windowEnd);
-        }
-
-        _logger.LogInformation("Analyzing {MrCount} merged MRs for user {UserId}", 
-            allMergeRequests.Count, userId);
-
-        // Calculate MR cycle time (merged_at - first_commit_at) in parallel
-        // Per PRD: cycle_time_median = median(merged_at - first_commit_at)
-        var cycleTimeCalculationTasks = allMergeRequests.Select(async mr =>
-        {
-            if (!mr.MergedAt.HasValue)
-            {
-                return (CycleTime: (double?)null, Excluded: true, Reason: "NoMergeDate");
-            }
-
-            try
-            {
-                // Fetch commits for this MR to get the first commit timestamp
-                var mrCommits = await _gitLabHttpClient.GetMergeRequestCommitsAsync(
-                    mr.ProjectId, 
-                    mr.Iid, 
-                    cancellationToken);
-
-                if (mrCommits.Any())
-                {
-                    // Get the first (oldest) commit - commits are typically returned newest first
-                    var firstCommit = mrCommits.OrderBy(c => c.CommittedDate).FirstOrDefault();
-                    
-                    if (firstCommit?.CommittedDate is not null)
+                    projectSummaries.Add(new ProjectPipelineSummary
                     {
-                        var cycleTimeHours = (mr.MergedAt.Value - firstCommit.CommittedDate.Value).TotalHours;
-                        
-                        // Only include positive cycle times
-                        if (cycleTimeHours > 0)
-                        {
-                            return (CycleTime: (double?)cycleTimeHours, Excluded: false, Reason: string.Empty);
-                        }
-                        else
-                        {
-                            _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} with negative cycle time: {CycleTime}h", 
-                                mr.Iid, mr.ProjectId, cycleTimeHours);
-                            return (CycleTime: (double?)null, Excluded: true, Reason: "NegativeCycleTime");
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} due to missing commit timestamp", 
-                            mr.Iid, mr.ProjectId);
-                        return (CycleTime: (double?)null, Excluded: true, Reason: "MissingCommitTimestamp");
-                    }
-                }
-                else
-                {
-                    _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} with no commits", 
-                        mr.Iid, mr.ProjectId);
-                    return (CycleTime: (double?)null, Excluded: true, Reason: "NoCommits");
+                        ProjectId = project.Id,
+                        ProjectName = project.Name ?? $"Project {project.Id}",
+                        TotalPipelines = userPipelines.Count,
+                        SuccessfulPipelines = successful,
+                        FailedPipelines = failed
+                    });
+
+                    _logger.LogDebug("Found {PipelineCount} pipelines for user {UserId} in project {ProjectId}",
+                        userPipelines.Count, userId, project.Id);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to fetch commits for MR {MrIid} in project {ProjectId}", 
-                    mr.Iid, mr.ProjectId);
-                return (CycleTime: (double?)null, Excluded: true, Reason: "Exception");
+                _logger.LogWarning(ex, "Failed to fetch pipelines for project {ProjectId}", project.Id);
+                // Continue with other projects
             }
-        });
-
-        var cycleTimeResults = await Task.WhenAll(cycleTimeCalculationTasks);
-
-        var cycleTimes = cycleTimeResults
-            .Where(r => r.CycleTime.HasValue)
-            .Select(r => r.CycleTime!.Value)
-            .ToList();
-
-        var excludedCount = cycleTimeResults.Count(r => r.Excluded);
-
-        // Calculate median (P50)
-        decimal? mrCycleTimeP50H = null;
-        if (cycleTimes.Any())
-        {
-            var sortedCycleTimes = cycleTimes.OrderBy(x => x).ToList();
-            var median = ComputeMedian(sortedCycleTimes);
-            mrCycleTimeP50H = (decimal)median;
-
-            _logger.LogInformation("Calculated MR cycle time P50 for user {UserId}: {CycleTimeP50}h from {Count} MRs", 
-                userId, mrCycleTimeP50H, cycleTimes.Count);
-        }
-        else
-        {
-            _logger.LogWarning("No valid cycle times calculated for user {UserId}", userId);
         }
 
-        return new MrCycleTimeResult
+        if (!allPipelines.Any())
+        {
+            _logger.LogInformation("No pipelines found for user {UserId} in the specified time period", userId);
+            return CreateEmptyResult(user, lookbackDays, startDate, endDate);
+        }
+
+        // Calculate metrics
+        var totalPipelines = allPipelines.Count;
+        var successfulPipelines = allPipelines.Count(p => p.Status.Equals("success", StringComparison.OrdinalIgnoreCase));
+        var failedPipelines = allPipelines.Count(p => p.Status.Equals("failed", StringComparison.OrdinalIgnoreCase));
+        var otherStatusPipelines = totalPipelines - successfulPipelines - failedPipelines;
+
+        var successRate = totalPipelines > 0
+            ? (decimal)successfulPipelines / totalPipelines
+            : (decimal?)null;
+
+        _logger.LogInformation(
+            "Pipeline success rate for user {UserId}: {SuccessRate:P2} ({Successful}/{Total} pipelines)",
+            userId, successRate, successfulPipelines, totalPipelines);
+
+        return new PipelineSuccessRateResult
         {
             UserId = userId,
             Username = user.Username ?? string.Empty,
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
-            MrCycleTimeP50H = mrCycleTimeP50H,
-            MergedMrCount = cycleTimes.Count,
-            ExcludedMrCount = excludedCount,
+            Email = user.Email ?? string.Empty,
+            LookbackDays = lookbackDays,
+            AnalysisStartDate = startDate,
+            AnalysisEndDate = endDate,
+            TotalPipelines = totalPipelines,
+            SuccessfulPipelines = successfulPipelines,
+            FailedPipelines = failedPipelines,
+            OtherStatusPipelines = otherStatusPipelines,
+            PipelineSuccessRate = successRate,
             Projects = projectSummaries
         };
     }
 
-    private static double ComputeMedian(List<double> sortedValues)
-    {
-        var count = sortedValues.Count;
-        if (count == 0)
-        {
-            return 0;
-        }
-
-        if (count % 2 == 1)
-        {
-            // Odd number of elements - return middle element
-            return sortedValues[count / 2];
-        }
-        else
-        {
-            // Even number of elements - return average of two middle elements
-            var mid1 = sortedValues[count / 2 - 1];
-            var mid2 = sortedValues[count / 2];
-            return (mid1 + mid2) / 2.0;
-        }
-    }
-
-    private static MrCycleTimeResult CreateEmptyResult(
+    private static PipelineSuccessRateResult CreateEmptyResult(
         Models.Raw.GitLabUser user,
-        int windowDays,
-        DateTime windowStart,
-        DateTime windowEnd)
+        int lookbackDays,
+        DateTime startDate,
+        DateTime endDate)
     {
-        return new MrCycleTimeResult
+        return new PipelineSuccessRateResult
         {
             UserId = user.Id,
             Username = user.Username ?? string.Empty,
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
-            MrCycleTimeP50H = null,
-            MergedMrCount = 0,
-            ExcludedMrCount = 0,
-            Projects = new List<ProjectMrSummary>()
+            Email = user.Email ?? string.Empty,
+            LookbackDays = lookbackDays,
+            AnalysisStartDate = startDate,
+            AnalysisEndDate = endDate,
+            TotalPipelines = 0,
+            SuccessfulPipelines = 0,
+            FailedPipelines = 0,
+            OtherStatusPipelines = 0,
+            PipelineSuccessRate = null,
+            Projects = new List<ProjectPipelineSummary>()
         };
     }
 }

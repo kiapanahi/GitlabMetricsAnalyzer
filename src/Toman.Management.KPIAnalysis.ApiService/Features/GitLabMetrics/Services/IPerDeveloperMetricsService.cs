@@ -6,22 +6,22 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Service
 public interface IPerDeveloperMetricsService
 {
     /// <summary>
-    /// Calculates MR cycle time (P50/median) for a developer across all projects
+    /// Calculates pipeline success rate for a specific developer
     /// </summary>
     /// <param name="userId">The GitLab user ID</param>
-    /// <param name="windowDays">Number of days to look back (default: 30)</param>
+    /// <param name="lookbackDays">Number of days to look back (default: 30)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>MR cycle time analysis result</returns>
-    Task<MrCycleTimeResult> CalculateMrCycleTimeAsync(
+    /// <returns>Pipeline success rate metric result</returns>
+    Task<PipelineSuccessRateResult> GetPipelineSuccessRateAsync(
         long userId,
-        int windowDays = 30,
+        int lookbackDays = 30,
         CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Result of MR cycle time calculation
+/// Result of pipeline success rate calculation
 /// </summary>
-public sealed class MrCycleTimeResult
+public sealed class PipelineSuccessRateResult
 {
     /// <summary>
     /// The GitLab user ID
@@ -34,47 +34,64 @@ public sealed class MrCycleTimeResult
     public required string Username { get; init; }
 
     /// <summary>
+    /// The email address
+    /// </summary>
+    public required string Email { get; init; }
+
+    /// <summary>
     /// Number of days analyzed
     /// </summary>
-    public required int WindowDays { get; init; }
+    public required int LookbackDays { get; init; }
 
     /// <summary>
     /// Start date of the analysis period (UTC)
     /// </summary>
-    public required DateTime WindowStart { get; init; }
+    public required DateTime AnalysisStartDate { get; init; }
 
     /// <summary>
     /// End date of the analysis period (UTC)
     /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public required DateTime AnalysisEndDate { get; init; }
 
     /// <summary>
-    /// Median MR cycle time in hours (P50)
+    /// Total number of pipelines triggered by the developer
     /// </summary>
-    public decimal? MrCycleTimeP50H { get; init; }
+    public required int TotalPipelines { get; init; }
 
     /// <summary>
-    /// Total number of merged MRs analyzed
+    /// Number of successful pipelines
     /// </summary>
-    public required int MergedMrCount { get; init; }
+    public required int SuccessfulPipelines { get; init; }
 
     /// <summary>
-    /// Number of MRs excluded due to missing first_commit_at timestamp
+    /// Number of failed pipelines
     /// </summary>
-    public required int ExcludedMrCount { get; init; }
+    public required int FailedPipelines { get; init; }
+
+    /// <summary>
+    /// Number of pipelines with other statuses (running, pending, canceled, etc.)
+    /// </summary>
+    public required int OtherStatusPipelines { get; init; }
+
+    /// <summary>
+    /// Pipeline success rate as a ratio (0.0-1.0)
+    /// </summary>
+    public decimal? PipelineSuccessRate { get; init; }
 
     /// <summary>
     /// Projects included in the analysis
     /// </summary>
-    public required List<ProjectMrSummary> Projects { get; init; }
+    public required List<ProjectPipelineSummary> Projects { get; init; }
 }
 
 /// <summary>
-/// Summary of MRs per project
+/// Summary of pipelines per project
 /// </summary>
-public sealed class ProjectMrSummary
+public sealed class ProjectPipelineSummary
 {
     public required long ProjectId { get; init; }
     public required string ProjectName { get; init; }
-    public required int MergedMrCount { get; init; }
+    public required int TotalPipelines { get; init; }
+    public required int SuccessfulPipelines { get; init; }
+    public required int FailedPipelines { get; init; }
 }
