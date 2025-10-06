@@ -82,6 +82,53 @@ public sealed class MockGitLabHttpClient : IGitLabHttpClient
     }
 
     /// <summary>
+    /// Gets commits for a specific merge request.
+    /// </summary>
+    public Task<IReadOnlyList<GitLabCommit>> GetMergeRequestCommitsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        // Mock implementation - return some commits for the MR's source branch
+        var mr = _mergeRequests.FirstOrDefault(m => m.ProjectId == projectId && m.Iid == mergeRequestIid);
+        if (mr is null)
+        {
+            return Task.FromResult(Array.Empty<GitLabCommit>() as IReadOnlyList<GitLabCommit>);
+        }
+
+        // Return 1-5 commits for this MR, simulating commits in the MR
+        var random = new Random((int)(projectId + mergeRequestIid));
+        var commitCount = random.Next(1, 6);
+        var mrCommits = new List<GitLabCommit>();
+
+        for (int i = 0; i < commitCount; i++)
+        {
+            var commitDate = mr.CreatedAt?.AddHours(-random.Next(1, 24 * 7)); // Commits before MR creation
+            mrCommits.Add(new GitLabCommit
+            {
+                Id = $"commit_{projectId}_{mergeRequestIid}_{i}",
+                ShortId = $"abc{i}{mergeRequestIid}",
+                Title = $"Commit {i + 1} for MR {mergeRequestIid}",
+                Message = $"Work on feature\n\n- Implementation details",
+                AuthorName = mr.Author?.Name ?? "Developer",
+                AuthorEmail = mr.Author?.Email ?? "dev@example.com",
+                CommitterName = mr.Author?.Name ?? "Developer",
+                CommitterEmail = mr.Author?.Email ?? "dev@example.com",
+                AuthoredDate = commitDate,
+                CommittedDate = commitDate,
+                Stats = new GitLabCommitStats
+                {
+                    Additions = random.Next(10, 100),
+                    Deletions = random.Next(0, 50),
+                    Total = random.Next(10, 150)
+                },
+                Status = "success",
+                ProjectId = projectId
+            });
+        }
+
+        // Sort by date to ensure first commit is the oldest
+        return Task.FromResult(mrCommits.OrderBy(c => c.CommittedDate).ToList().AsReadOnly() as IReadOnlyList<GitLabCommit>);
+    }
+
+    /// <summary>
     /// Gets pipelines for a specific project.
     /// </summary>
     public Task<IReadOnlyList<GitLabPipeline>> GetPipelinesAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default)

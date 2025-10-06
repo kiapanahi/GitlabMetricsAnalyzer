@@ -58,6 +58,15 @@ public interface IGitLabHttpClient
     Task<IReadOnlyList<GitLabMergeRequest>> GetMergeRequestsAsync(long projectId, DateTimeOffset? updatedAfter = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets commits for a specific merge request.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="mergeRequestIid">The merge request IID (internal ID)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of commits in the merge request</returns>
+    Task<IReadOnlyList<GitLabCommit>> GetMergeRequestCommitsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets pipelines for a specific project.
     /// </summary>
     /// <param name="projectId">The project ID</param>
@@ -575,6 +584,27 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         {
             _logger.LogError(ex, "Failed to fetch merge requests for project {ProjectId} via GitLab API", projectId);
             throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<GitLabCommit>> GetMergeRequestCommitsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API", mergeRequestIid, projectId);
+
+            var commitDtos = await GetPaginatedAsync<DTOs.GitLabCommit>($"projects/{projectId}/merge_requests/{mergeRequestIid}/commits", cancellationToken);
+
+            var commits = commitDtos.Select(dto => MapToCommit(dto, projectId)).ToList();
+
+            _logger.LogDebug("Successfully fetched {CommitCount} commits for merge request {MergeRequestIid} in project {ProjectId}", commits.Count, mergeRequestIid, projectId);
+            return commits.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API", mergeRequestIid, projectId);
+            // Return empty list instead of throwing to handle MRs without accessible commits gracefully
+            return Array.Empty<GitLabCommit>();
         }
     }
 

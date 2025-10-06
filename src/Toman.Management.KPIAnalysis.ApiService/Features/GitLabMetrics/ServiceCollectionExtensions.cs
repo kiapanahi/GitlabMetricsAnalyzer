@@ -41,6 +41,7 @@ internal static class ServiceCollectionExtensions
         // Add services
         // We'll keep CommitTimeAnalysis and shared infra always registered.
         builder.Services.AddScoped<ICommitTimeAnalysisService, CommitTimeAnalysisService>();
+        builder.Services.AddScoped<IPerDeveloperMetricsService, PerDeveloperMetricsService>();
 
         // Add HTTP client for GitLab API calls (configurable via GitLab:UseMockClient)
         var gitLabConfig = builder.Configuration.GetSection(GitLabConfiguration.SectionName).Get<GitLabConfiguration>();
