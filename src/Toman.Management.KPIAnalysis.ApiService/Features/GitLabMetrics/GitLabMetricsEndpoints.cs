@@ -4,7 +4,8 @@ public static class GitLabMetricsEndpoints
 {
     public static WebApplication MapGitlabMetricsEndpoints(this WebApplication app)
     {
-        app.MapUserMetricsEndpoints();
+        app.MapCommitTimeAnalysisEndpoints();
+        app.MapMrThroughputEndpoints();
 
         return app;
     }

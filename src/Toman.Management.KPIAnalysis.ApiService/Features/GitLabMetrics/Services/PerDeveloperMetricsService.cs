@@ -3,7 +3,7 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastruct
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
-/// Service implementation for calculating per-developer metrics from live GitLab data
+/// Service implementation for computing per-developer metrics from live GitLab data
 /// </summary>
 public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
 {
@@ -18,9 +18,9 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
         _logger = logger;
     }
 
-    public async Task<MrCycleTimeResult> CalculateMrCycleTimeAsync(
-        long userId,
-        int windowDays = 30,
+    public async Task<MrThroughputResult> CalculateMrThroughputAsync(
+        long developerId,
+        int windowDays = 7,
         CancellationToken cancellationToken = default)
     {
         if (windowDays <= 0)
@@ -28,231 +28,118 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             throw new ArgumentException("Window days must be greater than 0", nameof(windowDays));
         }
 
-        _logger.LogInformation("Calculating MR cycle time for user {UserId} over {WindowDays} days", userId, windowDays);
+        _logger.LogInformation("Calculating MR throughput for developer {DeveloperId} over {WindowDays} days", developerId, windowDays);
 
         // Get user details
-        var user = await _gitLabHttpClient.GetUserByIdAsync(userId, cancellationToken);
+        var user = await _gitLabHttpClient.GetUserByIdAsync(developerId, cancellationToken);
         if (user is null)
         {
-            throw new InvalidOperationException($"User with ID {userId} not found");
+            throw new InvalidOperationException($"User with ID {developerId} not found");
         }
 
-        var windowEnd = DateTime.UtcNow;
-        var windowStart = windowEnd.AddDays(-windowDays);
+        var endDate = DateTime.UtcNow;
+        var startDate = endDate.AddDays(-windowDays);
 
-        _logger.LogDebug("Fetching merge requests for user {UserId} from {WindowStart} to {WindowEnd}", 
-            userId, windowStart, windowEnd);
+        _logger.LogDebug("Fetching merge requests for developer {DeveloperId} from {StartDate} to {EndDate}", 
+            developerId, startDate, endDate);
 
         // Get projects the user has contributed to
-        var contributedProjects = await _gitLabHttpClient.GetUserContributedProjectsAsync(userId, cancellationToken);
+        var contributedProjects = await _gitLabHttpClient.GetUserContributedProjectsAsync(developerId, cancellationToken);
 
         if (!contributedProjects.Any())
         {
-            _logger.LogWarning("No contributed projects found for user {UserId}", userId);
-            return CreateEmptyResult(user, windowDays, windowStart, windowEnd);
+            _logger.LogWarning("No contributed projects found for developer {DeveloperId}", developerId);
+            return CreateEmptyResult(user, windowDays, startDate, endDate);
         }
 
-        _logger.LogInformation("Found {ProjectCount} contributed projects for user {UserId}", 
-            contributedProjects.Count, userId);
+        _logger.LogInformation("Found {ProjectCount} contributed projects for developer {DeveloperId}", 
+            contributedProjects.Count, developerId);
 
-        // Fetch MRs from all contributed projects in parallel
-        var fetchMrTasks = contributedProjects.Select(async project =>
+        // Fetch merge requests from all contributed projects
+        var projectMrSummaries = new List<ProjectMrSummary>();
+        var totalMergedMrs = 0;
+
+        foreach (var project in contributedProjects)
         {
             try
             {
                 var mergeRequests = await _gitLabHttpClient.GetMergeRequestsAsync(
                     project.Id,
-                    new DateTimeOffset(windowStart),
+                    new DateTimeOffset(startDate),
                     cancellationToken);
 
-                // Filter MRs by author and within time window
-                var userMergeRequests = mergeRequests
-                    .Where(mr => mr.Author?.Id == userId)
-                    .Where(mr => mr.MergedAt.HasValue && mr.MergedAt.Value >= windowStart && mr.MergedAt.Value <= windowEnd)
+                // Filter merged MRs authored by this developer within the time window
+                var mergedMrsByDeveloper = mergeRequests
+                    .Where(mr => mr.Author?.Id == developerId &&
+                                 mr.MergedAt.HasValue &&
+                                 mr.MergedAt.Value >= startDate &&
+                                 mr.MergedAt.Value <= endDate)
                     .ToList();
 
-                if (userMergeRequests.Any())
+                if (mergedMrsByDeveloper.Any())
                 {
-                    _logger.LogDebug("Found {MrCount} merged MRs for user {UserId} in project {ProjectId}", 
-                        userMergeRequests.Count, userId, project.Id);
+                    var mergedCount = mergedMrsByDeveloper.Count;
+                    totalMergedMrs += mergedCount;
 
-                    return (
-                        MergeRequests: userMergeRequests,
-                        Summary: new ProjectMrSummary
-                        {
-                            ProjectId = project.Id,
-                            ProjectName = project.Name ?? "Unknown",
-                            MergedMrCount = userMergeRequests.Count
-                        }
-                    );
+                    projectMrSummaries.Add(new ProjectMrSummary
+                    {
+                        ProjectId = project.Id,
+                        ProjectName = project.Name ?? "Unknown",
+                        MergedMrCount = mergedCount
+                    });
+
+                    _logger.LogDebug("Found {MergedCount} merged MRs in project {ProjectId} for developer {DeveloperId}",
+                        mergedCount, project.Id, developerId);
                 }
-
-                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to fetch merge requests for project {ProjectId}", project.Id);
-                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
+                // Continue with other projects
             }
-        });
-
-        var projectResults = await Task.WhenAll(fetchMrTasks);
-
-        var allMergeRequests = projectResults
-            .SelectMany(r => r.MergeRequests)
-            .ToList();
-
-        var projectSummaries = projectResults
-            .Where(r => r.Summary is not null)
-            .Select(r => r.Summary!)
-            .ToList();
-
-        if (!allMergeRequests.Any())
-        {
-            _logger.LogWarning("No merged MRs found for user {UserId} in the specified time window", userId);
-            return CreateEmptyResult(user, windowDays, windowStart, windowEnd);
         }
 
-        _logger.LogInformation("Analyzing {MrCount} merged MRs for user {UserId}", 
-            allMergeRequests.Count, userId);
+        // Calculate throughput as MRs merged per week
+        var mrThroughputWk = CalculateThroughputPerWeek(totalMergedMrs, windowDays);
 
-        // Calculate MR cycle time (merged_at - first_commit_at) in parallel
-        // Per PRD: cycle_time_median = median(merged_at - first_commit_at)
-        var cycleTimeCalculationTasks = allMergeRequests.Select(async mr =>
+        _logger.LogInformation(
+            "Calculated MR throughput for developer {DeveloperId}: {TotalMergedMrs} MRs in {WindowDays} days = {ThroughputWk} MRs/week",
+            developerId, totalMergedMrs, windowDays, mrThroughputWk);
+
+        return new MrThroughputResult
         {
-            if (!mr.MergedAt.HasValue)
-            {
-                return (CycleTime: (double?)null, Excluded: true, Reason: "NoMergeDate");
-            }
-
-            try
-            {
-                // Fetch commits for this MR to get the first commit timestamp
-                var mrCommits = await _gitLabHttpClient.GetMergeRequestCommitsAsync(
-                    mr.ProjectId, 
-                    mr.Iid, 
-                    cancellationToken);
-
-                if (mrCommits.Any())
-                {
-                    // Get the first (oldest) commit - commits are typically returned newest first
-                    var firstCommit = mrCommits.OrderBy(c => c.CommittedDate).FirstOrDefault();
-                    
-                    if (firstCommit?.CommittedDate is not null)
-                    {
-                        var cycleTimeHours = (mr.MergedAt.Value - firstCommit.CommittedDate.Value).TotalHours;
-                        
-                        // Only include positive cycle times
-                        if (cycleTimeHours > 0)
-                        {
-                            return (CycleTime: (double?)cycleTimeHours, Excluded: false, Reason: string.Empty);
-                        }
-                        else
-                        {
-                            _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} with negative cycle time: {CycleTime}h", 
-                                mr.Iid, mr.ProjectId, cycleTimeHours);
-                            return (CycleTime: (double?)null, Excluded: true, Reason: "NegativeCycleTime");
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} due to missing commit timestamp", 
-                            mr.Iid, mr.ProjectId);
-                        return (CycleTime: (double?)null, Excluded: true, Reason: "MissingCommitTimestamp");
-                    }
-                }
-                else
-                {
-                    _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} with no commits", 
-                        mr.Iid, mr.ProjectId);
-                    return (CycleTime: (double?)null, Excluded: true, Reason: "NoCommits");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to fetch commits for MR {MrIid} in project {ProjectId}", 
-                    mr.Iid, mr.ProjectId);
-                return (CycleTime: (double?)null, Excluded: true, Reason: "Exception");
-            }
-        });
-
-        var cycleTimeResults = await Task.WhenAll(cycleTimeCalculationTasks);
-
-        var cycleTimes = cycleTimeResults
-            .Where(r => r.CycleTime.HasValue)
-            .Select(r => r.CycleTime!.Value)
-            .ToList();
-
-        var excludedCount = cycleTimeResults.Count(r => r.Excluded);
-
-        // Calculate median (P50)
-        decimal? mrCycleTimeP50H = null;
-        if (cycleTimes.Any())
-        {
-            var sortedCycleTimes = cycleTimes.OrderBy(x => x).ToList();
-            var median = ComputeMedian(sortedCycleTimes);
-            mrCycleTimeP50H = (decimal)median;
-
-            _logger.LogInformation("Calculated MR cycle time P50 for user {UserId}: {CycleTimeP50}h from {Count} MRs", 
-                userId, mrCycleTimeP50H, cycleTimes.Count);
-        }
-        else
-        {
-            _logger.LogWarning("No valid cycle times calculated for user {UserId}", userId);
-        }
-
-        return new MrCycleTimeResult
-        {
-            UserId = userId,
+            UserId = developerId,
             Username = user.Username ?? string.Empty,
             WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
-            MrCycleTimeP50H = mrCycleTimeP50H,
-            MergedMrCount = cycleTimes.Count,
-            ExcludedMrCount = excludedCount,
-            Projects = projectSummaries
+            AnalysisStartDate = startDate,
+            AnalysisEndDate = endDate,
+            TotalMergedMrs = totalMergedMrs,
+            MrThroughputWk = mrThroughputWk,
+            Projects = projectMrSummaries.OrderByDescending(p => p.MergedMrCount).ToList()
         };
     }
 
-    private static double ComputeMedian(List<double> sortedValues)
+    private static int CalculateThroughputPerWeek(int totalMergedMrs, int windowDays)
     {
-        var count = sortedValues.Count;
-        if (count == 0)
-        {
-            return 0;
-        }
-
-        if (count % 2 == 1)
-        {
-            // Odd number of elements - return middle element
-            return sortedValues[count / 2];
-        }
-        else
-        {
-            // Even number of elements - return average of two middle elements
-            var mid1 = sortedValues[count / 2 - 1];
-            var mid2 = sortedValues[count / 2];
-            return (mid1 + mid2) / 2.0;
-        }
+        // Convert to weekly rate: (count * 7) / windowDays
+        return (int)(totalMergedMrs * 7.0 / windowDays);
     }
 
-    private static MrCycleTimeResult CreateEmptyResult(
+    private static MrThroughputResult CreateEmptyResult(
         Models.Raw.GitLabUser user,
         int windowDays,
-        DateTime windowStart,
-        DateTime windowEnd)
+        DateTime startDate,
+        DateTime endDate)
     {
-        return new MrCycleTimeResult
+        return new MrThroughputResult
         {
             UserId = user.Id,
             Username = user.Username ?? string.Empty,
             WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
-            MrCycleTimeP50H = null,
-            MergedMrCount = 0,
-            ExcludedMrCount = 0,
+            AnalysisStartDate = startDate,
+            AnalysisEndDate = endDate,
+            TotalMergedMrs = 0,
+            MrThroughputWk = 0,
             Projects = new List<ProjectMrSummary>()
         };
     }

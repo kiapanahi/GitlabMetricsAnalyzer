@@ -1,27 +1,27 @@
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
-/// Service for calculating per-developer metrics from live GitLab data
+/// Service for computing per-developer metrics from live GitLab data
 /// </summary>
 public interface IPerDeveloperMetricsService
 {
     /// <summary>
-    /// Calculates MR cycle time (P50/median) for a developer across all projects
+    /// Calculates MR throughput for a specific developer from live GitLab data
     /// </summary>
-    /// <param name="userId">The GitLab user ID</param>
-    /// <param name="windowDays">Number of days to look back (default: 30)</param>
+    /// <param name="developerId">The GitLab user ID</param>
+    /// <param name="windowDays">Number of days to analyze (default: 7)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>MR cycle time analysis result</returns>
-    Task<MrCycleTimeResult> CalculateMrCycleTimeAsync(
-        long userId,
-        int windowDays = 30,
+    /// <returns>MR throughput analysis result</returns>
+    Task<MrThroughputResult> CalculateMrThroughputAsync(
+        long developerId,
+        int windowDays = 7,
         CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Result of MR cycle time calculation
+/// Result of MR throughput calculation
 /// </summary>
-public sealed class MrCycleTimeResult
+public sealed class MrThroughputResult
 {
     /// <summary>
     /// The GitLab user ID
@@ -34,34 +34,29 @@ public sealed class MrCycleTimeResult
     public required string Username { get; init; }
 
     /// <summary>
-    /// Number of days analyzed
+    /// Number of days in the analysis window
     /// </summary>
     public required int WindowDays { get; init; }
 
     /// <summary>
     /// Start date of the analysis period (UTC)
     /// </summary>
-    public required DateTime WindowStart { get; init; }
+    public required DateTime AnalysisStartDate { get; init; }
 
     /// <summary>
     /// End date of the analysis period (UTC)
     /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public required DateTime AnalysisEndDate { get; init; }
 
     /// <summary>
-    /// Median MR cycle time in hours (P50)
+    /// Total number of merge requests merged in the window
     /// </summary>
-    public decimal? MrCycleTimeP50H { get; init; }
+    public required int TotalMergedMrs { get; init; }
 
     /// <summary>
-    /// Total number of merged MRs analyzed
+    /// MR throughput as MRs merged per week
     /// </summary>
-    public required int MergedMrCount { get; init; }
-
-    /// <summary>
-    /// Number of MRs excluded due to missing first_commit_at timestamp
-    /// </summary>
-    public required int ExcludedMrCount { get; init; }
+    public required int MrThroughputWk { get; init; }
 
     /// <summary>
     /// Projects included in the analysis
@@ -70,7 +65,7 @@ public sealed class MrCycleTimeResult
 }
 
 /// <summary>
-/// Summary of MRs per project
+/// Summary of merge requests per project
 /// </summary>
 public sealed class ProjectMrSummary
 {
