@@ -13,8 +13,8 @@ public interface ICommitTimeAnalysisService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Commit time distribution analysis</returns>
     Task<CommitTimeDistributionAnalysis> AnalyzeCommitTimeDistributionAsync(
-        long userId, 
-        int lookbackDays = 30, 
+        long userId,
+        int lookbackDays = 30,
         CancellationToken cancellationToken = default);
 }
 

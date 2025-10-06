@@ -15,12 +15,17 @@ public sealed class MetricsConfiguration
     /// <summary>
     /// Identity mapping and filtering configuration
     /// </summary>
-    public required IdentityConfiguration Identity { get; init; }
+    public required IdentityConfiguration Identity { get; init; } = new IdentityConfiguration();
 
     /// <summary>
     /// Various exclusion rules
     /// </summary>
-    public required ExclusionConfiguration Excludes { get; init; }
+    public required ExclusionConfiguration Excludes { get; init; } = new ExclusionConfiguration();
+
+    /// <summary>
+    /// When true, register legacy/experimental metrics services. Defaults to false to allow safe incremental removal.
+    /// </summary>
+    public bool EnableLegacyMetrics { get; init; } = false;
 }
 
 /// <summary>

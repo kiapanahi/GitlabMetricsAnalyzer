@@ -44,8 +44,8 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         // Get push events for the user (using events API which doesn't require email)
         var events = await _gitLabHttpClient.GetUserEventsAsync(
-            userId, 
-            new DateTimeOffset(startDate), 
+            userId,
+            new DateTimeOffset(startDate),
             new DateTimeOffset(endDate),
             cancellationToken);
 
@@ -100,7 +100,7 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         var totalCommits = eventTimes.Count;
 
-        _logger.LogInformation("Analyzing {CommitCount} total commits from {EventCount} push events for user {UserId}", 
+        _logger.LogInformation("Analyzing {CommitCount} total commits from {EventCount} push events for user {UserId}",
             totalCommits, events.Count, userId);
 
         // Analyze hourly distribution
@@ -109,11 +109,11 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         // Find peak activity
         var (peakHour, peakCount) = hourlyDistribution.MaxBy(kvp => kvp.Value);
-        var peakPercentage = totalCommits > 0 
-            ? (decimal)peakCount / totalCommits * 100 
+        var peakPercentage = totalCommits > 0
+            ? (decimal)peakCount / totalCommits * 100
             : 0;
 
-        _logger.LogInformation("Completed analysis for user {UserId}: {TotalCommits} commits, peak at hour {PeakHour}", 
+        _logger.LogInformation("Completed analysis for user {UserId}: {TotalCommits} commits, peak at hour {PeakHour}",
             userId, totalCommits, peakHour);
 
         return new CommitTimeDistributionAnalysis
