@@ -44,28 +44,28 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddHostedService<MigratorBackgroundService>();
 
         // Add services
-        builder.Services.AddScoped<IGitLabCollectorService, GitLabCollectorService>();
-        builder.Services.AddScoped<IGitLabService, GitLabService>();
-        builder.Services.AddScoped<IMetricsCalculationService, MetricsCalculationService>();
-        builder.Services.AddScoped<IUserSyncService, UserSyncService>();
-        builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
-        builder.Services.AddScoped<IDataEnrichmentService, DataEnrichmentService>();
-        builder.Services.AddScoped<IPerDeveloperMetricsComputationService, PerDeveloperMetricsComputationService>();
-
-        // Add new metrics persistence and export services
-        builder.Services.AddScoped<IMetricsAggregatesPersistenceService, MetricsAggregatesPersistenceService>();
-        builder.Services.AddScoped<IMetricCatalogService, MetricCatalogService>();
-        builder.Services.AddScoped<IMetricsExportService, MetricsExportService>();
-
-        // Add data reset service
-        builder.Services.AddScoped<IDataResetService, DataResetService>();
-
-        // Add observability and data quality services
-        builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
-        builder.Services.AddScoped<IDataQualityService, DataQualityService>();
-
-        // Add commit time analysis service
+        // We'll keep CommitTimeAnalysis and shared infra always registered.
+        // Other, legacy/experimental services are gated behind a feature flag
+        // so we can safely remove their implementations without breaking DI.
         builder.Services.AddScoped<ICommitTimeAnalysisService, CommitTimeAnalysisService>();
+
+    var enableLegacy = builder.Configuration.GetSection(MetricsConfiguration.SectionName).GetValue<bool>("EnableLegacyMetrics", false);
+
+        if (enableLegacy)
+        {
+            // NOTE: many legacy implementations are being removed in staged commits.
+            // Register only services that still have implementations. Others will be
+            // re-introduced or replaced by new implementations later.
+
+            // Keep user sync and identity mapping if implementations exist
+            builder.Services.AddScoped<IUserSyncService, UserSyncService>();
+            builder.Services.AddScoped<IIdentityMappingService, IdentityMappingService>();
+
+            // Data reset, observability and data quality remain implemented
+            builder.Services.AddScoped<IDataResetService, DataResetService>();
+            builder.Services.AddSingleton<IObservabilityMetricsService, ObservabilityMetricsService>();
+            builder.Services.AddScoped<IDataQualityService, DataQualityService>();
+        }
 
         // Add HTTP client for GitLab API calls (configurable via GitLab:UseMockClient)
         var gitLabConfig = builder.Configuration.GetSection(GitLabConfiguration.SectionName).Get<GitLabConfiguration>();
