@@ -9,369 +9,267 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 namespace Toman.Management.KPIAnalysis.Tests.Unit;
 
 /// <summary>
-/// Unit tests for PerDeveloperMetricsService.
+/// Unit tests for PerDeveloperMetricsService
 /// </summary>
 public sealed class PerDeveloperMetricsServiceTests
 {
     [Fact]
-    public async Task CalculateMrCycleTimeAsync_WithMergedMRs_CalculatesMedianCorrectly()
+    public async Task CalculateDeploymentFrequencyAsync_WithValidUser_ReturnsAnalysis()
     {
         // Arrange
-        const long userId = 1;
-        const int windowDays = 30;
+        var userId = 1L;
+        var windowDays = 30;
+
+        var mockHttpClient = new Mock<IGitLabHttpClient>();
+        var mockLogger = new Mock<ILogger<PerDeveloperMetricsService>>();
 
         var user = new GitLabUser
         {
             Id = userId,
             Username = "testuser",
-            Name = "Test User",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            Name = "Test User"
         };
 
-        var project = new GitLabContributedProject
+        var contributedProjects = new List<GitLabContributedProject>
         {
-            Id = 100,
-            Name = "test-project",
-            Path = "test-project",
-            PathWithNamespace = "company/test-project",
-            NameWithNamespace = "Company / Test Project",
-            DefaultBranch = "main",
-            WebUrl = "https://gitlab.example.com/company/test-project",
-            ForksCount = 0
-        };
-
-        var now = DateTime.UtcNow;
-        
-        // Create MRs with known cycle times
-        // MR 1: 2 days cycle time (48 hours)
-        var mr1 = new GitLabMergeRequest
-        {
-            Id = 1,
-            Iid = 1,
-            ProjectId = 100,
-            Title = "MR 1",
-            State = "merged",
-            CreatedAt = now.AddDays(-10),
-            MergedAt = now.AddDays(-8),
-            Author = user,
-            TargetBranch = "main",
-            SourceBranch = "feature/1"
-        };
-
-        // MR 2: 4 days cycle time (96 hours)
-        var mr2 = new GitLabMergeRequest
-        {
-            Id = 2,
-            Iid = 2,
-            ProjectId = 100,
-            Title = "MR 2",
-            State = "merged",
-            CreatedAt = now.AddDays(-14),
-            MergedAt = now.AddDays(-10),
-            Author = user,
-            TargetBranch = "main",
-            SourceBranch = "feature/2"
-        };
-
-        // Create commits for MRs
-        // MR 1 has first commit 2 days before merge
-        var mr1Commits = new List<GitLabCommit>
-        {
-            new GitLabCommit
+            new()
             {
-                Id = "commit1",
-                ShortId = "abc123",
-                Title = "First commit for MR 1",
-                AuthorName = "Test User",
-                AuthorEmail = "test@example.com",
-                CommittedDate = now.AddDays(-10), // Same as MR creation
-                ProjectId = 100
+                Id = 100,
+                Name = "Test Project"
             }
         };
 
-        // MR 2 has first commit 4 days before merge
-        var mr2Commits = new List<GitLabCommit>
+        var commits = new List<GitLabCommit>
         {
-            new GitLabCommit
+            new()
             {
-                Id = "commit2",
-                ShortId = "def456",
-                Title = "First commit for MR 2",
-                AuthorName = "Test User",
+                Id = "abc123",
                 AuthorEmail = "test@example.com",
-                CommittedDate = now.AddDays(-14), // 4 days before merge
-                ProjectId = 100
+                Title = "Test commit"
+            }
+        };
+
+        var pipelines = new List<GitLabPipeline>
+        {
+            new()
+            {
+                Id = 1,
+                ProjectId = 100,
+                Sha = "abc123",
+                Ref = "main",
+                Status = "success",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
             },
-            new GitLabCommit
+            new()
             {
-                Id = "commit3",
-                ShortId = "ghi789",
-                Title = "Second commit for MR 2",
-                AuthorName = "Test User",
-                AuthorEmail = "test@example.com",
-                CommittedDate = now.AddDays(-12),
-                ProjectId = 100
+                Id = 2,
+                ProjectId = 100,
+                Sha = "abc123",
+                Ref = "main",
+                Status = "success",
+                CreatedAt = DateTime.UtcNow.AddDays(-10),
+                UpdatedAt = DateTime.UtcNow.AddDays(-10)
             }
         };
 
-        // Setup mocks
-        var mockGitLabClient = new Mock<IGitLabHttpClient>();
-        
-        mockGitLabClient
-            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+        mockHttpClient.Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        mockGitLabClient
-            .Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<GitLabContributedProject> { project });
+        mockHttpClient.Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contributedProjects);
 
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestsAsync(100, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<GitLabMergeRequest> { mr1, mr2 });
+        mockHttpClient.Setup(x => x.GetCommitsAsync(100, It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(commits);
 
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestCommitsAsync(100, 1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mr1Commits);
+        mockHttpClient.Setup(x => x.GetPipelinesAsync(100, It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pipelines);
 
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestCommitsAsync(100, 2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mr2Commits);
-
-        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
-        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+        var service = new PerDeveloperMetricsService(mockHttpClient.Object, mockLogger.Object);
 
         // Act
-        var result = await service.CalculateMrCycleTimeAsync(userId, windowDays, TestContext.Current.CancellationToken);
+        var result = await service.CalculateDeploymentFrequencyAsync(userId, windowDays, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(userId, result.UserId);
         Assert.Equal("testuser", result.Username);
         Assert.Equal(windowDays, result.WindowDays);
-        Assert.NotNull(result.MrCycleTimeP50H);
-        
-        // Median of 48h and 96h should be 72h
-        Assert.Equal(72m, result.MrCycleTimeP50H.Value);
-        Assert.Equal(2, result.MergedMrCount);
-        Assert.Equal(0, result.ExcludedMrCount);
+        Assert.Equal(2, result.TotalDeployments);
+        // With 2 deployments in 30 days: (2 * 7 / 30) = 0.467 = 0 when cast to int
+        Assert.Equal(0, result.DeploymentFrequencyWk);
         Assert.Single(result.Projects);
-        Assert.Equal(100, result.Projects[0].ProjectId);
-        Assert.Equal("test-project", result.Projects[0].ProjectName);
-        Assert.Equal(2, result.Projects[0].MergedMrCount);
+        Assert.Equal("Test Project", result.Projects[0].ProjectName);
+        Assert.Equal(2, result.Projects[0].DeploymentCount);
     }
 
     [Fact]
-    public async Task CalculateMrCycleTimeAsync_WithNoMRs_ReturnsEmptyResult()
+    public async Task CalculateDeploymentFrequencyAsync_WithNoContributedProjects_ReturnsEmptyAnalysis()
     {
         // Arrange
-        const long userId = 1;
-        const int windowDays = 30;
+        var userId = 1L;
+        var windowDays = 30;
+
+        var mockHttpClient = new Mock<IGitLabHttpClient>();
+        var mockLogger = new Mock<ILogger<PerDeveloperMetricsService>>();
 
         var user = new GitLabUser
         {
             Id = userId,
             Username = "testuser",
-            Name = "Test User",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            Name = "Test User"
         };
 
-        // Setup mocks
-        var mockGitLabClient = new Mock<IGitLabHttpClient>();
-        
-        mockGitLabClient
-            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+        mockHttpClient.Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        mockGitLabClient
-            .Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
+        mockHttpClient.Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<GitLabContributedProject>());
 
-        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
-        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+        var service = new PerDeveloperMetricsService(mockHttpClient.Object, mockLogger.Object);
 
         // Act
-        var result = await service.CalculateMrCycleTimeAsync(userId, windowDays, TestContext.Current.CancellationToken);
+        var result = await service.CalculateDeploymentFrequencyAsync(userId, windowDays, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(userId, result.UserId);
-        Assert.Null(result.MrCycleTimeP50H);
-        Assert.Equal(0, result.MergedMrCount);
-        Assert.Equal(0, result.ExcludedMrCount);
+        Assert.Equal(0, result.TotalDeployments);
+        Assert.Equal(0, result.DeploymentFrequencyWk);
         Assert.Empty(result.Projects);
     }
 
     [Fact]
-    public async Task CalculateMrCycleTimeAsync_WithUserNotFound_ThrowsInvalidOperationException()
+    public async Task CalculateDeploymentFrequencyAsync_WithInvalidUserId_ThrowsException()
     {
         // Arrange
-        const long userId = 999;
-        const int windowDays = 30;
+        var userId = 999L;
+        var windowDays = 30;
 
-        var mockGitLabClient = new Mock<IGitLabHttpClient>();
-        
-        mockGitLabClient
-            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+        var mockHttpClient = new Mock<IGitLabHttpClient>();
+        var mockLogger = new Mock<ILogger<PerDeveloperMetricsService>>();
+
+        mockHttpClient.Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GitLabUser?)null);
 
-        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
-        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+        var service = new PerDeveloperMetricsService(mockHttpClient.Object, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.CalculateMrCycleTimeAsync(userId, windowDays, TestContext.Current.CancellationToken));
+            async () => await service.CalculateDeploymentFrequencyAsync(userId, windowDays, CancellationToken.None)
+        );
     }
 
     [Fact]
-    public async Task CalculateMrCycleTimeAsync_WithInvalidWindowDays_ThrowsArgumentException()
+    public async Task CalculateDeploymentFrequencyAsync_WithInvalidWindowDays_ThrowsException()
     {
         // Arrange
-        const long userId = 1;
-        const int windowDays = -1;
+        var userId = 1L;
+        var windowDays = 0;
 
-        var mockGitLabClient = new Mock<IGitLabHttpClient>();
-        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
-        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+        var mockHttpClient = new Mock<IGitLabHttpClient>();
+        var mockLogger = new Mock<ILogger<PerDeveloperMetricsService>>();
+
+        var service = new PerDeveloperMetricsService(mockHttpClient.Object, mockLogger.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.CalculateMrCycleTimeAsync(userId, windowDays, TestContext.Current.CancellationToken));
+            async () => await service.CalculateDeploymentFrequencyAsync(userId, windowDays, CancellationToken.None)
+        );
     }
 
     [Fact]
-    public async Task CalculateMrCycleTimeAsync_WithOddNumberOfMRs_CalculatesMedianCorrectly()
+    public async Task CalculateDeploymentFrequencyAsync_OnlyCountsSuccessfulMainBranchPipelines()
     {
         // Arrange
-        const long userId = 1;
-        const int windowDays = 30;
+        var userId = 1L;
+        var windowDays = 30;
+
+        var mockHttpClient = new Mock<IGitLabHttpClient>();
+        var mockLogger = new Mock<ILogger<PerDeveloperMetricsService>>();
 
         var user = new GitLabUser
         {
             Id = userId,
             Username = "testuser",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            Name = "Test User"
         };
 
-        var project = new GitLabContributedProject
+        var contributedProjects = new List<GitLabContributedProject>
         {
-            Id = 100,
-            Name = "test-project",
-            Path = "test-project",
-            PathWithNamespace = "company/test-project",
-            NameWithNamespace = "Company / Test Project",
-            DefaultBranch = "main",
-            WebUrl = "https://gitlab.example.com/company/test-project",
-            ForksCount = 0
-        };
-
-        var now = DateTime.UtcNow;
-        
-        // Create 3 MRs with cycle times: 24h, 48h, 72h
-        var mr1 = new GitLabMergeRequest
-        {
-            Id = 1,
-            Iid = 1,
-            ProjectId = 100,
-            State = "merged",
-            MergedAt = now.AddDays(-1),
-            Author = user,
-            TargetBranch = "main",
-            SourceBranch = "feature/1"
-        };
-
-        var mr2 = new GitLabMergeRequest
-        {
-            Id = 2,
-            Iid = 2,
-            ProjectId = 100,
-            State = "merged",
-            MergedAt = now.AddDays(-5),
-            Author = user,
-            TargetBranch = "main",
-            SourceBranch = "feature/2"
-        };
-
-        var mr3 = new GitLabMergeRequest
-        {
-            Id = 3,
-            Iid = 3,
-            ProjectId = 100,
-            State = "merged",
-            MergedAt = now.AddDays(-10),
-            Author = user,
-            TargetBranch = "main",
-            SourceBranch = "feature/3"
-        };
-
-        var mr1Commits = new List<GitLabCommit>
-        {
-            new GitLabCommit
+            new()
             {
-                Id = "commit1",
-                CommittedDate = now.AddDays(-2), // 24h before merge
-                ProjectId = 100
+                Id = 100,
+                Name = "Test Project"
             }
         };
 
-        var mr2Commits = new List<GitLabCommit>
+        var commits = new List<GitLabCommit>
         {
-            new GitLabCommit
+            new()
             {
-                Id = "commit2",
-                CommittedDate = now.AddDays(-7), // 48h before merge
-                ProjectId = 100
+                Id = "abc123",
+                AuthorEmail = "test@example.com",
+                Title = "Test commit"
             }
         };
 
-        var mr3Commits = new List<GitLabCommit>
+        var pipelines = new List<GitLabPipeline>
         {
-            new GitLabCommit
+            new()
             {
-                Id = "commit3",
-                CommittedDate = now.AddDays(-13), // 72h before merge
-                ProjectId = 100
+                Id = 1,
+                ProjectId = 100,
+                Sha = "abc123",
+                Ref = "main",
+                Status = "success",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new()
+            {
+                Id = 2,
+                ProjectId = 100,
+                Sha = "abc123",
+                Ref = "feature-branch",
+                Status = "success",
+                CreatedAt = DateTime.UtcNow.AddDays(-6),
+                UpdatedAt = DateTime.UtcNow.AddDays(-6)
+            },
+            new()
+            {
+                Id = 3,
+                ProjectId = 100,
+                Sha = "abc123",
+                Ref = "main",
+                Status = "failed",
+                CreatedAt = DateTime.UtcNow.AddDays(-7),
+                UpdatedAt = DateTime.UtcNow.AddDays(-7)
             }
         };
 
-        // Setup mocks
-        var mockGitLabClient = new Mock<IGitLabHttpClient>();
-        
-        mockGitLabClient
-            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+        mockHttpClient.Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        mockGitLabClient
-            .Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<GitLabContributedProject> { project });
+        mockHttpClient.Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contributedProjects);
 
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestsAsync(100, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<GitLabMergeRequest> { mr1, mr2, mr3 });
+        mockHttpClient.Setup(x => x.GetCommitsAsync(100, It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(commits);
 
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestCommitsAsync(100, 1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mr1Commits);
+        mockHttpClient.Setup(x => x.GetPipelinesAsync(100, It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pipelines);
 
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestCommitsAsync(100, 2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mr2Commits);
-
-        mockGitLabClient
-            .Setup(x => x.GetMergeRequestCommitsAsync(100, 3, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mr3Commits);
-
-        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
-        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+        var service = new PerDeveloperMetricsService(mockHttpClient.Object, mockLogger.Object);
 
         // Act
-        var result = await service.CalculateMrCycleTimeAsync(userId, windowDays, TestContext.Current.CancellationToken);
+        var result = await service.CalculateDeploymentFrequencyAsync(userId, windowDays, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.MrCycleTimeP50H);
-        
-        // Median of 24h, 48h, 72h should be 48h (middle value)
-        Assert.Equal(48m, result.MrCycleTimeP50H.Value);
-        Assert.Equal(3, result.MergedMrCount);
+        Assert.Equal(1, result.TotalDeployments); // Only the successful main branch pipeline
     }
 }

@@ -6,22 +6,22 @@ namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Service
 public interface IPerDeveloperMetricsService
 {
     /// <summary>
-    /// Calculates MR cycle time (P50/median) for a developer across all projects
+    /// Calculates deployment frequency for a specific developer
     /// </summary>
     /// <param name="userId">The GitLab user ID</param>
     /// <param name="windowDays">Number of days to look back (default: 30)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>MR cycle time analysis result</returns>
-    Task<MrCycleTimeResult> CalculateMrCycleTimeAsync(
+    /// <returns>Deployment frequency analysis</returns>
+    Task<DeploymentFrequencyAnalysis> CalculateDeploymentFrequencyAsync(
         long userId,
         int windowDays = 30,
         CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Result of MR cycle time calculation
+/// Result of deployment frequency analysis
 /// </summary>
-public sealed class MrCycleTimeResult
+public sealed class DeploymentFrequencyAnalysis
 {
     /// <summary>
     /// The GitLab user ID
@@ -41,40 +41,35 @@ public sealed class MrCycleTimeResult
     /// <summary>
     /// Start date of the analysis period (UTC)
     /// </summary>
-    public required DateTime WindowStart { get; init; }
+    public required DateTime AnalysisStartDate { get; init; }
 
     /// <summary>
     /// End date of the analysis period (UTC)
     /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public required DateTime AnalysisEndDate { get; init; }
 
     /// <summary>
-    /// Median MR cycle time in hours (P50)
+    /// Total number of successful production deployments found
     /// </summary>
-    public decimal? MrCycleTimeP50H { get; init; }
+    public required int TotalDeployments { get; init; }
 
     /// <summary>
-    /// Total number of merged MRs analyzed
+    /// Deployment frequency (deployments per week)
     /// </summary>
-    public required int MergedMrCount { get; init; }
+    public required int DeploymentFrequencyWk { get; init; }
 
     /// <summary>
-    /// Number of MRs excluded due to missing first_commit_at timestamp
+    /// Projects included in the analysis with deployment counts
     /// </summary>
-    public required int ExcludedMrCount { get; init; }
-
-    /// <summary>
-    /// Projects included in the analysis
-    /// </summary>
-    public required List<ProjectMrSummary> Projects { get; init; }
+    public required List<ProjectDeploymentSummary> Projects { get; init; }
 }
 
 /// <summary>
-/// Summary of MRs per project
+/// Summary of deployments per project
 /// </summary>
-public sealed class ProjectMrSummary
+public sealed class ProjectDeploymentSummary
 {
     public required long ProjectId { get; init; }
     public required string ProjectName { get; init; }
-    public required int MergedMrCount { get; init; }
+    public required int DeploymentCount { get; init; }
 }
