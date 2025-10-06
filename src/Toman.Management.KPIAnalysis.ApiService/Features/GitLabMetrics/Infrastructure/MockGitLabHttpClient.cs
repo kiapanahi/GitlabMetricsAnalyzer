@@ -792,6 +792,10 @@ public sealed class MockGitLabHttpClient : IGitLabHttpClient
             for (int i = 0; i < pipelineCount; i++)
             {
                 var createdDate = DateTime.Now.AddDays(-random.Next(180));
+                
+                // Assign a random user from the mock users
+                var userIndex = random.Next(_users.Count);
+                var user = _users[userIndex];
 
                 pipelines.Add(new GitLabPipeline
                 {
@@ -803,7 +807,8 @@ public sealed class MockGitLabHttpClient : IGitLabHttpClient
                     Source = sources[random.Next(sources.Length)],
                     CreatedAt = createdDate,
                     UpdatedAt = createdDate.AddMinutes(random.Next(1, 120)),
-                    WebUrl = $"https://gitlab.example.com/company/{project.Path}/-/pipelines/{(project.Id * 10000) + i}"
+                    WebUrl = $"https://gitlab.example.com/company/{project.Path}/-/pipelines/{(project.Id * 10000) + i}",
+                    User = user
                 });
             }
         }
