@@ -55,11 +55,8 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
         _logger.LogInformation("Found {ProjectCount} contributed projects for user {UserId}", 
             contributedProjects.Count, userId);
 
-        // Fetch MRs from all contributed projects
-        var allMergeRequests = new List<Models.Raw.GitLabMergeRequest>();
-        var projectSummaries = new List<ProjectMrSummary>();
-
-        foreach (var project in contributedProjects)
+        // Fetch MRs from all contributed projects in parallel
+        var fetchMrTasks = contributedProjects.Select(async project =>
         {
             try
             {
@@ -76,24 +73,39 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
 
                 if (userMergeRequests.Any())
                 {
-                    allMergeRequests.AddRange(userMergeRequests);
-                    projectSummaries.Add(new ProjectMrSummary
-                    {
-                        ProjectId = project.Id,
-                        ProjectName = project.Name ?? "Unknown",
-                        MergedMrCount = userMergeRequests.Count
-                    });
-
                     _logger.LogDebug("Found {MrCount} merged MRs for user {UserId} in project {ProjectId}", 
                         userMergeRequests.Count, userId, project.Id);
+
+                    return (
+                        MergeRequests: userMergeRequests,
+                        Summary: new ProjectMrSummary
+                        {
+                            ProjectId = project.Id,
+                            ProjectName = project.Name ?? "Unknown",
+                            MergedMrCount = userMergeRequests.Count
+                        }
+                    );
                 }
+
+                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to fetch merge requests for project {ProjectId}", project.Id);
-                // Continue with other projects
+                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
             }
-        }
+        });
+
+        var projectResults = await Task.WhenAll(fetchMrTasks);
+
+        var allMergeRequests = projectResults
+            .SelectMany(r => r.MergeRequests)
+            .ToList();
+
+        var projectSummaries = projectResults
+            .Where(r => r.Summary is not null)
+            .Select(r => r.Summary!)
+            .ToList();
 
         if (!allMergeRequests.Any())
         {
@@ -104,17 +116,13 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
         _logger.LogInformation("Analyzing {MrCount} merged MRs for user {UserId}", 
             allMergeRequests.Count, userId);
 
-        // Calculate MR cycle time (merged_at - first_commit_at)
+        // Calculate MR cycle time (merged_at - first_commit_at) in parallel
         // Per PRD: cycle_time_median = median(merged_at - first_commit_at)
-        var cycleTimes = new List<double>();
-        var excludedCount = 0;
-
-        foreach (var mr in allMergeRequests)
+        var cycleTimeCalculationTasks = allMergeRequests.Select(async mr =>
         {
             if (!mr.MergedAt.HasValue)
             {
-                excludedCount++;
-                continue;
+                return (CycleTime: (double?)null, Excluded: true, Reason: "NoMergeDate");
             }
 
             try
@@ -137,36 +145,45 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
                         // Only include positive cycle times
                         if (cycleTimeHours > 0)
                         {
-                            cycleTimes.Add(cycleTimeHours);
+                            return (CycleTime: (double?)cycleTimeHours, Excluded: false, Reason: string.Empty);
                         }
                         else
                         {
-                            excludedCount++;
                             _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} with negative cycle time: {CycleTime}h", 
                                 mr.Iid, mr.ProjectId, cycleTimeHours);
+                            return (CycleTime: (double?)null, Excluded: true, Reason: "NegativeCycleTime");
                         }
                     }
                     else
                     {
-                        excludedCount++;
                         _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} due to missing commit timestamp", 
                             mr.Iid, mr.ProjectId);
+                        return (CycleTime: (double?)null, Excluded: true, Reason: "MissingCommitTimestamp");
                     }
                 }
                 else
                 {
-                    excludedCount++;
                     _logger.LogDebug("Excluded MR {MrIid} in project {ProjectId} with no commits", 
                         mr.Iid, mr.ProjectId);
+                    return (CycleTime: (double?)null, Excluded: true, Reason: "NoCommits");
                 }
             }
             catch (Exception ex)
             {
-                excludedCount++;
                 _logger.LogWarning(ex, "Failed to fetch commits for MR {MrIid} in project {ProjectId}", 
                     mr.Iid, mr.ProjectId);
+                return (CycleTime: (double?)null, Excluded: true, Reason: "Exception");
             }
-        }
+        });
+
+        var cycleTimeResults = await Task.WhenAll(cycleTimeCalculationTasks);
+
+        var cycleTimes = cycleTimeResults
+            .Where(r => r.CycleTime.HasValue)
+            .Select(r => r.CycleTime!.Value)
+            .ToList();
+
+        var excludedCount = cycleTimeResults.Count(r => r.Excluded);
 
         // Calculate median (P50)
         decimal? mrCycleTimeP50H = null;
