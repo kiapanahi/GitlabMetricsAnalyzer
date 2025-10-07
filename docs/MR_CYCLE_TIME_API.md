@@ -18,7 +18,7 @@ Where:
 
 ## Endpoint
 
-### GET /api/metrics/mr-cycle-time/{userId}
+### GET /api/v1/{userId}/metrics/mr-cycle-time
 
 Calculates the median MR cycle time for a specific developer.
 
@@ -31,10 +31,10 @@ Calculates the median MR cycle time for a specific developer.
 **Example Request:**
 ```bash
 # Calculate MR cycle time for user 123 over the last 30 days
-curl "http://localhost:5000/api/metrics/mr-cycle-time/123"
+curl "http://localhost:5000/api/v1/123/metrics/mr-cycle-time"
 
 # Custom time window
-curl "http://localhost:5000/api/metrics/mr-cycle-time/123?windowDays=90"
+curl "http://localhost:5000/api/v1/123/metrics/mr-cycle-time?windowDays=90"
 ```
 
 **Response Schema:**
@@ -89,21 +89,21 @@ This endpoint fetches **live data** from GitLab APIs:
 ```bash
 # Calculate cycle time for all team members
 for user_id in 123 456 789; do
-  curl "http://localhost:5000/api/metrics/mr-cycle-time/$user_id?windowDays=90" | jq '.'
+  curl "http://localhost:5000/api/v1/$user_id/metrics/mr-cycle-time?windowDays=90" | jq '.'
 done
 ```
 
 ### Individual Developer Dashboard
 ```bash
 # Get developer's MR cycle time with project breakdown
-curl "http://localhost:5000/api/metrics/mr-cycle-time/123" | \
+curl "http://localhost:5000/api/v1/123/metrics/mr-cycle-time" | \
   jq '{username, cycleTime: .mrCycleTimeP50H, projects: .projects}'
 ```
 
 ### Quarterly Metrics Report
 ```bash
 # Calculate quarterly metrics
-curl "http://localhost:5000/api/metrics/mr-cycle-time/123?windowDays=90" | \
+curl "http://localhost:5000/api/v1/123/metrics/mr-cycle-time?windowDays=90" | \
   jq '{
     user: .username,
     quarter: "Q4 2024",

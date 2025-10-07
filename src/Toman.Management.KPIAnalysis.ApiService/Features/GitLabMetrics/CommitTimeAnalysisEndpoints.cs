@@ -8,11 +8,11 @@ internal static class CommitTimeAnalysisEndpoints
 {
     internal static void MapCommitTimeAnalysisEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/analysis/commit-time")
+        var group = app.MapGroup("/api/v1/{userId:long}/analysis/commit-time")
             .WithTags("Commit Time Analysis")
             .WithOpenApi();
 
-        group.MapGet("/{userId:long}", AnalyzeUserCommitTimeDistribution)
+        group.MapGet("", AnalyzeUserCommitTimeDistribution)
             .WithName("AnalyzeUserCommitTimeDistribution")
             .WithSummary("Analyze commit time distribution for a user")
             .WithDescription("Fetches commits from GitLab for the past N days and analyzes the distribution across 24 hours of the day");

@@ -8,11 +8,11 @@ internal static class MrCycleTimeEndpoints
 {
     internal static void MapMrCycleTimeEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/metrics/mr-cycle-time")
+        var group = app.MapGroup("/api/v1/{userId:long}/metrics/mr-cycle-time")
             .WithTags("MR Cycle Time Metrics")
             .WithOpenApi();
 
-        group.MapGet("/{userId:long}", CalculateMrCycleTime)
+        group.MapGet("", CalculateMrCycleTime)
             .WithName("CalculateMrCycleTime")
             .WithSummary("Calculate MR cycle time (P50) for a developer")
             .WithDescription("Fetches merge requests from GitLab for the past N days and calculates the median cycle time from first commit to merge");
