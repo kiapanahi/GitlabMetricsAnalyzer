@@ -16,6 +16,18 @@ public interface IPerDeveloperMetricsService
         long userId,
         int windowDays = 30,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calculates flow and throughput metrics for a developer across all projects
+    /// </summary>
+    /// <param name="userId">The GitLab user ID</param>
+    /// <param name="windowDays">Number of days to look back (default: 30)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Flow metrics result</returns>
+    Task<FlowMetricsResult> CalculateFlowMetricsAsync(
+        long userId,
+        int windowDays = 30,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -82,4 +94,80 @@ public sealed class ProjectMrSummary
     public required long ProjectId { get; init; }
     public required string ProjectName { get; init; }
     public required int MergedMrCount { get; init; }
+}
+
+/// <summary>
+/// Result of flow and throughput metrics calculation
+/// </summary>
+public sealed class FlowMetricsResult
+{
+    /// <summary>
+    /// The GitLab user ID
+    /// </summary>
+    public required long UserId { get; init; }
+
+    /// <summary>
+    /// The username
+    /// </summary>
+    public required string Username { get; init; }
+
+    /// <summary>
+    /// Number of days analyzed
+    /// </summary>
+    public required int WindowDays { get; init; }
+
+    /// <summary>
+    /// Start date of the analysis period (UTC)
+    /// </summary>
+    public required DateTime WindowStart { get; init; }
+
+    /// <summary>
+    /// End date of the analysis period (UTC)
+    /// </summary>
+    public required DateTime WindowEnd { get; init; }
+
+    /// <summary>
+    /// Metric 1: Total merged MRs count
+    /// </summary>
+    public required int MergedMrsCount { get; init; }
+
+    /// <summary>
+    /// Metric 2: Total lines changed (additions + deletions) in merged MRs
+    /// </summary>
+    public required int LinesChanged { get; init; }
+
+    /// <summary>
+    /// Metric 3: Median coding time (first commit → MR open) in hours
+    /// </summary>
+    public decimal? CodingTimeMedianH { get; init; }
+
+    /// <summary>
+    /// Metric 4: Median time to first review (MR open → first non-author comment) in hours
+    /// </summary>
+    public decimal? TimeToFirstReviewMedianH { get; init; }
+
+    /// <summary>
+    /// Metric 5: Median review time (first review → approval) in hours
+    /// </summary>
+    public decimal? ReviewTimeMedianH { get; init; }
+
+    /// <summary>
+    /// Metric 6: Median merge time (approval → merged) in hours
+    /// </summary>
+    public decimal? MergeTimeMedianH { get; init; }
+
+    /// <summary>
+    /// Metric 7: Count of open/draft MRs at snapshot time
+    /// </summary>
+    public required int WipOpenMrsCount { get; init; }
+
+    /// <summary>
+    /// Metric 8: Context switching index (distinct projects touched)
+    /// </summary>
+    public required int ContextSwitchingIndex { get; init; }
+
+    /// <summary>
+    /// Projects included in the analysis
+    /// </summary>
+    public required List<ProjectMrSummary> Projects { get; init; }
 }

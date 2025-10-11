@@ -160,6 +160,15 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of user events</returns>
     Task<IReadOnlyList<GitLabEvent>> GetUserEventsAsync(long userId, DateTimeOffset? after = null, DateTimeOffset? before = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets changes (diff stats) for a specific merge request.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="mergeRequestIid">The merge request IID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Merge request with changes including additions and deletions</returns>
+    Task<GitLabMergeRequestChanges?> GetMergeRequestChangesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -645,12 +654,39 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         {
             _logger.LogDebug("Fetching commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API", mergeRequestIid, projectId);
 
+            // First, get the list of commits in the MR (this endpoint doesn't support with_stats)
             var commitDtos = await GetPaginatedAsync<DTOs.GitLabCommit>($"projects/{projectId}/merge_requests/{mergeRequestIid}/commits", cancellationToken);
 
-            var commits = commitDtos.Select(dto => MapToCommit(dto, projectId)).ToList();
+            // Then fetch detailed stats for each commit using the repository commits endpoint
+            var detailedCommitTasks = commitDtos.Select(async dto =>
+            {
+                try
+                {
+                    // Fetch individual commit details with stats
+                    var response = await _httpClient.GetAsync($"projects/{projectId}/repository/commits/{Uri.EscapeDataString(dto.Id)}?stats=true", cancellationToken);
+                    
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogWarning("Failed to fetch stats for commit {CommitId} in project {ProjectId}: {StatusCode}", dto.Id, projectId, response.StatusCode);
+                        return MapToCommit(dto, projectId); // Return without stats
+                    }
 
-            _logger.LogDebug("Successfully fetched {CommitCount} commits for merge request {MergeRequestIid} in project {ProjectId}", commits.Count, mergeRequestIid, projectId);
-            return commits.AsReadOnly();
+                    var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var detailedDto = JsonSerializer.Deserialize<DTOs.GitLabCommit>(jsonContent, JsonOptions);
+                    
+                    return detailedDto is not null ? MapToCommit(detailedDto, projectId) : MapToCommit(dto, projectId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to fetch stats for commit {CommitId} in project {ProjectId}", dto.Id, projectId);
+                    return MapToCommit(dto, projectId); // Return without stats on error
+                }
+            });
+
+            var commits = await Task.WhenAll(detailedCommitTasks);
+
+            _logger.LogDebug("Successfully fetched {CommitCount} commits for merge request {MergeRequestIid} in project {ProjectId}", commits.Length, mergeRequestIid, projectId);
+            return commits.ToList().AsReadOnly();
         }
         catch (Exception ex)
         {
@@ -1019,5 +1055,68 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
                 CommitTitle = dto.PushData.CommitTitle
             } : null
         };
+    }
+
+    public async Task<GitLabMergeRequestChanges?> GetMergeRequestChangesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching changes for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+
+            var url = $"projects/{projectId}/merge_requests/{mergeRequestIid}/changes";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("MR {MergeRequestIid} not found in project {ProjectId}", mergeRequestIid, projectId);
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var changesDto = JsonSerializer.Deserialize<DTOs.GitLabMergeRequestChangesDto>(content, JsonOptions);
+
+            if (changesDto?.Changes is null)
+            {
+                _logger.LogDebug("No changes found for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+                return new GitLabMergeRequestChanges
+                {
+                    Additions = 0,
+                    Deletions = 0,
+                    Total = 0,
+                    Changes = new List<GitLabMergeRequestChange>()
+                };
+            }
+
+            // Map changes and calculate stats
+            var changes = changesDto.Changes.Select(c => new GitLabMergeRequestChange
+            {
+                OldPath = c.OldPath,
+                NewPath = c.NewPath,
+                NewFile = c.NewFile,
+                RenamedFile = c.RenamedFile,
+                DeletedFile = c.DeletedFile
+            }).ToList();
+
+            // Note: GitLab API doesn't always provide per-file additions/deletions in the changes endpoint
+            // We'll return the changes list but stats will need to be calculated from commits
+            var result = new GitLabMergeRequestChanges
+            {
+                Additions = 0,
+                Deletions = 0,
+                Total = 0,
+                Changes = changes
+            };
+
+            _logger.LogDebug("Successfully fetched {ChangeCount} file changes for MR {MergeRequestIid} in project {ProjectId}", 
+                changes.Count, mergeRequestIid, projectId);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch changes for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+            return null;
+        }
     }
 }
