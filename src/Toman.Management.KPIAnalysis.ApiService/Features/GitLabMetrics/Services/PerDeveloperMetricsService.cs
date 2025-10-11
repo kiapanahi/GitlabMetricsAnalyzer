@@ -87,12 +87,12 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
                     );
                 }
 
-                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
+                return (MergeRequests: Array.Empty<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to fetch merge requests for project {ProjectId}", project.Id);
-                return (MergeRequests: new List<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
+                return (MergeRequests: Array.Empty<Models.Raw.GitLabMergeRequest>(), Summary: (ProjectMrSummary?)null);
             }
         });
 
