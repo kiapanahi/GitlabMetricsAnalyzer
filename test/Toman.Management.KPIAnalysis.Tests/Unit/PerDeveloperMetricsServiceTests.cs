@@ -461,6 +461,7 @@ public sealed class PerDeveloperMetricsServiceTests
         };
 
         // Create commits with stats for line counting
+        // MR1: First commit at -11 days, MR created at -10 days → coding time = 24h
         var mr1Commits = new List<GitLabCommit>
         {
             new GitLabCommit
@@ -470,12 +471,13 @@ public sealed class PerDeveloperMetricsServiceTests
                 Title = "First commit for MR 1",
                 AuthorName = "Test User",
                 AuthorEmail = "test@example.com",
-                CommittedDate = now.AddDays(-11), // 1 day before MR creation (coding time = 24h)
+                CommittedDate = now.AddDays(-11),
                 ProjectId = 100,
                 Stats = new GitLabCommitStats { Additions = 50, Deletions = 10, Total = 60 }
             }
         };
 
+        // MR2: First commit at -16 days, MR created at -14 days → coding time = 48h
         var mr2Commits = new List<GitLabCommit>
         {
             new GitLabCommit
@@ -485,7 +487,7 @@ public sealed class PerDeveloperMetricsServiceTests
                 Title = "First commit for MR 2",
                 AuthorName = "Test User",
                 AuthorEmail = "test@example.com",
-                CommittedDate = now.AddDays(-16), // 2 days before MR creation (coding time = 48h)
+                CommittedDate = now.AddDays(-16),
                 ProjectId = 200,
                 Stats = new GitLabCommitStats { Additions = 100, Deletions = 20, Total = 120 }
             }
@@ -499,6 +501,7 @@ public sealed class PerDeveloperMetricsServiceTests
             Name = "Reviewer User"
         };
 
+        // MR1: MR created at -10 days, review at -9.5 days → time to first review = 12h
         var mr1Notes = new List<GitLabMergeRequestNote>
         {
             new GitLabMergeRequestNote
@@ -506,11 +509,12 @@ public sealed class PerDeveloperMetricsServiceTests
                 Id = 1,
                 Author = reviewer,
                 Body = "Looks good!",
-                CreatedAt = now.AddDays(-9.5), // 12 hours after MR creation (time to first review = 12h)
+                CreatedAt = now.AddDays(-9.5),
                 System = false
             }
         };
 
+        // MR2: MR created at -14 days, review at -13 days → time to first review = 24h
         var mr2Notes = new List<GitLabMergeRequestNote>
         {
             new GitLabMergeRequestNote
@@ -518,7 +522,7 @@ public sealed class PerDeveloperMetricsServiceTests
                 Id = 2,
                 Author = reviewer,
                 Body = "Some comments",
-                CreatedAt = now.AddDays(-13), // 24 hours after MR creation (time to first review = 24h)
+                CreatedAt = now.AddDays(-13),
                 System = false
             }
         };
@@ -587,7 +591,10 @@ public sealed class PerDeveloperMetricsServiceTests
         // Metric 5: Review Time Median - Not available without approval API
         Assert.Null(result.ReviewTimeMedianH);
         
-        // Metric 6: Merge Time Median - Using MR created → merged (48h and 96h, median = 72h)
+        // Metric 6: Merge Time Median - Using MR created → merged
+        // MR1: created at -10 days, merged at -8 days = 48h
+        // MR2: created at -14 days, merged at -10 days = 96h
+        // Median of 48h and 96h = 72h
         Assert.NotNull(result.MergeTimeMedianH);
         Assert.Equal(72m, result.MergeTimeMedianH.Value);
         
