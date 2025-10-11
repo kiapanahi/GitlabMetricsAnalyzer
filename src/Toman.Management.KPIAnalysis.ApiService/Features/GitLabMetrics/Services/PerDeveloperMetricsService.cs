@@ -212,20 +212,20 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             WindowDays = windowDays,
             WindowStart = windowStart,
             WindowEnd = windowEnd,
-            MrCycleTimeP50H = mrCycleTimeP50H,
-            MrCycleTimeP90H = mrCycleTimeP90H,
+            MrCycleTimeP50H = cycleTimes.Count == 0 ? null : ComputeMedian(cycleTimes),
+            MrCycleTimeP90H = cycleTimes.Count == 0 ? null : ComputePercentile(cycleTimes, 90),
             MergedMrCount = cycleTimes.Count,
             ExcludedMrCount = excludedCount,
             Projects = projectSummaries
         };
     }
 
-    private static double ComputeMedian(List<double> sortedValues)
+    private static double? ComputeMedian(List<double> sortedValues)
     {
         var count = sortedValues.Count;
         if (count == 0)
         {
-            return 0;
+            return null;
         }
 
         if (count % 2 == 1)
