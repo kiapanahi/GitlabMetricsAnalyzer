@@ -768,3 +768,86 @@ public class GitLabMergeRequestChange
     /// </summary>
     public bool DeletedFile { get; set; }
 }
+
+/// <summary>
+/// Represents a GitLab discussion (threaded comments).
+/// </summary>
+public class GitLabDiscussion
+{
+    /// <summary>
+    /// The discussion ID.
+    /// </summary>
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// Whether this discussion is for a single comment.
+    /// </summary>
+    public bool IndividualNote { get; set; }
+
+    /// <summary>
+    /// The notes in this discussion.
+    /// </summary>
+    public List<GitLabMergeRequestNote>? Notes { get; set; }
+}
+
+/// <summary>
+/// Represents merge request approval information.
+/// </summary>
+public class GitLabMergeRequestApprovals
+{
+    /// <summary>
+    /// The merge request ID.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The merge request IID.
+    /// </summary>
+    public long Iid { get; set; }
+
+    /// <summary>
+    /// The project ID.
+    /// </summary>
+    public long ProjectId { get; set; }
+
+    /// <summary>
+    /// Number of approvals required.
+    /// </summary>
+    public int ApprovalsRequired { get; set; }
+
+    /// <summary>
+    /// Number of approvals given.
+    /// </summary>
+    public int ApprovalsLeft { get; set; }
+
+    /// <summary>
+    /// Whether the MR is approved.
+    /// </summary>
+    public bool Approved { get; set; }
+
+    /// <summary>
+    /// List of users who approved.
+    /// </summary>
+    public List<GitLabApprover>? ApprovedBy { get; set; }
+
+    /// <summary>
+    /// List of suggested approvers.
+    /// </summary>
+    public List<GitLabUser>? SuggestedApprovers { get; set; }
+
+    /// <summary>
+    /// List of approvers.
+    /// </summary>
+    public List<GitLabUser>? Approvers { get; set; }
+}
+
+/// <summary>
+/// Represents an approver with timestamp.
+/// </summary>
+public class GitLabApprover
+{
+    /// <summary>
+    /// The user who approved.
+    /// </summary>
+    public GitLabUser? User { get; set; }
+}
