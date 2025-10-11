@@ -43,15 +43,8 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<ICommitTimeAnalysisService, CommitTimeAnalysisService>();
         builder.Services.AddScoped<IPerDeveloperMetricsService, PerDeveloperMetricsService>();
 
-        // Add HTTP client for GitLab API calls (configurable via GitLab:UseMockClient)
-        var gitLabConfig = builder.Configuration.GetSection(GitLabConfiguration.SectionName).Get<GitLabConfiguration>();
-        if (gitLabConfig?.UseMockClient == true)
-        {
-            builder.Services.AddSingleton<IGitLabHttpClient, MockGitLabHttpClient>();
-        }
-        else
-        {
-            builder.Services
+        // Add HTTP client for GitLab API calls
+        builder.Services
             .AddHttpClient<IGitLabHttpClient, GitLabHttpClient>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<GitLabConfiguration>>();
@@ -81,8 +74,6 @@ internal static class ServiceCollectionExtensions
                 // Configure total request timeout
                 options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
             });
-        }
-
 
         return builder;
     }

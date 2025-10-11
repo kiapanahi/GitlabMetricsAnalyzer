@@ -1,4 +1,5 @@
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -71,8 +72,8 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
             .ToList();
         var requiredProjects = await Task.WhenAll(projectTasks);
         var projectNameMap = requiredProjects
-            .Where(p => p != null)
-            .ToDictionary(p => p!.Id, p => p.Name ?? "Unknown");
+            .OfType<GitLabProject>()
+            .ToDictionary(p => p.Id, p => p.Name ?? "Unknown");
 
         // Group events by project and calculate commit counts
         var projectGroups = events
@@ -81,7 +82,7 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
             .Select(g => new
             {
                 Id = g.Key,
-                Name = projectNameMap.GetValueOrDefault(g.Key, "Unknown"),
+                Name = projectNameMap.GetValueOrDefault<long, string>(g.Key, "Unknown"),
                 CommitCount = g.Sum(e => e.PushData!.CommitCount),
                 Events = g.ToList()
             })
@@ -103,7 +104,7 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
         foreach (var evt in events.Where(e => e.PushData is not null))
         {
             var projectId = evt.Project?.Id ?? 0;
-            var projectName = projectId != 0 ? projectNameMap.GetValueOrDefault(projectId, "Unknown") : "Unknown";
+            var projectName = projectId != 0 ? projectNameMap.GetValueOrDefault<long, string>(projectId, "Unknown") : "Unknown";
             
             // Add an entry for each commit in the push event
             // This gives us a more accurate distribution

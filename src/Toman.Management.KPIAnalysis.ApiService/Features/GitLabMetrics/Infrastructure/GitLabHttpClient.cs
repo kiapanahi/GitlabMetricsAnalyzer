@@ -40,6 +40,14 @@ public interface IGitLabHttpClient
     Task<IReadOnlyList<GitLabProject>> GetGroupProjectsAsync(long groupId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a specific project by ID.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The project or null if not found</returns>
+    Task<GitLabProject?> GetProjectByIdAsync(long projectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets commits for a specific project.
     /// </summary>
     /// <param name="projectId">The project ID</param>
@@ -519,6 +527,50 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             {
                 _logger.LogWarning("Group {GroupId} not found or no access", groupId);
                 return new List<GitLabProject>().AsReadOnly();
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<GitLabProject?> GetProjectByIdAsync(long projectId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching project {ProjectId} via GitLab API", projectId);
+
+            var response = await _httpClient.GetAsync($"projects/{projectId}", cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Project {ProjectId} not found", projectId);
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var projectDto = JsonSerializer.Deserialize<DTOs.GitLabProject>(jsonContent, JsonOptions);
+
+            if (projectDto is null)
+            {
+                _logger.LogWarning("Failed to deserialize project {ProjectId}", projectId);
+                return null;
+            }
+
+            var project = MapToProject(projectDto);
+            _logger.LogInformation("Successfully fetched project {ProjectId} ({ProjectName}) via GitLab API", projectId, project.Name);
+            return project;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch project {ProjectId} via GitLab API", projectId);
+
+            // If project not found or no access, return null instead of throwing
+            if (ex is HttpRequestException httpEx && httpEx.Message.Contains("404"))
+            {
+                _logger.LogWarning("Project {ProjectId} not found or no access", projectId);
+                return null;
             }
 
             throw;
