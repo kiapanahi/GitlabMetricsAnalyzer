@@ -44,8 +44,8 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         // Get push events for the user (using events API which doesn't require email)
         var events = await _gitLabHttpClient.GetUserEventsAsync(
-            userId, 
-            new DateTimeOffset(startDate), 
+            userId,
+            new DateTimeOffset(startDate),
             new DateTimeOffset(endDate),
             cancellationToken);
 
@@ -57,14 +57,31 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         _logger.LogInformation("Found {EventCount} push events for user {UserId}", events.Count, userId);
 
+        // Get unique project IDs from events
+        var projectIds = events
+            .Where(e => e.Project is not null)
+            .Select(e => e.Project!.Id)
+            .Distinct()
+            .ToList();
+
+        // Fetch project details to get names
+        // Fetch only the required projects by ID to avoid unnecessary data transfer
+        var projectTasks = projectIds
+            .Select(id => _gitLabHttpClient.GetProjectByIdAsync(id, cancellationToken))
+            .ToList();
+        var requiredProjects = await Task.WhenAll(projectTasks);
+        var projectNameMap = requiredProjects
+            .Where(p => p != null)
+            .ToDictionary(p => p!.Id, p => p.Name ?? "Unknown");
+
         // Group events by project and calculate commit counts
         var projectGroups = events
             .Where(e => e.Project is not null && e.PushData is not null)
-            .GroupBy(e => new { e.Project!.Id, e.Project.Name })
+            .GroupBy(e => e.Project!.Id)
             .Select(g => new
             {
-                g.Key.Id,
-                Name = g.Key.Name ?? "Unknown",
+                Id = g.Key,
+                Name = projectNameMap.GetValueOrDefault(g.Key, "Unknown"),
                 CommitCount = g.Sum(e => e.PushData!.CommitCount),
                 Events = g.ToList()
             })
@@ -85,6 +102,9 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
         var eventTimes = new List<EventTime>();
         foreach (var evt in events.Where(e => e.PushData is not null))
         {
+            var projectId = evt.Project?.Id ?? 0;
+            var projectName = projectId != 0 ? projectNameMap.GetValueOrDefault(projectId, "Unknown") : "Unknown";
+            
             // Add an entry for each commit in the push event
             // This gives us a more accurate distribution
             for (var i = 0; i < evt.PushData!.CommitCount; i++)
@@ -92,15 +112,15 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
                 eventTimes.Add(new EventTime
                 {
                     Timestamp = evt.CreatedAt,
-                    ProjectId = evt.Project?.Id ?? 0,
-                    ProjectName = evt.Project?.Name ?? "Unknown"
+                    ProjectId = projectId,
+                    ProjectName = projectName
                 });
             }
         }
 
         var totalCommits = eventTimes.Count;
 
-        _logger.LogInformation("Analyzing {CommitCount} total commits from {EventCount} push events for user {UserId}", 
+        _logger.LogInformation("Analyzing {CommitCount} total commits from {EventCount} push events for user {UserId}",
             totalCommits, events.Count, userId);
 
         // Analyze hourly distribution
@@ -109,11 +129,11 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         // Find peak activity
         var (peakHour, peakCount) = hourlyDistribution.MaxBy(kvp => kvp.Value);
-        var peakPercentage = totalCommits > 0 
-            ? (decimal)peakCount / totalCommits * 100 
+        var peakPercentage = totalCommits > 0
+            ? (decimal)peakCount / totalCommits * 100
             : 0;
 
-        _logger.LogInformation("Completed analysis for user {UserId}: {TotalCommits} commits, peak at hour {PeakHour}", 
+        _logger.LogInformation("Completed analysis for user {UserId}: {TotalCommits} commits, peak at hour {PeakHour}",
             userId, totalCommits, peakHour);
 
         return new CommitTimeDistributionAnalysis

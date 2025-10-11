@@ -70,7 +70,7 @@ public sealed class GitLabMetricsDbContext(DbContextOptions<GitLabMetricsDbConte
                 {
                     property.SetValueConverter(
                         new ValueConverter<DateTime, DateTime>(
-                            v => v.Kind == DateTimeKind.Unspecified 
+                            v => v.Kind == DateTimeKind.Unspecified
                                 ? DateTime.SpecifyKind(v, DateTimeKind.Local).ToUniversalTime()
                                 : v.ToUniversalTime(),
                             v => DateTime.SpecifyKind(v, DateTimeKind.Utc)));
