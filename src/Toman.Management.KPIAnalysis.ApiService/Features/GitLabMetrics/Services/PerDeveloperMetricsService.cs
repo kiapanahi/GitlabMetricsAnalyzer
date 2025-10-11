@@ -185,16 +185,20 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
 
         var excludedCount = cycleTimeResults.Count(r => r.Excluded);
 
-        // Calculate median (P50)
+        // Calculate median (P50) and 90th percentile (P90)
         decimal? mrCycleTimeP50H = null;
+        decimal? mrCycleTimeP90H = null;
         if (cycleTimes.Any())
         {
             var sortedCycleTimes = cycleTimes.OrderBy(x => x).ToList();
             var median = ComputeMedian(sortedCycleTimes);
             mrCycleTimeP50H = (decimal)median;
 
-            _logger.LogInformation("Calculated MR cycle time P50 for user {UserId}: {CycleTimeP50}h from {Count} MRs", 
-                userId, mrCycleTimeP50H, cycleTimes.Count);
+            var p90 = ComputePercentile(sortedCycleTimes, 90);
+            mrCycleTimeP90H = (decimal)p90;
+
+            _logger.LogInformation("Calculated MR cycle time P50: {CycleTimeP50}h, P90: {CycleTimeP90}h for user {UserId} from {Count} MRs", 
+                mrCycleTimeP50H, mrCycleTimeP90H, userId, cycleTimes.Count);
         }
         else
         {
@@ -209,6 +213,7 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             WindowStart = windowStart,
             WindowEnd = windowEnd,
             MrCycleTimeP50H = mrCycleTimeP50H,
+            MrCycleTimeP90H = mrCycleTimeP90H,
             MergedMrCount = cycleTimes.Count,
             ExcludedMrCount = excludedCount,
             Projects = projectSummaries
@@ -237,6 +242,38 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
         }
     }
 
+    private static double ComputePercentile(List<double> sortedValues, int percentile)
+    {
+        var count = sortedValues.Count;
+        if (count == 0)
+        {
+            return 0;
+        }
+
+        if (percentile < 0 || percentile > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(percentile), "Percentile must be between 0 and 100");
+        }
+
+        // Calculate the index (0-based)
+        double index = (percentile / 100.0) * (count - 1);
+        int lowerIndex = (int)index;
+        int upperIndex = lowerIndex + 1;
+
+        if (lowerIndex == count - 1)
+        {
+            // Exactly at the last element
+            return sortedValues[lowerIndex];
+        }
+
+        // Interpolate between lower and upper
+        double lowerValue = sortedValues[lowerIndex];
+        double upperValue = sortedValues[upperIndex];
+        double fraction = index - lowerIndex;
+
+        return lowerValue + (fraction * (upperValue - lowerValue));
+    }
+
     private static MrCycleTimeResult CreateEmptyResult(
         Models.Raw.GitLabUser user,
         int windowDays,
@@ -251,6 +288,7 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             WindowStart = windowStart,
             WindowEnd = windowEnd,
             MrCycleTimeP50H = null,
+            MrCycleTimeP90H = null,
             MergedMrCount = 0,
             ExcludedMrCount = 0,
             Projects = new List<ProjectMrSummary>()

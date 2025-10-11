@@ -54,6 +54,11 @@ public sealed class MrCycleTimeResult
     public decimal? MrCycleTimeP50H { get; init; }
 
     /// <summary>
+    /// 90th percentile MR cycle time in hours (P90)
+    /// </summary>
+    public decimal? MrCycleTimeP90H { get; init; }
+
+    /// <summary>
     /// Total number of merged MRs analyzed
     /// </summary>
     public required int MergedMrCount { get; init; }
