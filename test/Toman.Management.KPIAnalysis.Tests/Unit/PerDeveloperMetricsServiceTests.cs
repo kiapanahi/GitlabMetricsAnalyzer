@@ -374,4 +374,298 @@ public sealed class PerDeveloperMetricsServiceTests
         Assert.Equal(48m, result.MrCycleTimeP50H.Value);
         Assert.Equal(3, result.MergedMrCount);
     }
+
+    [Fact]
+    public async Task CalculateFlowMetricsAsync_WithMergedMRs_CalculatesAllMetricsCorrectly()
+    {
+        // Arrange
+        const long userId = 1;
+        const int windowDays = 30;
+
+        var user = new GitLabUser
+        {
+            Id = userId,
+            Username = "testuser",
+            Name = "Test User",
+            Email = "test@example.com"
+        };
+
+        var project1 = new GitLabContributedProject
+        {
+            Id = 100,
+            Name = "project-1",
+            Path = "project-1",
+            PathWithNamespace = "company/project-1",
+            NameWithNamespace = "Company / Project 1",
+            DefaultBranch = "main",
+            WebUrl = "https://gitlab.example.com/company/project-1",
+            ForksCount = 0
+        };
+
+        var project2 = new GitLabContributedProject
+        {
+            Id = 200,
+            Name = "project-2",
+            Path = "project-2",
+            PathWithNamespace = "company/project-2",
+            NameWithNamespace = "Company / Project 2",
+            DefaultBranch = "main",
+            WebUrl = "https://gitlab.example.com/company/project-2",
+            ForksCount = 0
+        };
+
+        var now = DateTime.UtcNow;
+        
+        // Create merged MRs
+        var mr1 = new GitLabMergeRequest
+        {
+            Id = 1,
+            Iid = 1,
+            ProjectId = 100,
+            Title = "MR 1",
+            State = "merged",
+            CreatedAt = now.AddDays(-10),
+            MergedAt = now.AddDays(-8),
+            Author = user,
+            TargetBranch = "main",
+            SourceBranch = "feature/1"
+        };
+
+        var mr2 = new GitLabMergeRequest
+        {
+            Id = 2,
+            Iid = 2,
+            ProjectId = 200,
+            Title = "MR 2",
+            State = "merged",
+            CreatedAt = now.AddDays(-14),
+            MergedAt = now.AddDays(-10),
+            Author = user,
+            TargetBranch = "main",
+            SourceBranch = "feature/2"
+        };
+
+        // Create open MRs
+        var mr3 = new GitLabMergeRequest
+        {
+            Id = 3,
+            Iid = 3,
+            ProjectId = 100,
+            Title = "MR 3 (open)",
+            State = "opened",
+            CreatedAt = now.AddDays(-2),
+            MergedAt = null,
+            Author = user,
+            TargetBranch = "main",
+            SourceBranch = "feature/3"
+        };
+
+        // Create commits with stats for line counting
+        var mr1Commits = new List<GitLabCommit>
+        {
+            new GitLabCommit
+            {
+                Id = "commit1",
+                ShortId = "abc123",
+                Title = "First commit for MR 1",
+                AuthorName = "Test User",
+                AuthorEmail = "test@example.com",
+                CommittedDate = now.AddDays(-11), // 1 day before MR creation (coding time = 24h)
+                ProjectId = 100,
+                Stats = new GitLabCommitStats { Additions = 50, Deletions = 10, Total = 60 }
+            }
+        };
+
+        var mr2Commits = new List<GitLabCommit>
+        {
+            new GitLabCommit
+            {
+                Id = "commit2",
+                ShortId = "def456",
+                Title = "First commit for MR 2",
+                AuthorName = "Test User",
+                AuthorEmail = "test@example.com",
+                CommittedDate = now.AddDays(-16), // 2 days before MR creation (coding time = 48h)
+                ProjectId = 200,
+                Stats = new GitLabCommitStats { Additions = 100, Deletions = 20, Total = 120 }
+            }
+        };
+
+        // Create notes for review metrics
+        var reviewer = new GitLabUser
+        {
+            Id = 2,
+            Username = "reviewer",
+            Name = "Reviewer User"
+        };
+
+        var mr1Notes = new List<GitLabMergeRequestNote>
+        {
+            new GitLabMergeRequestNote
+            {
+                Id = 1,
+                Author = reviewer,
+                Body = "Looks good!",
+                CreatedAt = now.AddDays(-9.5), // 12 hours after MR creation (time to first review = 12h)
+                System = false
+            }
+        };
+
+        var mr2Notes = new List<GitLabMergeRequestNote>
+        {
+            new GitLabMergeRequestNote
+            {
+                Id = 2,
+                Author = reviewer,
+                Body = "Some comments",
+                CreatedAt = now.AddDays(-13), // 24 hours after MR creation (time to first review = 24h)
+                System = false
+            }
+        };
+
+        // Setup mocks
+        var mockGitLabClient = new Mock<IGitLabHttpClient>();
+        
+        mockGitLabClient
+            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        mockGitLabClient
+            .Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GitLabContributedProject> { project1, project2 });
+
+        mockGitLabClient
+            .Setup(x => x.GetMergeRequestsAsync(100, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GitLabMergeRequest> { mr1, mr3 });
+
+        mockGitLabClient
+            .Setup(x => x.GetMergeRequestsAsync(200, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GitLabMergeRequest> { mr2 });
+
+        mockGitLabClient
+            .Setup(x => x.GetMergeRequestCommitsAsync(100, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mr1Commits);
+
+        mockGitLabClient
+            .Setup(x => x.GetMergeRequestCommitsAsync(200, 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mr2Commits);
+
+        mockGitLabClient
+            .Setup(x => x.GetMergeRequestNotesAsync(100, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mr1Notes);
+
+        mockGitLabClient
+            .Setup(x => x.GetMergeRequestNotesAsync(200, 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mr2Notes);
+
+        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
+        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+
+        // Act
+        var result = await service.CalculateFlowMetricsAsync(userId, windowDays, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(userId, result.UserId);
+        Assert.Equal("testuser", result.Username);
+        Assert.Equal(windowDays, result.WindowDays);
+        
+        // Metric 1: Merged MRs Count
+        Assert.Equal(2, result.MergedMrsCount);
+        
+        // Metric 2: Lines Changed (50+10 + 100+20 = 180)
+        Assert.Equal(180, result.LinesChanged);
+        
+        // Metric 3: Coding Time Median (median of 24h and 48h = 36h)
+        Assert.NotNull(result.CodingTimeMedianH);
+        Assert.Equal(36m, result.CodingTimeMedianH.Value);
+        
+        // Metric 4: Time to First Review Median (median of 12h and 24h = 18h)
+        Assert.NotNull(result.TimeToFirstReviewMedianH);
+        Assert.Equal(18m, result.TimeToFirstReviewMedianH.Value);
+        
+        // Metric 5: Review Time Median - Not available without approval API
+        Assert.Null(result.ReviewTimeMedianH);
+        
+        // Metric 6: Merge Time Median - Using MR created → merged (48h and 96h, median = 72h)
+        Assert.NotNull(result.MergeTimeMedianH);
+        Assert.Equal(72m, result.MergeTimeMedianH.Value);
+        
+        // Metric 7: WIP/Open MRs Count
+        Assert.Equal(1, result.WipOpenMrsCount);
+        
+        // Metric 8: Context Switching Index (2 projects with merged MRs)
+        Assert.Equal(2, result.ContextSwitchingIndex);
+        
+        // Projects
+        Assert.Equal(2, result.Projects.Count);
+    }
+
+    [Fact]
+    public async Task CalculateFlowMetricsAsync_WithNoMRs_ReturnsEmptyResult()
+    {
+        // Arrange
+        const long userId = 1;
+        const int windowDays = 30;
+
+        var user = new GitLabUser
+        {
+            Id = userId,
+            Username = "testuser",
+            Name = "Test User",
+            Email = "test@example.com"
+        };
+
+        // Setup mocks
+        var mockGitLabClient = new Mock<IGitLabHttpClient>();
+        
+        mockGitLabClient
+            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        mockGitLabClient
+            .Setup(x => x.GetUserContributedProjectsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GitLabContributedProject>());
+
+        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
+        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+
+        // Act
+        var result = await service.CalculateFlowMetricsAsync(userId, windowDays, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(userId, result.UserId);
+        Assert.Equal(0, result.MergedMrsCount);
+        Assert.Equal(0, result.LinesChanged);
+        Assert.Null(result.CodingTimeMedianH);
+        Assert.Null(result.TimeToFirstReviewMedianH);
+        Assert.Null(result.ReviewTimeMedianH);
+        Assert.Null(result.MergeTimeMedianH);
+        Assert.Equal(0, result.WipOpenMrsCount);
+        Assert.Equal(0, result.ContextSwitchingIndex);
+        Assert.Empty(result.Projects);
+    }
+
+    [Fact]
+    public async Task CalculateFlowMetricsAsync_WithInvalidUserId_ThrowsException()
+    {
+        // Arrange
+        const long userId = 999;
+        const int windowDays = 30;
+
+        var mockGitLabClient = new Mock<IGitLabHttpClient>();
+        
+        mockGitLabClient
+            .Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GitLabUser?)null);
+
+        var logger = Mock.Of<ILogger<PerDeveloperMetricsService>>();
+        var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await service.CalculateFlowMetricsAsync(userId, windowDays, TestContext.Current.CancellationToken)
+        );
+    }
 }
