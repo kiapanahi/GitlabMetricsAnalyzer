@@ -461,7 +461,8 @@ public sealed class PerDeveloperMetricsServiceTests
         };
 
         // Create commits with stats for line counting
-        // MR1: First commit at -11 days, MR created at -10 days → coding time = 24h
+        // MR1: First commit at -11 days, MR created at -10 days
+        // Coding time calculation: (-10) - (-11) = 1 day = 24 hours
         var mr1Commits = new List<GitLabCommit>
         {
             new GitLabCommit
@@ -477,7 +478,8 @@ public sealed class PerDeveloperMetricsServiceTests
             }
         };
 
-        // MR2: First commit at -16 days, MR created at -14 days → coding time = 48h
+        // MR2: First commit at -16 days, MR created at -14 days
+        // Coding time calculation: (-14) - (-16) = 2 days = 48 hours
         var mr2Commits = new List<GitLabCommit>
         {
             new GitLabCommit
@@ -501,7 +503,8 @@ public sealed class PerDeveloperMetricsServiceTests
             Name = "Reviewer User"
         };
 
-        // MR1: MR created at -10 days, review at -9.5 days → time to first review = 12h
+        // MR1: MR created at -10 days, first review at -9.5 days
+        // Time to first review calculation: (-9.5) - (-10) = 0.5 days = 12 hours
         var mr1Notes = new List<GitLabMergeRequestNote>
         {
             new GitLabMergeRequestNote
@@ -514,7 +517,8 @@ public sealed class PerDeveloperMetricsServiceTests
             }
         };
 
-        // MR2: MR created at -14 days, review at -13 days → time to first review = 24h
+        // MR2: MR created at -14 days, first review at -13 days
+        // Time to first review calculation: (-13) - (-14) = 1 day = 24 hours
         var mr2Notes = new List<GitLabMergeRequestNote>
         {
             new GitLabMergeRequestNote
@@ -592,9 +596,11 @@ public sealed class PerDeveloperMetricsServiceTests
         Assert.Null(result.ReviewTimeMedianH);
         
         // Metric 6: Merge Time Median - Using MR created → merged
-        // MR1: created at -10 days, merged at -8 days = 48h
-        // MR2: created at -14 days, merged at -10 days = 96h
-        // Median of 48h and 96h = 72h
+        // MR1: created at -10 days, merged at -8 days
+        //   Calculation: (-8) - (-10) = 2 days = 48 hours
+        // MR2: created at -14 days, merged at -10 days
+        //   Calculation: (-10) - (-14) = 4 days = 96 hours
+        // Median of [48h, 96h] = 72h
         Assert.NotNull(result.MergeTimeMedianH);
         Assert.Equal(72m, result.MergeTimeMedianH.Value);
         
