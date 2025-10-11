@@ -654,17 +654,39 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         {
             _logger.LogDebug("Fetching commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API", mergeRequestIid, projectId);
 
-            var queryParams = new Dictionary<string, string>
+            // First, get the list of commits in the MR (this endpoint doesn't support with_stats)
+            var commitDtos = await GetPaginatedAsync<DTOs.GitLabCommit>($"projects/{projectId}/merge_requests/{mergeRequestIid}/commits", cancellationToken);
+
+            // Then fetch detailed stats for each commit using the repository commits endpoint
+            var detailedCommitTasks = commitDtos.Select(async dto =>
             {
-                {"with_stats", "true"} // Include commit statistics for line count calculations
-            };
+                try
+                {
+                    // Fetch individual commit details with stats
+                    var response = await _httpClient.GetAsync($"projects/{projectId}/repository/commits/{Uri.EscapeDataString(dto.Id)}?stats=true", cancellationToken);
+                    
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogWarning("Failed to fetch stats for commit {CommitId} in project {ProjectId}: {StatusCode}", dto.Id, projectId, response.StatusCode);
+                        return MapToCommit(dto, projectId); // Return without stats
+                    }
 
-            var commitDtos = await GetPaginatedAsync<DTOs.GitLabCommit>($"projects/{projectId}/merge_requests/{mergeRequestIid}/commits", cancellationToken, queryParams);
+                    var jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var detailedDto = JsonSerializer.Deserialize<DTOs.GitLabCommit>(jsonContent, JsonOptions);
+                    
+                    return detailedDto is not null ? MapToCommit(detailedDto, projectId) : MapToCommit(dto, projectId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to fetch stats for commit {CommitId} in project {ProjectId}", dto.Id, projectId);
+                    return MapToCommit(dto, projectId); // Return without stats on error
+                }
+            });
 
-            var commits = commitDtos.Select(dto => MapToCommit(dto, projectId)).ToList();
+            var commits = await Task.WhenAll(detailedCommitTasks);
 
-            _logger.LogDebug("Successfully fetched {CommitCount} commits for merge request {MergeRequestIid} in project {ProjectId}", commits.Count, mergeRequestIid, projectId);
-            return commits.AsReadOnly();
+            _logger.LogDebug("Successfully fetched {CommitCount} commits for merge request {MergeRequestIid} in project {ProjectId}", commits.Length, mergeRequestIid, projectId);
+            return commits.ToList().AsReadOnly();
         }
         catch (Exception ex)
         {
