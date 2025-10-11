@@ -25,7 +25,7 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
     {
         if (windowDays <= 0)
         {
-            throw new ArgumentException("Window days must be greater than 0", nameof(windowDays));
+            throw new ArgumentOutOfRangeException(nameof(windowDays), windowDays, "Window days must be greater than 0");
         }
 
         _logger.LogInformation("Calculating MR cycle time for user {UserId} over {WindowDays} days", userId, windowDays);
