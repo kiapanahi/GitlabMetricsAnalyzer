@@ -373,7 +373,12 @@ curl "http://localhost:5000/api/v1/123/metrics/collaboration?windowDays=90"
 | `reviewDepthScoreAvgChars` | Average comment length (quality indicator) | ↑ good | characters |
 
 **Bot Filtering**: 
-System notes and comments from bot accounts (matching configured patterns like `*-bot`, `ci-*`, etc.) are automatically excluded from all metrics.
+System notes and comments from bot accounts are automatically excluded from all metrics. Bot accounts are identified using regex patterns that can be configured via the `Metrics:Identity:BotRegexPatterns` setting. Default patterns include:
+- `bot$` - Usernames ending with "bot" (e.g., `gitlab-bot`)
+- `^bot-` - Usernames starting with "bot-" (e.g., `bot-reviewer`)
+- `\[bot\]` - Usernames containing "[bot]" (e.g., `github-actions[bot]`)
+- `-ci$` - Usernames ending with "-ci" (e.g., `jenkins-ci`)
+- `^ci-` - Usernames starting with "ci-" (e.g., `ci-pipeline`)
 
 **Use Cases**:
 - Identify collaboration patterns and team interaction
@@ -506,7 +511,7 @@ curl "http://localhost:5000/api/v1/catalog"
         "direction": "↑ good"
       },
       "reviewsGiven": {
-        "description": "Number of code reviews provided to other developers (legacy)",
+        "description": "Number of code reviews provided to other developers (DEPRECATED: use reviewCommentsGiven and approvalsGiven from collaboration metrics endpoint for more granular data)",
         "dataType": "integer",
         "unit": "count",
         "aggregation": "sum"
