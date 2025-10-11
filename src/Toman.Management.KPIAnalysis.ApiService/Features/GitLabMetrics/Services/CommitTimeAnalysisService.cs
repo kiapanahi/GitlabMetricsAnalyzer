@@ -65,8 +65,14 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
             .ToList();
 
         // Fetch project details to get names
-        var userProjects = await _gitLabHttpClient.GetUserContributedProjectsAsync(userId, cancellationToken);
-        var projectNameMap = userProjects.ToDictionary(p => p.Id, p => p.Name ?? "Unknown");
+        // Fetch only the required projects by ID to avoid unnecessary data transfer
+        var projectTasks = projectIds
+            .Select(id => _gitLabHttpClient.GetProjectByIdAsync(id, cancellationToken))
+            .ToList();
+        var requiredProjects = await Task.WhenAll(projectTasks);
+        var projectNameMap = requiredProjects
+            .Where(p => p != null)
+            .ToDictionary(p => p!.Id, p => p.Name ?? "Unknown");
 
         // Group events by project and calculate commit counts
         var projectGroups = events
