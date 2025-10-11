@@ -21,6 +21,11 @@ internal static class UserMetricsEndpoints
             .WithName("CalculateMrCycleTime")
             .WithSummary("Calculate MR cycle time (P50) for a developer")
             .WithDescription("Fetches merge requests from GitLab for the past N days and calculates the median cycle time from first commit to merge");
+
+        group.MapGet("/metrics/flow", CalculateFlowMetrics)
+            .WithName("CalculateFlowMetrics")
+            .WithSummary("Calculate flow and throughput metrics for a developer")
+            .WithDescription("Calculates comprehensive flow metrics including merged MRs count, lines changed, coding time, review time, merge time, WIP MRs, and context switching index");
     }
 
     private static async Task<IResult> AnalyzeUserCommitTimeDistribution(
@@ -107,6 +112,50 @@ internal static class UserMetricsEndpoints
             return Results.Problem(
                 detail: ex.Message,
                 title: "Error calculating MR cycle time",
+                statusCode: 500);
+        }
+    }
+
+    private static async Task<IResult> CalculateFlowMetrics(
+        long userId,
+        [FromQuery] int? windowDays,
+        IPerDeveloperMetricsService metricsService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var days = windowDays ?? 30;
+
+            if (days <= 0)
+            {
+                return Results.BadRequest(new { Error = "windowDays must be greater than 0" });
+            }
+
+            if (days > 365)
+            {
+                return Results.BadRequest(new { Error = "windowDays cannot exceed 365 days" });
+            }
+
+            var result = await metricsService.CalculateFlowMetricsAsync(
+                userId,
+                days,
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.NotFound(new { Error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                title: "Error calculating flow metrics",
                 statusCode: 500);
         }
     }

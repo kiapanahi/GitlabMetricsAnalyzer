@@ -295,4 +295,289 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             Projects = new List<ProjectMrSummary>()
         };
     }
+
+    public async Task<FlowMetricsResult> CalculateFlowMetricsAsync(
+        long userId,
+        int windowDays = 30,
+        CancellationToken cancellationToken = default)
+    {
+        if (windowDays <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(windowDays), windowDays, "Window days must be greater than 0");
+        }
+
+        _logger.LogInformation("Calculating flow metrics for user {UserId} over {WindowDays} days", userId, windowDays);
+
+        // Get user details
+        var user = await _gitLabHttpClient.GetUserByIdAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            throw new InvalidOperationException($"User with ID {userId} not found");
+        }
+
+        var windowEnd = DateTime.UtcNow;
+        var windowStart = windowEnd.AddDays(-windowDays);
+
+        _logger.LogDebug("Fetching merge requests for user {UserId} from {WindowStart} to {WindowEnd}", 
+            userId, windowStart, windowEnd);
+
+        // Get projects the user has contributed to
+        var contributedProjects = await _gitLabHttpClient.GetUserContributedProjectsAsync(userId, cancellationToken);
+
+        if (!contributedProjects.Any())
+        {
+            _logger.LogWarning("No contributed projects found for user {UserId}", userId);
+            return CreateEmptyFlowResult(user, windowDays, windowStart, windowEnd);
+        }
+
+        _logger.LogInformation("Found {ProjectCount} contributed projects for user {UserId}", 
+            contributedProjects.Count, userId);
+
+        // Fetch MRs from all contributed projects in parallel
+        var fetchMrTasks = contributedProjects.Select<GitLabContributedProject, Task<(
+            IReadOnlyList<Models.Raw.GitLabMergeRequest> MergedMRs, 
+            IReadOnlyList<Models.Raw.GitLabMergeRequest> OpenMRs,
+            ProjectMrSummary? Summary)>>(async project =>
+        {
+            try
+            {
+                var mergeRequests = await _gitLabHttpClient.GetMergeRequestsAsync(
+                    project.Id,
+                    new DateTimeOffset(windowStart),
+                    cancellationToken);
+
+                // Filter MRs by author
+                var userMergeRequests = mergeRequests
+                    .Where(mr => mr.Author?.Id == userId)
+                    .ToList();
+
+                // Separate merged and open/draft MRs
+                var mergedMrs = userMergeRequests
+                    .Where(mr => mr.MergedAt.HasValue && mr.MergedAt.Value >= windowStart && mr.MergedAt.Value <= windowEnd)
+                    .ToList();
+
+                var openMrs = userMergeRequests
+                    .Where(mr => mr.State == "opened" || mr.State == "draft")
+                    .ToList();
+
+                if (mergedMrs.Any() || openMrs.Any())
+                {
+                    _logger.LogDebug("Found {MergedCount} merged and {OpenCount} open MRs for user {UserId} in project {ProjectId}", 
+                        mergedMrs.Count, openMrs.Count, userId, project.Id);
+
+                    return (
+                        MergedMRs: mergedMrs,
+                        OpenMRs: openMrs,
+                        Summary: new ProjectMrSummary
+                        {
+                            ProjectId = project.Id,
+                            ProjectName = project.Name ?? "Unknown",
+                            MergedMrCount = mergedMrs.Count
+                        }
+                    );
+                }
+
+                return (
+                    MergedMRs: Array.Empty<Models.Raw.GitLabMergeRequest>(), 
+                    OpenMRs: Array.Empty<Models.Raw.GitLabMergeRequest>(),
+                    Summary: (ProjectMrSummary?)null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch merge requests for project {ProjectId}", project.Id);
+                return (
+                    MergedMRs: Array.Empty<Models.Raw.GitLabMergeRequest>(), 
+                    OpenMRs: Array.Empty<Models.Raw.GitLabMergeRequest>(),
+                    Summary: (ProjectMrSummary?)null);
+            }
+        });
+
+        var projectResults = await Task.WhenAll(fetchMrTasks);
+
+        var allMergedMergeRequests = projectResults
+            .SelectMany(r => r.MergedMRs)
+            .ToList();
+
+        var allOpenMergeRequests = projectResults
+            .SelectMany(r => r.OpenMRs)
+            .ToList();
+
+        var projectSummaries = projectResults
+            .Where(r => r.Summary is not null)
+            .Select(r => r.Summary!)
+            .ToList();
+
+        // Metric 1: Merged MRs Count
+        var mergedMrsCount = allMergedMergeRequests.Count;
+
+        // Metric 7: WIP/Open MRs Count (at snapshot time)
+        var wipOpenMrsCount = allOpenMergeRequests.Count;
+
+        // Metric 8: Context Switching Index (distinct projects)
+        var contextSwitchingIndex = projectSummaries.Count(p => p.MergedMrCount > 0);
+
+        _logger.LogInformation("Calculating detailed metrics for {MrCount} merged MRs", mergedMrsCount);
+
+        // Calculate metrics in parallel for each MR
+        var metricsCalculationTasks = allMergedMergeRequests.Select(async mr =>
+        {
+            try
+            {
+                // Get commits for this MR
+                var mrCommits = await _gitLabHttpClient.GetMergeRequestCommitsAsync(
+                    mr.ProjectId, 
+                    mr.Iid, 
+                    cancellationToken);
+
+                // Calculate lines changed from commit stats
+                var linesChanged = mrCommits
+                    .Where(c => c.Stats is not null)
+                    .Sum(c => (c.Stats!.Additions + c.Stats.Deletions));
+
+                // Get first commit timestamp
+                DateTime? firstCommitDate = null;
+                if (mrCommits.Any())
+                {
+                    var firstCommit = mrCommits.OrderBy(c => c.CommittedDate).FirstOrDefault();
+                    firstCommitDate = firstCommit?.CommittedDate;
+                }
+
+                // Calculate coding time (first commit → MR open)
+                double? codingTimeH = null;
+                if (firstCommitDate.HasValue && mr.CreatedAt.HasValue)
+                {
+                    codingTimeH = (mr.CreatedAt.Value - firstCommitDate.Value).TotalHours;
+                    if (codingTimeH < 0) codingTimeH = null; // Invalid
+                }
+
+                // Get MR notes to calculate review metrics
+                var mrNotes = await _gitLabHttpClient.GetMergeRequestNotesAsync(
+                    mr.ProjectId,
+                    mr.Iid,
+                    cancellationToken);
+
+                // Time to first review (MR open → first non-author comment)
+                double? timeToFirstReviewH = null;
+                var firstReviewNote = mrNotes
+                    .Where(n => !n.System && n.Author?.Id != userId && n.CreatedAt.HasValue)
+                    .OrderBy(n => n.CreatedAt)
+                    .FirstOrDefault();
+
+                if (firstReviewNote?.CreatedAt is not null && mr.CreatedAt.HasValue)
+                {
+                    timeToFirstReviewH = (firstReviewNote.CreatedAt.Value - mr.CreatedAt.Value).TotalHours;
+                    if (timeToFirstReviewH < 0) timeToFirstReviewH = null; // Invalid
+                }
+
+                // For review time and merge time, we need approval data
+                // GitLab API doesn't always have explicit approval timestamps in the basic API
+                // We'll calculate merge time as a proxy: MR created → merged
+                double? mergeTimeH = null;
+                if (mr.MergedAt.HasValue && mr.CreatedAt.HasValue)
+                {
+                    mergeTimeH = (mr.MergedAt.Value - mr.CreatedAt.Value).TotalHours;
+                    if (mergeTimeH < 0) mergeTimeH = null; // Invalid
+                }
+
+                return new
+                {
+                    LinesChanged = linesChanged,
+                    CodingTimeH = codingTimeH,
+                    TimeToFirstReviewH = timeToFirstReviewH,
+                    MergeTimeH = mergeTimeH
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to calculate metrics for MR {MrIid} in project {ProjectId}", 
+                    mr.Iid, mr.ProjectId);
+                return new
+                {
+                    LinesChanged = 0,
+                    CodingTimeH = (double?)null,
+                    TimeToFirstReviewH = (double?)null,
+                    MergeTimeH = (double?)null
+                };
+            }
+        });
+
+        var metricsResults = await Task.WhenAll(metricsCalculationTasks);
+
+        // Metric 2: Lines Changed (total)
+        var linesChanged = metricsResults.Sum(m => m.LinesChanged);
+
+        // Metric 3: Coding Time (median)
+        var codingTimes = metricsResults
+            .Where(m => m.CodingTimeH.HasValue && m.CodingTimeH.Value > 0)
+            .Select(m => m.CodingTimeH!.Value)
+            .OrderBy(x => x)
+            .ToList();
+        var codingTimeMedianH = codingTimes.Any() ? (decimal?)ComputeMedian(codingTimes) : null;
+
+        // Metric 4: Time to First Review (median)
+        var timeToFirstReviewTimes = metricsResults
+            .Where(m => m.TimeToFirstReviewH.HasValue && m.TimeToFirstReviewH.Value > 0)
+            .Select(m => m.TimeToFirstReviewH!.Value)
+            .OrderBy(x => x)
+            .ToList();
+        var timeToFirstReviewMedianH = timeToFirstReviewTimes.Any() ? (decimal?)ComputeMedian(timeToFirstReviewTimes) : null;
+
+        // Metric 5: Review Time (median) - Not available without approval API
+        decimal? reviewTimeMedianH = null;
+
+        // Metric 6: Merge Time (median) - Using MR created → merged as proxy
+        var mergeTimes = metricsResults
+            .Where(m => m.MergeTimeH.HasValue && m.MergeTimeH.Value > 0)
+            .Select(m => m.MergeTimeH!.Value)
+            .OrderBy(x => x)
+            .ToList();
+        var mergeTimeMedianH = mergeTimes.Any() ? (decimal?)ComputeMedian(mergeTimes) : null;
+
+        _logger.LogInformation(
+            "Flow metrics calculated for user {UserId}: {MergedCount} merged MRs, {LinesChanged} lines changed, {OpenCount} open MRs, {ProjectCount} projects",
+            userId, mergedMrsCount, linesChanged, wipOpenMrsCount, contextSwitchingIndex);
+
+        return new FlowMetricsResult
+        {
+            UserId = userId,
+            Username = user.Username ?? string.Empty,
+            WindowDays = windowDays,
+            WindowStart = windowStart,
+            WindowEnd = windowEnd,
+            MergedMrsCount = mergedMrsCount,
+            LinesChanged = linesChanged,
+            CodingTimeMedianH = codingTimeMedianH,
+            TimeToFirstReviewMedianH = timeToFirstReviewMedianH,
+            ReviewTimeMedianH = reviewTimeMedianH,
+            MergeTimeMedianH = mergeTimeMedianH,
+            WipOpenMrsCount = wipOpenMrsCount,
+            ContextSwitchingIndex = contextSwitchingIndex,
+            Projects = projectSummaries
+        };
+    }
+
+    private static FlowMetricsResult CreateEmptyFlowResult(
+        Models.Raw.GitLabUser user,
+        int windowDays,
+        DateTime windowStart,
+        DateTime windowEnd)
+    {
+        return new FlowMetricsResult
+        {
+            UserId = user.Id,
+            Username = user.Username ?? string.Empty,
+            WindowDays = windowDays,
+            WindowStart = windowStart,
+            WindowEnd = windowEnd,
+            MergedMrsCount = 0,
+            LinesChanged = 0,
+            CodingTimeMedianH = null,
+            TimeToFirstReviewMedianH = null,
+            ReviewTimeMedianH = null,
+            MergeTimeMedianH = null,
+            WipOpenMrsCount = 0,
+            ContextSwitchingIndex = 0,
+            Projects = new List<ProjectMrSummary>()
+        };
+    }
 }

@@ -711,3 +711,60 @@ public class GitLabEventAuthor
     /// </summary>
     public string? Name { get; set; }
 }
+
+/// <summary>
+/// Represents changes (diff stats) for a merge request.
+/// </summary>
+public class GitLabMergeRequestChanges
+{
+    /// <summary>
+    /// Total number of lines added across all changes.
+    /// </summary>
+    public int Additions { get; set; }
+
+    /// <summary>
+    /// Total number of lines deleted across all changes.
+    /// </summary>
+    public int Deletions { get; set; }
+
+    /// <summary>
+    /// Total changes (additions + deletions).
+    /// </summary>
+    public int Total { get; set; }
+
+    /// <summary>
+    /// List of changed files with individual stats.
+    /// </summary>
+    public List<GitLabMergeRequestChange>? Changes { get; set; }
+}
+
+/// <summary>
+/// Represents a single file change in a merge request.
+/// </summary>
+public class GitLabMergeRequestChange
+{
+    /// <summary>
+    /// The old file path (null for new files).
+    /// </summary>
+    public string? OldPath { get; set; }
+
+    /// <summary>
+    /// The new file path (null for deleted files).
+    /// </summary>
+    public string? NewPath { get; set; }
+
+    /// <summary>
+    /// Whether the file is new.
+    /// </summary>
+    public bool NewFile { get; set; }
+
+    /// <summary>
+    /// Whether the file was renamed.
+    /// </summary>
+    public bool RenamedFile { get; set; }
+
+    /// <summary>
+    /// Whether the file was deleted.
+    /// </summary>
+    public bool DeletedFile { get; set; }
+}
