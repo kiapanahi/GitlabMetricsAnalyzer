@@ -212,8 +212,8 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             WindowDays = windowDays,
             WindowStart = windowStart,
             WindowEnd = windowEnd,
-            MrCycleTimeP50H = cycleTimes.Count == 0 ? null : ComputeMedian(cycleTimes),
-            MrCycleTimeP90H = cycleTimes.Count == 0 ? null : ComputePercentile(cycleTimes, 90),
+            MrCycleTimeP50H = cycleTimes.Count == 0 ? null : ComputeMedian(sortedCycleTimes),
+            MrCycleTimeP90H = cycleTimes.Count == 0 ? null : ComputePercentile(sortedCycleTimes, 90),
             MergedMrCount = cycleTimes.Count,
             ExcludedMrCount = excludedCount,
             Projects = projectSummaries
