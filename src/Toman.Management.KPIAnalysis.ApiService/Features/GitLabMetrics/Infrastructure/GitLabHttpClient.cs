@@ -654,7 +654,12 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         {
             _logger.LogDebug("Fetching commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API", mergeRequestIid, projectId);
 
-            var commitDtos = await GetPaginatedAsync<DTOs.GitLabCommit>($"projects/{projectId}/merge_requests/{mergeRequestIid}/commits", cancellationToken);
+            var queryParams = new Dictionary<string, string>
+            {
+                {"with_stats", "true"} // Include commit statistics for line count calculations
+            };
+
+            var commitDtos = await GetPaginatedAsync<DTOs.GitLabCommit>($"projects/{projectId}/merge_requests/{mergeRequestIid}/commits", cancellationToken, queryParams);
 
             var commits = commitDtos.Select(dto => MapToCommit(dto, projectId)).ToList();
 
