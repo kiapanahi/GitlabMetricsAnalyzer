@@ -223,7 +223,7 @@ public sealed class PerDeveloperMetricsServiceTests
     }
 
     [Fact]
-    public async Task CalculateMrCycleTimeAsync_WithInvalidWindowDays_ThrowsArgumentException()
+    public async Task CalculateMrCycleTimeAsync_WithInvalidWindowDays_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
         const long userId = 1;
@@ -234,7 +234,7 @@ public sealed class PerDeveloperMetricsServiceTests
         var service = new PerDeveloperMetricsService(mockGitLabClient.Object, logger);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             async () => await service.CalculateMrCycleTimeAsync(userId, windowDays, TestContext.Current.CancellationToken));
     }
 

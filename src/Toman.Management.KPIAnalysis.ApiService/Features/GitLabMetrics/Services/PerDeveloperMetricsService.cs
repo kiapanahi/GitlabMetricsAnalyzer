@@ -1,4 +1,5 @@
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
@@ -56,7 +57,7 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             contributedProjects.Count, userId);
 
         // Fetch MRs from all contributed projects in parallel
-        var fetchMrTasks = contributedProjects.Select(async project =>
+        var fetchMrTasks = contributedProjects.Select<GitLabContributedProject, Task<(IReadOnlyList<Models.Raw.GitLabMergeRequest> MergeRequests, ProjectMrSummary? Summary)>>(async project =>
         {
             try
             {
@@ -186,13 +187,13 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
         var excludedCount = cycleTimeResults.Count(r => r.Excluded);
 
         // Calculate median (P50) and 90th percentile (P90)
+        var sortedCycleTimes = cycleTimes.OrderBy(x => x).ToList();
         decimal? mrCycleTimeP50H = null;
         decimal? mrCycleTimeP90H = null;
         if (cycleTimes.Any())
         {
-            var sortedCycleTimes = cycleTimes.OrderBy(x => x).ToList();
             var median = ComputeMedian(sortedCycleTimes);
-            mrCycleTimeP50H = (decimal)median;
+            mrCycleTimeP50H = (decimal)median!;
 
             var p90 = ComputePercentile(sortedCycleTimes, 90);
             mrCycleTimeP90H = (decimal)p90;
@@ -212,8 +213,8 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
             WindowDays = windowDays,
             WindowStart = windowStart,
             WindowEnd = windowEnd,
-            MrCycleTimeP50H = cycleTimes.Count == 0 ? null : ComputeMedian(sortedCycleTimes),
-            MrCycleTimeP90H = cycleTimes.Count == 0 ? null : ComputePercentile(sortedCycleTimes, 90),
+            MrCycleTimeP50H = cycleTimes.Count == 0 ? null : (decimal?)ComputeMedian(sortedCycleTimes),
+            MrCycleTimeP90H = cycleTimes.Count == 0 ? null : (decimal?)ComputePercentile(sortedCycleTimes, 90),
             MergedMrCount = cycleTimes.Count,
             ExcludedMrCount = excludedCount,
             Projects = projectSummaries
