@@ -169,6 +169,24 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Merge request with changes including additions and deletions</returns>
     Task<GitLabMergeRequestChanges?> GetMergeRequestChangesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets discussions (threaded comments) for a specific merge request.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="mergeRequestIid">The merge request IID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of discussions</returns>
+    Task<IReadOnlyList<GitLabDiscussion>> GetMergeRequestDiscussionsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets approval state for a specific merge request.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="mergeRequestIid">The merge request IID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Approval state information</returns>
+    Task<GitLabMergeRequestApprovals?> GetMergeRequestApprovalsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -1116,6 +1134,60 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch changes for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<GitLabDiscussion>> GetMergeRequestDiscussionsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching discussions for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+
+            var discussions = await GetPaginatedAsync<GitLabDiscussion>($"projects/{projectId}/merge_requests/{mergeRequestIid}/discussions", cancellationToken);
+
+            _logger.LogDebug("Successfully fetched {DiscussionCount} discussions for MR {MergeRequestIid} in project {ProjectId}", 
+                discussions.Count, mergeRequestIid, projectId);
+            return discussions.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch discussions for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+            return Array.Empty<GitLabDiscussion>();
+        }
+    }
+
+    public async Task<GitLabMergeRequestApprovals?> GetMergeRequestApprovalsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching approvals for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+
+            var url = $"projects/{projectId}/merge_requests/{mergeRequestIid}/approvals";
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Approvals not found for MR {MergeRequestIid} in project {ProjectId} (may not be available in this GitLab edition)", mergeRequestIid, projectId);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to fetch approvals for MR {MergeRequestIid} in project {ProjectId}: {StatusCode}", 
+                    mergeRequestIid, projectId, response.StatusCode);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var approvals = JsonSerializer.Deserialize<GitLabMergeRequestApprovals>(content, JsonOptions);
+
+            _logger.LogDebug("Successfully fetched approvals for MR {MergeRequestIid} in project {ProjectId}", mergeRequestIid, projectId);
+            return approvals;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch approvals for MR {MergeRequestIid} in project {ProjectId} (feature may not be available)", mergeRequestIid, projectId);
             return null;
         }
     }
