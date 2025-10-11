@@ -281,6 +281,107 @@ curl "http://localhost:5000/api/v1/metrics/developers/123?projectIds[]=456&proje
 }
 ```
 
+### Get Collaboration Metrics
+
+**Endpoint**: `GET /api/v1/{userId}/metrics/collaboration`
+
+Calculates comprehensive collaboration and code review metrics for a specific developer, including review participation, discussion engagement, and review quality indicators.
+
+```bash
+# Get collaboration metrics for user 123 over last 30 days
+curl "http://localhost:5000/api/v1/123/metrics/collaboration"
+
+# Custom time window
+curl "http://localhost:5000/api/v1/123/metrics/collaboration?windowDays=90"
+```
+
+**Path Parameters**:
+- `userId` (required): The GitLab user ID
+
+**Query Parameters**:
+- `windowDays` (optional): Number of days to analyze (default: 30, max: 365)
+
+**Response**:
+```json
+{
+  "userId": 123,
+  "username": "john.doe",
+  "windowDays": 30,
+  "windowStart": "2024-12-11T00:00:00Z",
+  "windowEnd": "2025-01-10T00:00:00Z",
+  "reviewCommentsGiven": 48,
+  "reviewCommentsReceived": 32,
+  "approvalsGiven": 15,
+  "resolvedDiscussionThreads": 12,
+  "unresolvedDiscussionThreads": 3,
+  "selfMergedMrsCount": 2,
+  "selfMergedMrsRatio": 0.125,
+  "reviewTurnaroundTimeMedianH": 4.5,
+  "reviewDepthScoreAvgChars": 185.2,
+  "totalMrsCreated": 18,
+  "totalMrsMerged": 16,
+  "mrsReviewed": 24,
+  "projects": [
+    {
+      "projectId": 100,
+      "projectName": "backend-api",
+      "mrsCreated": 10,
+      "mrsReviewed": 15,
+      "commentsGiven": 28,
+      "commentsReceived": 20
+    },
+    {
+      "projectId": 101,
+      "projectName": "frontend-app",
+      "mrsCreated": 8,
+      "mrsReviewed": 9,
+      "commentsGiven": 20,
+      "commentsReceived": 12
+    }
+  ],
+  "perspectives": {
+    "asAuthor": {
+      "mrsCreated": 18,
+      "commentsReceived": 32,
+      "selfMergedMrs": 2,
+      "discussionThreads": 15,
+      "resolvedThreads": 12
+    },
+    "asReviewer": {
+      "mrsReviewed": 24,
+      "commentsGiven": 48,
+      "approvalsGiven": 15,
+      "reviewTurnaroundMedianH": 4.5,
+      "avgReviewDepthChars": 185.2
+    }
+  }
+}
+```
+
+**Metric Descriptions**:
+
+| Metric | Description | Direction | Unit |
+|--------|-------------|-----------|------|
+| `reviewCommentsGiven` | Number of review comments made by developer on others' MRs | ↑ good | count |
+| `reviewCommentsReceived` | Comments received on developer's MRs | context-dependent | count |
+| `approvalsGiven` | Number of MR approvals provided | ↑ good | count |
+| `resolvedDiscussionThreads` | Number of resolved discussion threads on own MRs | ↑ good | count |
+| `unresolvedDiscussionThreads` | Number of unresolved discussion threads | ↓ good | count |
+| `selfMergedMrsCount` | MRs merged without external approval | ↓ good | count |
+| `selfMergedMrsRatio` | Ratio of self-merged to total merged MRs | ↓ good | ratio (0-1) |
+| `reviewTurnaroundTimeMedianH` | Median time to provide first review comment | ↓ good | hours |
+| `reviewDepthScoreAvgChars` | Average comment length (quality indicator) | ↑ good | characters |
+
+**Bot Filtering**: 
+System notes and comments from bot accounts (matching configured patterns like `*-bot`, `ci-*`, etc.) are automatically excluded from all metrics.
+
+**Use Cases**:
+- Identify collaboration patterns and team interaction
+- Measure code review effectiveness and engagement
+- Track review responsiveness and quality
+- Identify opportunities for improving review practices
+- Assess balance between giving and receiving reviews
+
 ### Get Metrics Catalog
 
 **Endpoint**: `GET /api/v1/catalog`
@@ -340,8 +441,72 @@ curl "http://localhost:5000/api/v1/catalog"
       }
     },
     "collaboration": {
+      "reviewCommentsGiven": {
+        "description": "Number of review comments made by developer on others' MRs",
+        "dataType": "integer",
+        "unit": "count",
+        "aggregation": "sum",
+        "direction": "↑ good"
+      },
+      "reviewCommentsReceived": {
+        "description": "Number of comments received on developer's MRs",
+        "dataType": "integer",
+        "unit": "count",
+        "aggregation": "sum",
+        "direction": "context-dependent"
+      },
+      "approvalsGiven": {
+        "description": "Number of MR approvals provided by developer",
+        "dataType": "integer",
+        "unit": "count",
+        "aggregation": "sum",
+        "direction": "↑ good"
+      },
+      "resolvedDiscussionThreads": {
+        "description": "Number of resolved discussion threads on developer's MRs",
+        "dataType": "integer",
+        "unit": "count",
+        "aggregation": "sum",
+        "direction": "↑ good"
+      },
+      "unresolvedDiscussionThreads": {
+        "description": "Number of unresolved discussion threads",
+        "dataType": "integer",
+        "unit": "count",
+        "aggregation": "sum",
+        "direction": "↓ good"
+      },
+      "selfMergedMrsCount": {
+        "description": "MRs merged without external review or approval",
+        "dataType": "integer",
+        "unit": "count",
+        "aggregation": "sum",
+        "direction": "↓ good"
+      },
+      "selfMergedMrsRatio": {
+        "description": "Ratio of self-merged MRs to total merged MRs",
+        "dataType": "decimal",
+        "unit": "ratio",
+        "range": [0, 1],
+        "aggregation": "average",
+        "direction": "↓ good"
+      },
+      "reviewTurnaroundTimeMedianH": {
+        "description": "Median time to provide first review comment (hours)",
+        "dataType": "decimal",
+        "unit": "hours",
+        "aggregation": "median",
+        "direction": "↓ good"
+      },
+      "reviewDepthScoreAvgChars": {
+        "description": "Average comment length as quality indicator",
+        "dataType": "decimal",
+        "unit": "characters",
+        "aggregation": "average",
+        "direction": "↑ good"
+      },
       "reviewsGiven": {
-        "description": "Number of code reviews provided to other developers",
+        "description": "Number of code reviews provided to other developers (legacy)",
         "dataType": "integer",
         "unit": "count",
         "aggregation": "sum"
