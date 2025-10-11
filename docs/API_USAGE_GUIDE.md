@@ -373,12 +373,24 @@ curl "http://localhost:5000/api/v1/123/metrics/collaboration?windowDays=90"
 | `reviewDepthScoreAvgChars` | Average comment length (quality indicator) | ↑ good | characters |
 
 **Bot Filtering**: 
-System notes and comments from bot accounts are automatically excluded from all metrics. Bot accounts are identified using regex patterns that can be configured via the `Metrics:Identity:BotRegexPatterns` setting. Default patterns include:
-- `bot$` - Usernames ending with "bot" (e.g., `gitlab-bot`)
-- `^bot-` - Usernames starting with "bot-" (e.g., `bot-reviewer`)
-- `\[bot\]` - Usernames containing "[bot]" (e.g., `github-actions[bot]`)
-- `-ci$` - Usernames ending with "-ci" (e.g., `jenkins-ci`)
-- `^ci-` - Usernames starting with "ci-" (e.g., `ci-pipeline`)
+System notes and comments from bot accounts are automatically excluded from all metrics. Bot accounts are identified using regex patterns that can be configured via the `Metrics:Identity:BotRegexPatterns` setting in `appsettings.json`. 
+
+Example configuration patterns (from appsettings.json):
+- `^.*bot$` - Usernames ending with "bot" (e.g., `gitlab-bot`, `renovatebot`)
+- `^.*\[bot\]$` - Usernames ending with "[bot]" (e.g., `github-actions[bot]`)
+- `^gitlab-ci$` - Exact match for GitLab CI
+- `^dependabot.*` - Usernames starting with "dependabot"
+- `^renovate.*` - Usernames starting with "renovate"
+- `^.*automation.*$` - Usernames containing "automation"
+
+If no patterns are configured, the following default patterns are used:
+- `bot$` - Ends with "bot"
+- `^bot-` - Starts with "bot-"
+- `\[bot\]` - Contains "[bot]" anywhere
+- `-ci$` - Ends with "-ci"
+- `^ci-` - Starts with "ci-"
+
+All pattern matching is case-insensitive.
 
 **Use Cases**:
 - Identify collaboration patterns and team interaction
