@@ -602,7 +602,24 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API", mergeRequestIid, projectId);
+            // Try to log a more specific reason for the failure
+            if (ex is HttpRequestException httpEx)
+            {
+                // If the inner exception is a WebException, we may be able to get the status code
+                var statusCode = (httpEx.Data.Contains("StatusCode") ? httpEx.Data["StatusCode"] : null);
+                if (statusCode != null)
+                {
+                    _logger.LogWarning(httpEx, "Failed to fetch commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API. HTTP status code: {StatusCode}", mergeRequestIid, projectId, statusCode);
+                }
+                else
+                {
+                    _logger.LogWarning(httpEx, "Failed to fetch commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API. Reason: {Message}", mergeRequestIid, projectId, httpEx.Message);
+                }
+            }
+            else
+            {
+                _logger.LogWarning(ex, "Failed to fetch commits for merge request {MergeRequestIid} in project {ProjectId} via GitLab API. Reason: {Message}", mergeRequestIid, projectId, ex.Message);
+            }
             // Return empty list instead of throwing to handle MRs without accessible commits gracefully
             return Array.Empty<GitLabCommit>();
         }
