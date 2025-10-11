@@ -2,25 +2,26 @@
 
 ## Overview
 
-The MR Cycle Time API provides real-time calculation of merge request cycle time metrics for individual developers by fetching live data from your GitLab server. This metric measures the median time from the first commit in a merge request to when it gets merged.
+The MR Cycle Time API provides real-time calculation of merge request cycle time metrics for individual developers by fetching live data from your GitLab server. This metric measures the median (P50) and 90th percentile (P90) time from the first commit in a merge request to when it gets merged.
 
 ## Formula
 
 ```
 MR Cycle Time (P50) = median(merged_at - first_commit_at) for merged MRs
+MR Cycle Time (P90) = 90th percentile(merged_at - first_commit_at) for merged MRs
 ```
 
 Where:
 - `merged_at`: Timestamp when the MR was merged
 - `first_commit_at`: Timestamp of the first commit in the MR
 - Unit: Hours
-- Percentile: P50 (median)
+- Percentiles: P50 (median), P90 (90th percentile)
 
 ## Endpoint
 
 ### GET /api/v1/{userId}/metrics/mr-cycle-time
 
-Calculates the median MR cycle time for a specific developer.
+Calculates the median (P50) and 90th percentile (P90) MR cycle time for a specific developer.
 
 **Path Parameters:**
 - `userId` (required): GitLab user ID (long integer)
@@ -46,6 +47,7 @@ curl "http://localhost:5000/api/v1/123/metrics/mr-cycle-time?windowDays=90"
   "windowStart": "2024-09-06T10:30:00Z",
   "windowEnd": "2024-10-06T10:30:00Z",
   "mrCycleTimeP50H": 48.5,
+  "mrCycleTimeP90H": 120.2,
   "mergedMrCount": 15,
   "excludedMrCount": 2,
   "projects": [
