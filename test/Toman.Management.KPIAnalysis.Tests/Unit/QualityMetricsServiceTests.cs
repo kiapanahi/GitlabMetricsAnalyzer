@@ -251,7 +251,8 @@ public sealed class QualityMetricsServiceTests
         Assert.Equal(0.25m, result.RevertRate);
         Assert.Equal(1, result.RevertedMrCount);
 
-        // CI Success Rate: 2 first runs (abc123 and def456), 1 successful = 0.5
+        // CI Success Rate: 2 first runs by SHA - abc123 (success) and def456 (failed, ID 2 is first)
+        // 1 successful out of 2 = 0.5
         Assert.Equal(0.5m, result.CiSuccessRate);
         Assert.Equal(1, result.SuccessfulPipelinesFirstRun);
         Assert.Equal(2, result.TotalFirstRunPipelines);
