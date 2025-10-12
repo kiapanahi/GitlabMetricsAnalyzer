@@ -14,5 +14,8 @@ public sealed record GitLabMergeRequest(
     [property: JsonPropertyName("changes_count")] string? ChangesCount,
     [property: JsonPropertyName("source_branch")] string SourceBranch,
     [property: JsonPropertyName("target_branch")] string TargetBranch,
-    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
+    [property: JsonPropertyName("title")] string? Title,
+    [property: JsonPropertyName("labels")] List<string>? Labels,
+    [property: JsonPropertyName("has_conflicts")] bool HasConflicts
 );

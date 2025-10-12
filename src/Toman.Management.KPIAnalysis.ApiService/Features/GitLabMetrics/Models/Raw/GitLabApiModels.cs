@@ -378,6 +378,11 @@ public class GitLabMergeRequest
     /// The web URL.
     /// </summary>
     public string? WebUrl { get; set; }
+
+    /// <summary>
+    /// The labels.
+    /// </summary>
+    public List<string>? Labels { get; set; }
 }
 
 /// <summary>

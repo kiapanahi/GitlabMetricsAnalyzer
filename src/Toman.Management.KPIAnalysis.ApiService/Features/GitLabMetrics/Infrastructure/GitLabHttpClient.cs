@@ -371,7 +371,7 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             Id = dto.Id,
             Iid = dto.Iid,
             ProjectId = dto.ProjectId,
-            Title = string.Empty, // Not available in simple DTO
+            Title = dto.Title ?? string.Empty,
             Description = string.Empty, // Not available in simple DTO
             State = dto.State,
             CreatedAt = dto.CreatedAt.DateTime,
@@ -382,10 +382,11 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             SourceBranch = dto.SourceBranch,
             Author = MapToUser(dto.Author),
             WorkInProgress = false, // Not available in simple DTO
-            HasConflicts = false, // Not available in simple DTO
+            HasConflicts = dto.HasConflicts,
             ChangesCount = dto.ChangesCount ?? "0",
             MergeStatus = "can_be_merged", // Default status
-            WebUrl = string.Empty // Not available in simple DTO
+            WebUrl = string.Empty, // Not available in simple DTO
+            Labels = dto.Labels
         };
     }
 
