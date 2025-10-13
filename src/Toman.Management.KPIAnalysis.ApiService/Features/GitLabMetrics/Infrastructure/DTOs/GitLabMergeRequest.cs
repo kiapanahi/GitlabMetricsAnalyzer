@@ -17,5 +17,6 @@ public sealed record GitLabMergeRequest(
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
     [property: JsonPropertyName("title")] string? Title,
     [property: JsonPropertyName("labels")] List<string>? Labels,
-    [property: JsonPropertyName("has_conflicts")] bool HasConflicts
+    [property: JsonPropertyName("has_conflicts")] bool HasConflicts,
+    [property: JsonPropertyName("squash")] bool Squash
 );

@@ -383,6 +383,11 @@ public class GitLabMergeRequest
     /// The labels.
     /// </summary>
     public List<string>? Labels { get; set; }
+
+    /// <summary>
+    /// Whether the merge request should be squashed when merged.
+    /// </summary>
+    public bool Squash { get; set; }
 }
 
 /// <summary>

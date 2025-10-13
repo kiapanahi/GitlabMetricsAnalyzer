@@ -36,6 +36,11 @@ internal static class UserMetricsEndpoints
             .WithName("CalculateQualityMetrics")
             .WithSummary("Calculate quality and reliability metrics for a developer")
             .WithDescription("Calculates quality metrics including rework ratio, revert rate, CI success rate, pipeline duration, test coverage, hotfix rate, and merge conflict frequency");
+
+        group.MapGet("/metrics/code-characteristics", CalculateCodeCharacteristics)
+            .WithName("CalculateCodeCharacteristics")
+            .WithSummary("Calculate code characteristics metrics for a developer")
+            .WithDescription("Calculates code characteristics including commit frequency, commit size distribution, MR size distribution, file churn, squash merge rate, commit message quality, and branch naming compliance");
     }
 
     private static async Task<IResult> AnalyzeUserCommitTimeDistribution(
@@ -267,6 +272,50 @@ internal static class UserMetricsEndpoints
             return Results.Problem(
                 detail: ex.Message,
                 title: "Error calculating quality metrics",
+                statusCode: 500);
+        }
+    }
+
+    private static async Task<IResult> CalculateCodeCharacteristics(
+        long userId,
+        [FromQuery] int? windowDays,
+        ICodeCharacteristicsService metricsService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var days = windowDays ?? 30;
+
+            if (days <= 0)
+            {
+                return Results.BadRequest(new { Error = "windowDays must be greater than 0" });
+            }
+
+            if (days > 365)
+            {
+                return Results.BadRequest(new { Error = "windowDays cannot exceed 365 days" });
+            }
+
+            var result = await metricsService.CalculateCodeCharacteristicsAsync(
+                userId,
+                days,
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.NotFound(new { Error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                title: "Error calculating code characteristics metrics",
                 statusCode: 500);
         }
     }
