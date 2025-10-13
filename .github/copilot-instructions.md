@@ -101,3 +101,12 @@ Build a C# application that collects developer productivity metrics from an on-p
 - Use branches for new features and bug fixes
 - Always create pull requests for code reviews
 - Always review code before merging
+
+## Versioning Policy
+- Version format follows **MAJOR.MINOR.PATCH** (e.g., 15.2.3)
+- Update version in `Directory.Build.props` for each PR merged to main:
+  - **Features/New functionality**: Increment MAJOR version (e.g., 15.0.0 → 16.0.0)
+  - **Bug fixes**: Increment MINOR version (e.g., 15.0.0 → 15.1.0)
+  - **Patches/Code cleanup/Refactoring**: Increment PATCH version (e.g., 15.0.0 → 15.0.1)
+- Starting from PR #82, every merged PR must include a version bump
+- Version number provides traceability to feature implementations and fixes
