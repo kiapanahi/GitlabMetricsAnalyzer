@@ -31,6 +31,11 @@ internal static class UserMetricsEndpoints
             .WithName("CalculateCollaborationMetrics")
             .WithSummary("Calculate collaboration and review metrics for a developer")
             .WithDescription("Calculates collaboration metrics including review comments given/received, approvals, discussion threads, self-merged MRs, review turnaround time, and review depth");
+
+        group.MapGet("/metrics/quality", CalculateQualityMetrics)
+            .WithName("CalculateQualityMetrics")
+            .WithSummary("Calculate quality and reliability metrics for a developer")
+            .WithDescription("Calculates quality metrics including rework ratio, revert rate, CI success rate, pipeline duration, test coverage, hotfix rate, and merge conflict frequency");
     }
 
     private static async Task<IResult> AnalyzeUserCommitTimeDistribution(
@@ -205,6 +210,63 @@ internal static class UserMetricsEndpoints
             return Results.Problem(
                 detail: ex.Message,
                 title: "Error calculating collaboration metrics",
+                statusCode: 500);
+        }
+    }
+
+    private static async Task<IResult> CalculateQualityMetrics(
+        long userId,
+        [FromQuery] int? windowDays,
+        [FromQuery] int? revertDetectionDays,
+        IQualityMetricsService metricsService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var days = windowDays ?? 30;
+            var revertDays = revertDetectionDays ?? 30;
+
+            if (days <= 0)
+            {
+                return Results.BadRequest(new { Error = "windowDays must be greater than 0" });
+            }
+
+            if (days > 365)
+            {
+                return Results.BadRequest(new { Error = "windowDays cannot exceed 365 days" });
+            }
+
+            if (revertDays <= 0)
+            {
+                return Results.BadRequest(new { Error = "revertDetectionDays must be greater than 0" });
+            }
+
+            if (revertDays > 90)
+            {
+                return Results.BadRequest(new { Error = "revertDetectionDays cannot exceed 90 days" });
+            }
+
+            var result = await metricsService.CalculateQualityMetricsAsync(
+                userId,
+                days,
+                revertDays,
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.NotFound(new { Error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                title: "Error calculating quality metrics",
                 statusCode: 500);
         }
     }
