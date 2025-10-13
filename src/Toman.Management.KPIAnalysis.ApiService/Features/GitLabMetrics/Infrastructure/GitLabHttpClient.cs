@@ -386,7 +386,8 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             ChangesCount = dto.ChangesCount ?? "0",
             MergeStatus = "can_be_merged", // Default status
             WebUrl = string.Empty, // Not available in simple DTO
-            Labels = dto.Labels
+            Labels = dto.Labels,
+            Squash = dto.Squash
         };
     }
 
