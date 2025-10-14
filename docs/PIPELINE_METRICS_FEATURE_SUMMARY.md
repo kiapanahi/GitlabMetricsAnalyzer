@@ -8,7 +8,7 @@ The Pipeline & CI/CD Metrics feature provides comprehensive pipeline and build m
 
 ### 1. Failed Job Rate
 - **Description**: Identifies the most frequently failing pipeline jobs
-- **API**: `GET /projects/:id/pipelines/:id/jobs`
+- **GitLab API**: `GET /projects/{id}/pipelines/{pipeline_id}/jobs` (used internally)
 - **Unit**: failure count per job
 - **Direction**: ↓ good (lower is better)
 - **Implementation**: Groups jobs by name, calculates failure rate for each job, returns top 10 most failing jobs
@@ -25,7 +25,7 @@ The Pipeline & CI/CD Metrics feature provides comprehensive pipeline and build m
 ### 3. Pipeline Wait Time
 - **Description**: Queue time before pipeline starts
 - **Formula**: `median(started_at - created_at)` and P95
-- **API**: `GET /projects/:id/pipelines/:id`
+- **GitLab API**: `GET /projects/{id}/pipelines` (uses `started_at` and `created_at` fields)
 - **Unit**: minutes (P50 and P95)
 - **Direction**: ↓ good (lower is better)
 - **Implementation**: Calculates wait time from pipeline creation to start, provides P50 and P95 percentiles
@@ -33,7 +33,7 @@ The Pipeline & CI/CD Metrics feature provides comprehensive pipeline and build m
 
 ### 4. Deployment Frequency
 - **Description**: Merges to main/production branches (DORA metric)
-- **API**: Filter pipelines by `ref` (main, master, production)
+- **GitLab API**: `GET /projects/{id}/pipelines` (filters by `ref` field: main, master, production)
 - **Unit**: count per period
 - **Direction**: ↑ good (higher is better)
 - **Implementation**: Counts pipelines on main/master/production branches
@@ -46,7 +46,7 @@ The Pipeline & CI/CD Metrics feature provides comprehensive pipeline and build m
 
 ### 5. Job Duration Trends
 - **Description**: Track duration changes over time to detect degradation
-- **API**: `GET /projects/:id/pipelines/:id/jobs` → `duration`
+- **GitLab API**: `GET /projects/{id}/pipelines/{pipeline_id}/jobs` (uses `duration` field from job response)
 - **Unit**: minutes, with trend indicator (improving, stable, degrading)
 - **Direction**: ↓ good (lower is better)
 - **Implementation**: 
@@ -58,7 +58,7 @@ The Pipeline & CI/CD Metrics feature provides comprehensive pipeline and build m
 
 ### 6. Pipeline Success Rate by Branch Type
 - **Description**: Success rate on feature vs. main branches
-- **API**: Cross-reference pipeline with branch name
+- **GitLab API**: `GET /projects/{id}/pipelines` (uses `ref` and `status` fields from pipeline response)
 - **Unit**: percentage by category (main branches vs feature branches)
 - **Direction**: ↑ good (higher is better)
 - **Implementation**: 
@@ -68,7 +68,7 @@ The Pipeline & CI/CD Metrics feature provides comprehensive pipeline and build m
 
 ### 7. Coverage Trend
 - **Description**: Test coverage change over time
-- **API**: `GET /projects/:id/pipelines/:id` → `coverage`
+- **GitLab API**: `GET /projects/{id}/pipelines` (uses `coverage` field from pipeline response)
 - **Unit**: percentage with trend indicator
 - **Direction**: ↑ good (higher is better)
 - **Implementation**: 
