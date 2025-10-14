@@ -9,6 +9,7 @@ public sealed record GitLabPipeline(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
+    [property: JsonPropertyName("started_at")] DateTimeOffset? StartedAt,
     [property: JsonPropertyName("duration")] int? Duration,
     [property: JsonPropertyName("coverage")] string? Coverage
 );
