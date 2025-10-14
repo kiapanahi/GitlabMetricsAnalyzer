@@ -108,5 +108,5 @@ Build a C# application that collects developer productivity metrics from an on-p
   - **Features/New functionality**: Increment MAJOR version (e.g., 15.0.0 → 16.0.0)
   - **Bug fixes**: Increment MINOR version (e.g., 15.0.0 → 15.1.0)
   - **Patches/Code cleanup/Refactoring**: Increment PATCH version (e.g., 15.0.0 → 15.0.1)
-- Starting from PR #82, every merged PR must include a version bump
+- Every merged PR must include a version bump
 - Version number provides traceability to feature implementations and fixes
