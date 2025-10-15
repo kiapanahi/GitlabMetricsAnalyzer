@@ -399,6 +399,109 @@ All pattern matching is case-insensitive.
 - Identify opportunities for improving review practices
 - Assess balance between giving and receiving reviews
 
+### Get Advanced Metrics
+
+**Endpoint**: `GET /api/v1/metrics/advanced/{userId}`
+
+Calculates 7 advanced metrics for deeper insights into team health, work patterns, and code ownership.
+
+```bash
+# Get advanced metrics for user 123 (last 30 days)
+curl "http://localhost:5000/api/v1/metrics/advanced/123"
+
+# Custom time window (90 days)
+curl "http://localhost:5000/api/v1/metrics/advanced/456?windowDays=90"
+```
+
+**Path Parameters**:
+- `userId` (required): GitLab user ID
+
+**Query Parameters**:
+- `windowDays` (optional): Analysis window in days (default: 30, max: 365)
+
+**Response**:
+```json
+{
+  "userId": 123,
+  "username": "developer",
+  "windowDays": 30,
+  "windowStart": "2025-09-15T00:00:00Z",
+  "windowEnd": "2025-10-15T00:00:00Z",
+  "busFactor": 0.45,
+  "contributingDevelopersCount": 8,
+  "top3DevelopersFileChangePercentage": 65.5,
+  "responseTimeDistribution": {
+    "0": 0, "9": 12, "10": 45, "14": 52, "15": 41, "16": 25
+  },
+  "peakResponseHour": 14,
+  "totalReviewResponses": 213,
+  "batchSizeP50": 3.0,
+  "batchSizeP95": 8.0,
+  "batchSizeMrCount": 42,
+  "draftDurationMedianH": 12.5,
+  "draftMrCount": 15,
+  "iterationCountMedian": 2.0,
+  "iterationMrCount": 38,
+  "idleTimeInReviewMedianH": 4.2,
+  "idleTimeMrCount": 42,
+  "crossTeamCollaborationPercentage": null,
+  "crossTeamMrCount": 0,
+  "totalMrsForCrossTeam": 42,
+  "teamMappingAvailable": false,
+  "projects": [
+    {
+      "projectId": 100,
+      "projectName": "backend-api",
+      "mrCount": 25,
+      "commitCount": 147,
+      "fileChangeCount": 8432
+    }
+  ]
+}
+```
+
+**Metrics Included**:
+
+| Metric | Description | Direction | Unit |
+|--------|-------------|-----------|------|
+| `busFactor` | Code ownership concentration (Gini coefficient) | ↓ good | 0-1 score |
+| `responseTimeDistribution` | When developer responds to reviews (hourly) | context | hour→count map |
+| `batchSizeP50` / `batchSizeP95` | Commits per MR (median/P95) | context | count |
+| `draftDurationMedianH` | Time MRs spend in draft/WIP state | context | hours |
+| `iterationCountMedian` | Review cycles per MR | ↓ good | count |
+| `idleTimeInReviewMedianH` | Wait time after review comments | ↓ good | hours |
+| `crossTeamCollaborationPercentage` | MRs with cross-team reviewers | ↑ good | percentage |
+
+**Use Cases**:
+- **Risk Assessment**: Monitor bus factor to identify knowledge concentration
+- **Work Pattern Analysis**: Use response time distribution for meeting scheduling
+- **Process Improvement**: High iteration counts indicate unclear requirements
+- **Review Optimization**: Track idle time and response patterns
+- **Knowledge Sharing**: Monitor cross-team collaboration (requires team mapping)
+
+**Performance Considerations**:
+- This endpoint makes multiple GitLab API calls per MR
+- Recommended `windowDays`: 30-90 days
+- Consider caching results for dashboard use
+- May take longer for users with many MRs
+
+**Team Mapping Note**:
+Cross-team collaboration metric requires team mapping configuration (not yet implemented). When available, configure teams in `appsettings.json`:
+```json
+{
+  "Metrics": {
+    "TeamMapping": {
+      "teams": [
+        {"name": "Backend Team", "members": [123, 456]},
+        {"name": "Frontend Team", "members": [789, 890]}
+      ]
+    }
+  }
+}
+```
+
+See [Advanced Metrics Feature Summary](./ADVANCED_METRICS_FEATURE_SUMMARY.md) for detailed documentation.
+
 ### Get Metrics Catalog
 
 **Endpoint**: `GET /api/v1/catalog`

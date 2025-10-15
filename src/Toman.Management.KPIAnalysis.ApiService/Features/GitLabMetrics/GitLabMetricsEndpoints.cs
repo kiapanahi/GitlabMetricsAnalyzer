@@ -6,6 +6,7 @@ public static class GitLabMetricsEndpoints
     {
         app.MapUserMetricsEndpoints();
         app.MapPipelineMetricsEndpoints();
+        app.MapAdvancedMetricsEndpoints();
 
         return app;
     }
