@@ -7,6 +7,8 @@ public static class GitLabMetricsEndpoints
         app.MapUserMetricsEndpoints();
         app.MapPipelineMetricsEndpoints();
         app.MapAdvancedMetricsEndpoints();
+        app.MapTeamMetricsEndpoints();
+        app.MapProjectMetricsEndpoints();
 
         return app;
     }

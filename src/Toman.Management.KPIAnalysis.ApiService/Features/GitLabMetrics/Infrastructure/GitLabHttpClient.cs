@@ -197,6 +197,22 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of jobs in the pipeline</returns>
     Task<IReadOnlyList<GitLabPipelineJob>> GetPipelineJobsAsync(long projectId, long pipelineId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets branches for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of branches in the project</returns>
+    Task<IReadOnlyList<Infrastructure.DTOs.GitLabBranch>> GetBranchesAsync(long projectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets milestones for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of milestones in the project</returns>
+    Task<IReadOnlyList<Infrastructure.DTOs.GitLabMilestone>> GetMilestonesAsync(long projectId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -1224,6 +1240,42 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
         {
             _logger.LogError(ex, "Failed to fetch jobs for pipeline {PipelineId} in project {ProjectId}", pipelineId, projectId);
             return Array.Empty<GitLabPipelineJob>();
+        }
+    }
+
+    public async Task<IReadOnlyList<DTOs.GitLabBranch>> GetBranchesAsync(long projectId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching branches for project {ProjectId}", projectId);
+
+            var branches = await GetPaginatedAsync<DTOs.GitLabBranch>($"projects/{projectId}/repository/branches", cancellationToken);
+
+            _logger.LogDebug("Successfully fetched {BranchCount} branches for project {ProjectId}", branches.Count, projectId);
+            return branches.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch branches for project {ProjectId}", projectId);
+            return Array.Empty<DTOs.GitLabBranch>();
+        }
+    }
+
+    public async Task<IReadOnlyList<DTOs.GitLabMilestone>> GetMilestonesAsync(long projectId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching milestones for project {ProjectId}", projectId);
+
+            var milestones = await GetPaginatedAsync<DTOs.GitLabMilestone>($"projects/{projectId}/milestones", cancellationToken);
+
+            _logger.LogDebug("Successfully fetched {MilestoneCount} milestones for project {ProjectId}", milestones.Count, projectId);
+            return milestones.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch milestones for project {ProjectId}", projectId);
+            return Array.Empty<DTOs.GitLabMilestone>();
         }
     }
 
