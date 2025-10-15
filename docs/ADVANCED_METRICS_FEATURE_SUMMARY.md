@@ -324,8 +324,9 @@ RecurringJob.AddOrUpdate<IAdvancedMetricsService>(
 
 ### Materialized Views
 
-For historical trend analysis:
+For historical trend analysis (PostgreSQL-specific):
 ```sql
+-- PostgreSQL materialized view for caching metrics
 CREATE MATERIALIZED VIEW advanced_metrics_daily AS
 SELECT 
     user_id,
@@ -335,7 +336,12 @@ SELECT
     iteration_count_median
 FROM advanced_metrics_calculations
 WHERE calculation_date >= CURRENT_DATE - INTERVAL '90 days';
+
+-- Refresh materialized view
+REFRESH MATERIALIZED VIEW advanced_metrics_daily;
 ```
+
+**Note**: This application uses PostgreSQL. The above syntax is PostgreSQL-specific. Other database systems may require different approaches for similar functionality.
 
 ## Use Cases
 
