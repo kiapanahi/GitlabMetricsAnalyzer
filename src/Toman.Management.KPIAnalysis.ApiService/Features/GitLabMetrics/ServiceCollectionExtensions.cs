@@ -47,6 +47,8 @@ internal static class ServiceCollectionExtensions
         builder.Services.AddScoped<ICodeCharacteristicsService, CodeCharacteristicsService>();
         builder.Services.AddScoped<IPipelineMetricsService, PipelineMetricsService>();
         builder.Services.AddScoped<IAdvancedMetricsService, AdvancedMetricsService>();
+        builder.Services.AddScoped<ITeamMetricsService, TeamMetricsService>();
+        builder.Services.AddScoped<IProjectMetricsService, ProjectMetricsService>();
 
         // Add HTTP client for GitLab API calls
         builder.Services

@@ -31,6 +31,11 @@ public sealed class MetricsConfiguration
     /// Configuration for code characteristics metrics
     /// </summary>
     public CodeCharacteristicsConfiguration CodeCharacteristics { get; init; } = new CodeCharacteristicsConfiguration();
+
+    /// <summary>
+    /// Team mapping configuration for team-level metrics
+    /// </summary>
+    public TeamMappingConfiguration? TeamMapping { get; init; }
 }
 
 /// <summary>
@@ -155,4 +160,36 @@ public sealed class CodeCharacteristicsConfiguration
         @"^merge\s+",
         @"^revert\s+",
     ];
+}
+
+/// <summary>
+/// Configuration for team mapping
+/// </summary>
+public sealed class TeamMappingConfiguration
+{
+    /// <summary>
+    /// List of teams with their member user IDs
+    /// </summary>
+    public List<TeamDefinition> Teams { get; init; } = [];
+}
+
+/// <summary>
+/// Definition of a team
+/// </summary>
+public sealed class TeamDefinition
+{
+    /// <summary>
+    /// Team identifier
+    /// </summary>
+    public required string Id { get; init; }
+
+    /// <summary>
+    /// Team display name
+    /// </summary>
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// List of GitLab user IDs that belong to this team
+    /// </summary>
+    public List<long> Members { get; init; } = [];
 }
