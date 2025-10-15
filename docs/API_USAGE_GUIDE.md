@@ -7,6 +7,7 @@ This guide provides comprehensive examples for using the GitLab Metrics Analyzer
 - [Authentication](#authentication)
 - [Versioning Strategy](#versioning-strategy)
 - [Developer Metrics APIs](#developer-metrics-apis)
+- [Team & Project Metrics APIs](#team--project-metrics-apis)
 - [Export APIs](#export-apis)
 - [Data Quality APIs](#data-quality-apis)
 - [Error Handling](#error-handling)
@@ -486,21 +487,82 @@ curl "http://localhost:5000/api/v1/metrics/advanced/456?windowDays=90"
 - May take longer for users with many MRs
 
 **Team Mapping Note**:
-Cross-team collaboration metric requires team mapping configuration (not yet implemented). When available, configure teams in `appsettings.json`:
+Cross-team collaboration metric requires team mapping configuration. See the [Team & Project Metrics guide](./TEAM_PROJECT_METRICS.md) for details.
+
+See [Advanced Metrics Feature Summary](./ADVANCED_METRICS_FEATURE_SUMMARY.md) for detailed documentation.
+
+## Team & Project Metrics APIs
+
+Team and project-level aggregation metrics provide organizational insights beyond individual developer metrics. These APIs support OKR tracking, resource planning, and process improvement initiatives.
+
+### Get Team Metrics
+
+**Endpoint**: `GET /api/v1/teams/{teamId}/metrics`
+
+**Query Parameters**:
+- `windowDays` (optional): Number of days to analyze (default: 30, max: 365)
+
+**Example Request**:
+```bash
+curl "http://localhost:5000/api/v1/teams/backend-team/metrics?windowDays=30"
+```
+
+**Response Fields**:
+- `totalMergedMrs`: Aggregate merged MRs by all team members
+- `avgMrCycleTimeP50H`: Median cycle time across all team MRs
+- `crossProjectContributors`: Team members contributing to multiple projects
+- `teamReviewCoveragePercentage`: % of MRs with sufficient reviewers
+- `projectActivities`: Per-project contribution breakdown
+
+**Use Cases**:
+- Sprint planning and velocity tracking
+- Resource allocation across projects
+- Team collaboration assessment
+
+### Get Project Metrics
+
+**Endpoint**: `GET /api/v1/projects/{projectId}/metrics`
+
+**Query Parameters**:
+- `windowDays` (optional): Number of days to analyze (default: 30, max: 365)
+
+**Example Request**:
+```bash
+curl "http://localhost:5000/api/v1/projects/100/metrics?windowDays=30"
+```
+
+**Response Fields**:
+- `totalCommits`: Commit count in the analysis window
+- `totalMergedMrs`: Merged MR count
+- `longLivedBranchCount`: Branches older than 30 days (not merged)
+- `labelUsageDistribution`: Most common labels on MRs
+- `milestoneCompletionRate`: % of milestones completed on time
+- `reviewCoveragePercentage`: % of MRs with sufficient reviewers
+
+**Use Cases**:
+- Project health monitoring
+- Technical debt identification (long-lived branches)
+- Process adherence tracking (labels, milestones)
+
+**Configuration**:
+Team metrics require team mapping configuration in `appsettings.json`:
 ```json
 {
   "Metrics": {
     "TeamMapping": {
-      "teams": [
-        {"name": "Backend Team", "members": [123, 456]},
-        {"name": "Frontend Team", "members": [789, 890]}
+      "Teams": [
+        {
+          "Id": "backend-team",
+          "Name": "Backend Team",
+          "Members": [123, 456, 789]
+        }
       ]
     }
   }
 }
 ```
 
-See [Advanced Metrics Feature Summary](./ADVANCED_METRICS_FEATURE_SUMMARY.md) for detailed documentation.
+**For complete documentation**, see [Team & Project Metrics Guide](./TEAM_PROJECT_METRICS.md).
 
 ### Get Metrics Catalog
 
