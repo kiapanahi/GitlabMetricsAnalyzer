@@ -136,6 +136,7 @@ curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
 ### Developer Metrics API (v1)
 - `GET /api/v1/metrics/developers` - Paginated developer metrics with filtering
 - `GET /api/v1/metrics/developers/{id}` - Individual developer metrics with history
+- `GET /api/v1/metrics/advanced/{userId}` - Advanced metrics (bus factor, response time, batch size, draft duration, iteration count, idle time, cross-team collaboration)
 - `GET /api/v1/catalog` - Available metrics catalog with schema version
 
 ### Data Quality & Exports
@@ -159,6 +160,7 @@ curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
 - **Collaboration Metrics**: Review patterns, knowledge sharing indicators
 - **Quality Metrics**: Pipeline success rates, code revert patterns
 - **Productivity Metrics**: Velocity scores, efficiency indicators
+- **Advanced Metrics**: Bus factor, response time distribution, batch size, draft duration, iteration count, idle time, cross-team collaboration
 
 ## Data Export System
 
