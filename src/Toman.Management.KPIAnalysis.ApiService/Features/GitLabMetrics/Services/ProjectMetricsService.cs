@@ -74,7 +74,7 @@ public sealed class ProjectMetricsService(
         }
 
         // Get branches and calculate long-lived branches
-        var branches = await _gitLabHttpClient.GetBranchesAsync((int)projectId, cancellationToken);
+        var branches = await _gitLabHttpClient.GetBranchesAsync(projectId, cancellationToken);
         var longLivedBranches = branches
             .Where(b => !b.Merged &&
                        (windowEnd - b.Commit.CommittedDate.DateTime).TotalDays > LongLivedBranchThresholdDays)
@@ -110,7 +110,7 @@ public sealed class ProjectMetricsService(
         }
 
         // Get milestones and calculate completion rate
-        var milestones = await _gitLabHttpClient.GetMilestonesAsync((int)projectId, cancellationToken);
+        var milestones = await _gitLabHttpClient.GetMilestonesAsync(projectId, cancellationToken);
         var completedMilestones = milestones.Where(m => m.State == "closed").ToList();
         var onTimeMilestones = completedMilestones
             .Where(m => m.DueDate.HasValue &&
@@ -127,7 +127,7 @@ public sealed class ProjectMetricsService(
 
         foreach (var mr in mergedMrs)
         {
-            var approvals = await _gitLabHttpClient.GetMergeRequestApprovalsAsync((int)projectId, (int)mr.Iid, cancellationToken);
+            var approvals = await _gitLabHttpClient.GetMergeRequestApprovalsAsync(projectId, mr.Iid, cancellationToken);
             if (approvals is not null)
             {
                 var reviewerCount = approvals.ApprovedBy?.Count ?? 0;
