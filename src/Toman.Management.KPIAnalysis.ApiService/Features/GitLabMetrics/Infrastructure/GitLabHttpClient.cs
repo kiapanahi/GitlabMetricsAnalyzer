@@ -7,6 +7,7 @@ using GitLabCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetr
 using GitLabCommitStats = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommitStats;
 using GitLabMergeRequest = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequest;
 using GitLabPipeline = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipeline;
+using GitLabPipelineJob = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipelineJob;
 using GitLabProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
 using GitLabUser = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
 
@@ -187,6 +188,15 @@ public interface IGitLabHttpClient
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Approval state information</returns>
     Task<GitLabMergeRequestApprovals?> GetMergeRequestApprovalsAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets jobs for a specific pipeline.
+    /// </summary>
+    /// <param name="projectId">The project ID</param>
+    /// <param name="pipelineId">The pipeline ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of jobs in the pipeline</returns>
+    Task<IReadOnlyList<GitLabPipelineJob>> GetPipelineJobsAsync(long projectId, long pipelineId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -403,6 +413,8 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             Source = "push", // Default source, not available in simple DTO
             CreatedAt = dto.CreatedAt.DateTime,
             UpdatedAt = dto.UpdatedAt.DateTime,
+            StartedAt = dto.StartedAt?.DateTime,
+            Coverage = dto.Coverage,
             WebUrl = string.Empty // Not available in simple DTO
         };
     }
@@ -1192,5 +1204,51 @@ public sealed class GitLabHttpClient(HttpClient httpClient, ILogger<GitLabHttpCl
             _logger.LogWarning(ex, "Failed to fetch approvals for MR {MergeRequestIid} in project {ProjectId} (feature may not be available)", mergeRequestIid, projectId);
             return null;
         }
+    }
+
+    public async Task<IReadOnlyList<GitLabPipelineJob>> GetPipelineJobsAsync(long projectId, long pipelineId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching jobs for pipeline {PipelineId} in project {ProjectId}", pipelineId, projectId);
+
+            var jobDtos = await GetPaginatedAsync<DTOs.GitLabPipelineJob>($"projects/{projectId}/pipelines/{pipelineId}/jobs", cancellationToken);
+
+            var jobs = jobDtos.Select(dto => MapToPipelineJob(dto, projectId)).ToList();
+
+            _logger.LogDebug("Successfully fetched {JobCount} jobs for pipeline {PipelineId} in project {ProjectId}", 
+                jobs.Count, pipelineId, projectId);
+            return jobs.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch jobs for pipeline {PipelineId} in project {ProjectId}", pipelineId, projectId);
+            return Array.Empty<GitLabPipelineJob>();
+        }
+    }
+
+    private static GitLabPipelineJob MapToPipelineJob(DTOs.GitLabPipelineJob dto, long projectId)
+    {
+        return new GitLabPipelineJob
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            Status = dto.Status,
+            Stage = dto.Stage,
+            CreatedAt = dto.CreatedAt.DateTime,
+            StartedAt = dto.StartedAt?.DateTime,
+            FinishedAt = dto.FinishedAt?.DateTime,
+            Duration = dto.Duration,
+            QueuedDuration = dto.QueuedDuration,
+            Coverage = dto.Coverage,
+            User = dto.User is not null ? MapToUser(dto.User) : null,
+            PipelineId = dto.Pipeline?.Id ?? 0,
+            ProjectId = projectId,
+            Sha = dto.Pipeline?.Sha ?? string.Empty,
+            Ref = dto.Pipeline?.Ref ?? string.Empty,
+            AllowFailure = dto.AllowFailure,
+            Tag = dto.Tag,
+            WebUrl = dto.WebUrl
+        };
     }
 }

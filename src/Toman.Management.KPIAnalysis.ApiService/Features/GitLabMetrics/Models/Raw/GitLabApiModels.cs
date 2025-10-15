@@ -436,6 +436,16 @@ public class GitLabPipeline
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
+    /// When started.
+    /// </summary>
+    public DateTime? StartedAt { get; set; }
+
+    /// <summary>
+    /// Coverage percentage from pipeline reports.
+    /// </summary>
+    public string? Coverage { get; set; }
+
+    /// <summary>
     /// The web URL.
     /// </summary>
     public string? WebUrl { get; set; }
