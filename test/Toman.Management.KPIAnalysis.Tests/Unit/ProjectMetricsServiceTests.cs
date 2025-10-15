@@ -14,6 +14,7 @@ using RawGitLabMergeRequest = Toman.Management.KPIAnalysis.ApiService.Features.G
 using RawGitLabUser = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
 using RawGitLabContributedProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabContributedProject;
 using RawGitLabMergeRequestApprovals = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestApprovals;
+using RawGitLabMergeRequestChanges = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestChanges;
 
 namespace Toman.Management.KPIAnalysis.Tests.Unit;
 
@@ -157,6 +158,15 @@ public sealed class ProjectMetricsServiceTests
             .Setup(x => x.GetMergeRequestApprovalsAsync(It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((RawGitLabMergeRequestApprovals?)null);
 
+        mockHttpClient
+            .Setup(x => x.GetMergeRequestChangesAsync(It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RawGitLabMergeRequestChanges
+            {
+                Additions = 100,
+                Deletions = 50,
+                Total = 150
+            });
+
         var service = new ProjectMetricsService(mockHttpClient.Object, mockLogger.Object);
 
         // Act
@@ -169,6 +179,7 @@ public sealed class ProjectMetricsServiceTests
         Assert.Equal(windowDays, result.WindowDays);
         Assert.Equal(1, result.TotalCommits);
         Assert.Equal(1, result.TotalMergedMrs);
+        Assert.Equal(150, result.TotalLinesChanged); // Should have 150 lines from mock
         Assert.Equal(1, result.LongLivedBranchCount); // old-feature branch is > 30 days
     }
 

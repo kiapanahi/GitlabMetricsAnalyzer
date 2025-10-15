@@ -8,6 +8,10 @@ using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastruct
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
+using RawGitLabCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
+using RawGitLabMergeRequestApprovals = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestApprovals;
+using RawGitLabMergeRequestChanges = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestChanges;
+
 namespace Toman.Management.KPIAnalysis.Tests.Unit;
 
 /// <summary>
@@ -98,8 +102,33 @@ public sealed class TeamMetricsServiceTests
             .ReturnsAsync(mergeRequests);
 
         mockHttpClient
-            .Setup(x => x.GetMergeRequestApprovalsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GitLabMergeRequestApprovals?)null);
+            .Setup(x => x.GetMergeRequestApprovalsAsync(It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RawGitLabMergeRequestApprovals?)null);
+
+        mockHttpClient
+            .Setup(x => x.GetCommitsAsync(It.IsAny<long>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RawGitLabCommit>
+            {
+                new RawGitLabCommit
+                {
+                    Id = "commit1",
+                    ShortId = "abc123",
+                    Title = "Test commit",
+                    AuthorName = "Test User",
+                    AuthorEmail = "test@example.com",
+                    CommittedDate = now.AddDays(-5),
+                    ProjectId = 100
+                }
+            });
+
+        mockHttpClient
+            .Setup(x => x.GetMergeRequestChangesAsync(It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RawGitLabMergeRequestChanges
+            {
+                Additions = 100,
+                Deletions = 50,
+                Total = 150
+            });
 
         var service = new TeamMetricsService(mockHttpClient.Object, mockOptions.Object, mockLogger.Object);
 
@@ -112,6 +141,10 @@ public sealed class TeamMetricsServiceTests
         Assert.Equal("Backend Team", result.TeamName);
         Assert.Equal(2, result.MemberCount);
         Assert.Equal(windowDays, result.WindowDays);
+        Assert.Equal(1, result.TotalCommits); // Should have 1 commit from mock
+        Assert.Equal(150, result.TotalLinesChanged); // Should have 150 lines from mock (100 additions + 50 deletions)
+        Assert.Single(result.ProjectActivities); // Should have 1 project
+        Assert.Equal(1, result.ProjectActivities.First().CommitCount); // Should have 1 commit for that project
     }
 
     [Fact]

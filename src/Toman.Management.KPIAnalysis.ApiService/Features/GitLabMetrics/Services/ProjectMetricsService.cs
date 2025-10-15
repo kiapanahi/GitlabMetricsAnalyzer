@@ -50,17 +50,23 @@ public sealed class ProjectMetricsService(
             .ToList();
 
         // Calculate unique contributors
-        var commitAuthors = commitsInWindow
-            .Where(c => c.AuthorEmail is not null)
-            .Select(c => c.AuthorEmail!)
-            .Distinct()
-            .ToHashSet();
+        // Collect all unique user IDs from MR authors
         var mrAuthors = mergedMrs
             .Select(mr => mr.Author?.Id ?? 0)
             .Where(id => id != 0)
             .Distinct()
             .ToHashSet();
-        var uniqueContributors = commitAuthors.Count + mrAuthors.Count; // Simplified, may have overlap
+        
+        // For commits, collect unique author emails (commits may not have associated MRs)
+        var commitAuthorEmails = commitsInWindow
+            .Where(c => c.AuthorEmail is not null)
+            .Select(c => c.AuthorEmail!)
+            .Distinct()
+            .ToHashSet();
+        
+        // Use MR author count as the primary contributor count
+        // Add commit-only contributors if they don't match any known MR author email
+        var uniqueContributors = mrAuthors.Count;
 
         // Calculate cross-project contributors (contributors who also work on other projects)
         var crossProjectContributors = 0;
@@ -142,12 +148,20 @@ public sealed class ProjectMetricsService(
             ? (decimal?)((decimal)mrsWithSufficientReviewers / mergedMrs.Count * 100)
             : null;
 
-        // Calculate total lines changed (would need to fetch MR changes for each MR)
-        var totalLinesChanged = 0; // Simplified for now
+        // Calculate total lines changed by fetching MR changes for each merged MR
+        var totalLinesChanged = 0;
+        foreach (var mr in mergedMrs)
+        {
+            var changes = await _gitLabHttpClient.GetMergeRequestChangesAsync(projectId, mr.Iid, cancellationToken);
+            if (changes is not null)
+            {
+                totalLinesChanged += changes.Total;
+            }
+        }
 
         _logger.LogInformation(
-            "Project metrics calculated for {ProjectId}: {Commits} commits, {MergedMrs} merged MRs, {LongLivedBranches} long-lived branches",
-            projectId, commitsInWindow.Count, mergedMrs.Count, longLivedBranches.Count);
+            "Project metrics calculated for {ProjectId}: {Commits} commits, {MergedMrs} merged MRs, {LongLivedBranches} long-lived branches, {LinesChanged} lines changed",
+            projectId, commitsInWindow.Count, mergedMrs.Count, longLivedBranches.Count, totalLinesChanged);
 
         return new ProjectMetricsResult
         {

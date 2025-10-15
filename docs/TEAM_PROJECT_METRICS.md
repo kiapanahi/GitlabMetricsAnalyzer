@@ -152,11 +152,12 @@ curl "https://your-instance/api/v1/projects/100/metrics?windowDays=30"
 
 #### 1. Team Velocity
 - **Total Merged MRs**: Aggregate count of merged merge requests by all team members
-- **Total Commits**: Aggregate commit count (currently simplified)
-- **Total Lines Changed**: Aggregate lines added/deleted (currently simplified)
+- **Total Commits**: Aggregate commit count across all team projects
+- **Total Lines Changed**: Aggregate lines added/deleted across all merged MRs
 - **Avg MR Cycle Time (P50)**: Median cycle time across all team MRs
 - **Direction**: ↑ good (higher throughput indicates higher velocity)
 - **Use Case**: Sprint planning, capacity estimation
+- **Note**: Lines changed is calculated by fetching MR changes for each merged MR (one API call per MR)
 
 #### 2. Project Activity Scores
 - **Per-Project Breakdown**: Lists each project the team contributes to with:
@@ -182,9 +183,10 @@ curl "https://your-instance/api/v1/projects/100/metrics?windowDays=30"
 #### 1. Project Activity Score
 - **Total Commits**: Count of commits in the analysis window
 - **Total Merged MRs**: Count of merged merge requests
-- **Total Lines Changed**: Aggregate code changes (currently simplified)
+- **Total Lines Changed**: Aggregate code changes across all merged MRs
 - **Direction**: Context-dependent
 - **Use Case**: Project health monitoring, activity tracking
+- **Note**: Lines changed is calculated by fetching MR changes for each merged MR (one API call per MR)
 
 #### 2. Branch Lifecycle Analysis
 - **Long-Lived Branch Count**: Branches older than 30 days that aren't merged
@@ -241,11 +243,15 @@ curl "https://your-instance/api/v1/projects/100/metrics?windowDays=30"
 - Project metrics can be cached for longer periods (6-12 hours)
 
 ### Query Optimization
-- Team metrics make multiple API calls per member
-- For large teams (>10 members), consider:
+- Team metrics make multiple API calls per member and per MR/project:
+  - Commits: One call per project
+  - MR Changes: One call per merged MR
+  - For a team with 5 members across 3 projects with 50 total MRs, this results in ~53 API calls
+- For large teams (>10 members) or active projects (>100 MRs), consider:
   - Limiting the window period (30-90 days)
   - Running calculations asynchronously
   - Pre-computing metrics via background jobs
+  - GitLab's API rate limit is typically 600 requests/minute for authenticated users
 
 ### Efficient Aggregation
 - Current implementation fetches data on-demand
@@ -257,9 +263,9 @@ curl "https://your-instance/api/v1/projects/100/metrics?windowDays=30"
 ## Future Enhancements
 
 ### Short-Term
-1. **Enhanced Commit/Lines Metrics**: Calculate actual commit counts and line changes
-2. **Configurable Review Thresholds**: Allow teams to set their own minimum reviewer counts
-3. **Time-Series Support**: Track metrics over time for trending analysis
+1. **Configurable Review Thresholds**: Allow teams to set their own minimum reviewer counts
+2. **Time-Series Support**: Track metrics over time for trending analysis
+3. **Improved Contributor Deduplication**: Better matching of commit authors to GitLab user IDs
 
 ### Long-Term
 1. **Background Processing**: Move expensive calculations to background jobs

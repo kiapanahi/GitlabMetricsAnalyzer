@@ -120,8 +120,42 @@ public sealed class TeamMetricsService(
 
         // Calculate metrics
         var totalMergedMrs = allMergedMrs.Count;
-        var totalCommits = 0; // Would need to fetch commits for accurate count, simplified for now
-        var totalLinesChanged = 0; // Would need to fetch MR changes, simplified for now
+        
+        // Calculate total commits by fetching commits for each project in the window
+        var totalCommits = 0;
+        var projectCommitCounts = new Dictionary<long, int>();
+        
+        foreach (var projectId in projectContributions.Keys)
+        {
+            var projectCommits = await _gitLabHttpClient.GetCommitsAsync(
+                projectId,
+                new DateTimeOffset(windowStart, TimeSpan.Zero),
+                cancellationToken);
+            
+            // Count commits in the window - all commits in team projects count towards team metrics
+            var commitsInWindow = projectCommits.Count(c => 
+                c.CommittedDate.HasValue &&
+                c.CommittedDate.Value >= windowStart &&
+                c.CommittedDate.Value <= windowEnd);
+            
+            projectCommitCounts[projectId] = commitsInWindow;
+            totalCommits += commitsInWindow;
+        }
+        
+        // Calculate total lines changed by fetching MR changes for each merged MR
+        var totalLinesChanged = 0;
+        foreach (var mr in allMergedMrs)
+        {
+            var changes = await _gitLabHttpClient.GetMergeRequestChangesAsync(
+                mr.ProjectId,
+                mr.Iid,
+                cancellationToken);
+            
+            if (changes is not null)
+            {
+                totalLinesChanged += changes.Total;
+            }
+        }
 
         var avgMrCycleTimeP50H = cycleTimes.Any()
             ? ComputeMedian(cycleTimes)
@@ -151,7 +185,7 @@ public sealed class TeamMetricsService(
                 {
                     ProjectId = projectId,
                     ProjectName = projectDict.TryGetValue(projectId, out var p) ? p.PathWithNamespace ?? $"Project-{projectId}" : $"Project-{projectId}",
-                    CommitCount = 0, // Simplified
+                    CommitCount = projectCommitCounts.GetValueOrDefault(projectId, 0),
                     MergedMrCount = projectMrs.Count,
                     ContributorCount = contributors.Count
                 };
@@ -160,8 +194,8 @@ public sealed class TeamMetricsService(
             .ToList();
 
         _logger.LogInformation(
-            "Team metrics calculated for {TeamId}: {MergedMrs} merged MRs, {Projects} projects, {CrossProjectContributors} cross-project contributors",
-            teamId, totalMergedMrs, totalProjectsTouched, crossProjectContributors);
+            "Team metrics calculated for {TeamId}: {MergedMrs} merged MRs, {Commits} commits, {LinesChanged} lines changed, {Projects} projects, {CrossProjectContributors} cross-project contributors",
+            teamId, totalMergedMrs, totalCommits, totalLinesChanged, totalProjectsTouched, crossProjectContributors);
 
         return new TeamMetricsResult
         {
