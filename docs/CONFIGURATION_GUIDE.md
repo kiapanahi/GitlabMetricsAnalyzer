@@ -1,16 +1,18 @@
 # Configuration Guide
 
+> **⚠️ Note**: Database configuration removed in v2.0 (October 2025). The application now uses **live GitLab API calls** with no data storage.
+
 This guide provides detailed configuration instructions for setting up and customizing the GitLab Metrics Analyzer for your environment.
 
 ## Table of Contents
 - [Overview](#overview)
 - [Core Configuration](#core-configuration)
-- [GitLab Integration](#gitlab-integration)
-- [Database Configuration](#database-configuration)
-- [Metrics Configuration](#metrics-configuration)
-- [Processing Configuration](#processing-configuration)
-- [Export Configuration](#export-configuration)
-- [Logging Configuration](#logging-configuration)
+- [GitLab Integration](#gitlab-integration) ✅ **ACTIVE**
+- [❌ Database Configuration](#database-configuration) **[REMOVED - Not used]**
+- [Metrics Configuration](#metrics-configuration) ✅ **ACTIVE**
+- [❌ Processing Configuration](#processing-configuration) **[REMOVED - Not used]**
+- [❌ Export Configuration](#export-configuration) **[REMOVED - Not implemented]**
+- [Logging Configuration](#logging-configuration) ✅ **ACTIVE**
 - [Environment-Specific Settings](#environment-specific-settings)
 - [Security Considerations](#security-considerations)
 - [Performance Tuning](#performance-tuning)
@@ -26,6 +28,12 @@ The GitLab Metrics Analyzer uses a hierarchical configuration system based on .N
 
 ## Core Configuration
 
+### Active Configuration (v2.0+)
+
+The current configuration only requires **two sections**:
+1. **GitLab** - API connection settings
+2. **Metrics** - Bot filtering and exclusion patterns
+
 ### Base Configuration File (appsettings.json)
 
 ```json
@@ -33,21 +41,21 @@ The GitLab Metrics Analyzer uses a hierarchical configuration system based on .N
   "Logging": {
     "LogLevel": {
       "Default": "Information",
-      "Microsoft.AspNetCore": "Warning",
-      "Microsoft.EntityFrameworkCore": "Warning"
+      "Microsoft.AspNetCore": "Warning"
     }
   },
   "AllowedHosts": "*",
   "GitLab": {
-    "BaseUrl": "https://gitlab.qcluster.org/",
-    "Token": ""
+    "BaseUrl": "https://gitlab.qcluster.org/"
   },
-  "Processing": {
-    "MaxDegreeOfParallelism": 8,
-    "BackfillDays": 180
-  },
-  "Exports": {
-    "Directory": "/data/exports"
+  "Metrics": {
+    "Identity": {
+      "BotRegexPatterns": ["^.*bot$", "^.*\\[bot\\]$"]
+    },
+    "Excludes": {
+      "CommitPatterns": ["^Merge branch.*"],
+      "BranchPatterns": ["^dependabot/.*"],
+      "FilePatterns": ["^.*\\.min\\.(js|css)$"]
   },
   "Timezone": "Asia/Tehran",
   "Metrics": {
@@ -181,7 +189,21 @@ export GitLab__BaseUrl="https://gitlab.company.com/"
 docker run -e GitLab__Token="glpat-xxx" -e GitLab__BaseUrl="https://gitlab.company.com/" gitlab-metrics-analyzer
 ```
 
-## Database Configuration
+## ❌ [REMOVED] Database Configuration
+
+**This section is obsolete. The application no longer uses a database.**
+
+**Removed in**: v2.0 (October 2025)  
+**Reason**: Application migrated to live API-based metrics calculation with no data storage.
+
+**For current configuration**, see:
+- [GitLab Integration](#gitlab-integration) - API connection settings
+- [Metrics Configuration](#metrics-configuration) - Bot filtering and exclusion patterns
+
+---
+
+<details>
+<summary>Click to expand obsolete database configuration (for historical reference)</summary>
 
 ### Connection String Configuration
 
@@ -382,7 +404,19 @@ Filter metrics collection to specific projects:
 }
 ```
 
-## Processing Configuration
+## ❌ [REMOVED] Processing Configuration
+
+**This section is obsolete. There is no data collection or batch processing.**
+
+**Removed in**: v2.0 (October 2025)  
+**Reason**: Application migrated to on-demand metrics calculation. No background processing or data collection.
+
+**Current behavior**: Metrics are calculated in real-time when API endpoints are called.
+
+---
+
+<details>
+<summary>Click to expand obsolete processing configuration (for historical reference)</summary>
 
 Configure data collection and processing behavior:
 
@@ -439,7 +473,19 @@ Configure data collection and processing behavior:
 }
 ```
 
-## Export Configuration
+## ❌ [REMOVED] Export Configuration
+
+**This section is obsolete. Export functionality was never implemented.**
+
+**Removed in**: v2.0 (October 2025)  
+**Reason**: Designed but never implemented. APIs return JSON responses directly.
+
+**Current behavior**: All API endpoints return JSON responses. Clients can consume and export as needed.
+
+---
+
+<details>
+<summary>Click to expand obsolete export configuration (for historical reference)</summary>
 
 Configure data export functionality:
 

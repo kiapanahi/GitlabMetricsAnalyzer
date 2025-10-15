@@ -1,3 +1,13 @@
+# ⚠️ DOCUMENT UNDER REVISION ⚠️
+
+**This document contains outdated information about database operations and data collection workflows that were never implemented.**
+
+**Current Architecture**: The application calculates metrics via **live GitLab API calls** with no data storage. See [CURRENT_STATE.md](CURRENT_STATE.md) for accurate architecture.
+
+**Sections marked [OBSOLETE]** describe features that do not exist in the current implementation.
+
+---
+
 # Operations Runbook
 
 This document provides operational guidance for managing the GitLab Metrics Analyzer system in production.
@@ -13,19 +23,33 @@ This document provides operational guidance for managing the GitLab Metrics Anal
 
 ## System Overview
 
-The GitLab Metrics Analyzer v1 is a manually-triggered system that:
-- Collects developer productivity metrics from GitLab API
-- Stores data in PostgreSQL with time-series partitioning
-- Provides REST APIs for metrics consumption
-- Generates exportable reports in multiple formats
+The GitLab Metrics Analyzer is a **live metrics API** that:
+- ✅ Calculates developer productivity metrics from GitLab API in real-time
+- ❌ ~~Stores data in PostgreSQL~~ **[OBSOLETE - No database]**
+- ✅ Provides REST APIs for metrics consumption (10 endpoints)
+- ❌ ~~Generates exportable reports~~ **[OBSOLETE - No exports feature]**
 
 **Key Characteristics:**
-- Manual trigger workflow (no automatic scheduling)
-- Incremental collection with windowing support
-- Built-in data quality validation
-- Comprehensive logging and monitoring
+- ✅ On-demand calculation (request → GitLab API → calculate → respond)
+- ❌ ~~Manual trigger workflow~~ **[OBSOLETE - No collection triggers]**
+- ❌ ~~Incremental collection with windowing~~ **[OBSOLETE - No data collection]**
+- ✅ Built-in resilience (Polly: retry, circuit breaker, timeout)
+- ✅ Comprehensive logging and monitoring (Serilog, OpenTelemetry)
 
-## Manual Operations
+## ❌ [OBSOLETE] Manual Operations
+
+**This entire section describes data collection operations that were never implemented.**
+
+The current system has **no manual operations** - it's a stateless API that responds to HTTP requests.
+
+**For current operations**, see:
+- API endpoint usage: [ENDPOINT_AUDIT.md](ENDPOINT_AUDIT.md)
+- Configuration: [CONFIGURATION_REVIEW.md](CONFIGURATION_REVIEW.md)
+
+---
+
+<details>
+<summary>Click to expand obsolete content (for historical reference)</summary>
 
 ### Daily Operations
 

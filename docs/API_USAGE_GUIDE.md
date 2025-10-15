@@ -17,16 +17,19 @@ This guide provides comprehensive examples for using the GitLab Metrics Analyzer
 ## API Overview
 
 The GitLab Metrics Analyzer exposes RESTful APIs for:
-- **Manual data collection triggers**
-- **Developer productivity metrics retrieval**
-- **Data export generation**
-- **System health monitoring**
-- **Data quality assessment**
+- **Live metrics calculation** (10 endpoints across user, team, project, pipeline metrics)
+- **Developer productivity analytics** (commit patterns, MR cycle time, collaboration, quality)
+- **Team and project metrics** (aggregated metrics for teams and projects)
+- **Advanced metrics** (bus factor, response time, batch size, etc.)
 
 **Base URL**: `http://localhost:5000` (adjust for your deployment)
 
 **API Versions**: 
 - `v1` (current): `/api/v1/*` - Stable, production-ready endpoints
+
+**Architecture**: Live API-based metrics calculation (no data storage)
+
+**For complete endpoint documentation**, see [ENDPOINT_AUDIT.md](ENDPOINT_AUDIT.md)
 
 ## Authentication
 
@@ -895,9 +898,9 @@ curl "http://localhost:5000/api/data-quality/reports/trends?days=30"
     ]
   },
   "recommendations": [
-    "Consider running incremental collection to fill data gaps",
     "Review bot detection patterns for user 125-127",
-    "Investigate negative line count records"
+    "Investigate negative line count records",
+    "Consider adjusting time window to reduce GitLab API load"
   ]
 }
 ```
@@ -931,10 +934,9 @@ All API endpoints return consistent error responses:
 
 #### Server Errors (5xx)
 - `INTERNAL_ERROR` (500): General server error
-- `DATABASE_ERROR` (500): Database connectivity issues
-- `COLLECTION_ERROR` (500): Data collection failures
-- `EXPORT_GENERATION_ERROR` (500): Export creation failures
 - `GITLAB_API_ERROR` (502): GitLab API connectivity issues
+- `GITLAB_API_TIMEOUT` (504): GitLab API request timeout
+- `CIRCUIT_BREAKER_OPEN` (503): Too many failures, circuit breaker activated
 
 ### Example Error Responses
 

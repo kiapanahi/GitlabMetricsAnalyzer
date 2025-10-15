@@ -1,3 +1,13 @@
+# ⚠️ DOCUMENT UNDER REVISION ⚠️
+
+**This document contains outdated information about PostgreSQL setup, database migrations, and data collection infrastructure that do not exist.**
+
+**Current Architecture**: The application is a **stateless REST API** that calculates metrics on-demand from GitLab. No database required. See [CURRENT_STATE.md](CURRENT_STATE.md) for accurate deployment information.
+
+**Sections marked [OBSOLETE]** describe infrastructure that is not needed for the current implementation.
+
+---
+
 # Deployment Guide
 
 This guide provides comprehensive deployment instructions for the GitLab Metrics Analyzer system across different environments and platforms.
