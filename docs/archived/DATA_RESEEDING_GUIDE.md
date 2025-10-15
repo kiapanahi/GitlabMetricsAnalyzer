@@ -1,3 +1,14 @@
+# ⚠️ ARCHIVED DOCUMENT ⚠️
+
+**This document describes obsolete features that were never implemented.**
+
+**Archived Date**: October 15, 2025  
+**Reason**: Application uses **live GitLab API calls** instead of database storage. Data reseeding workflows described here were designed but never implemented.
+
+**For current architecture**, see: [CURRENT_STATE.md](../CURRENT_STATE.md)
+
+---
+
 # GitLab Data Re-seeding and Re-hydration Guide
 
 This document explains how to re-seed or re-hydrate the raw data fetched from GitLab when the database is out of sync with GitLab's actual data.

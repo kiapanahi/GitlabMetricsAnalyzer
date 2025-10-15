@@ -1,3 +1,14 @@
+# ⚠️ ARCHIVED DOCUMENT ⚠️
+
+**This document describes database entities that were designed but never used.**
+
+**Archived Date**: October 15, 2025  
+**Reason**: All 20+ entity models described here are unused. Application calculates metrics via live GitLab API calls with no database storage.
+
+**For current architecture**, see: [CURRENT_STATE.md](../CURRENT_STATE.md)
+
+---
+
 # PRD Entity Design Document
 
 ## Overview
