@@ -1,4 +1,3 @@
-using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,8 +13,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddProblemDetails();
 
 builder.AddGitLabMetricsServices();
-
-builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
 
 var app = builder.Build();
 
