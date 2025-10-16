@@ -9,8 +9,6 @@ public static class Constants
 
     public static class Keys
     {
-        public const string PostgresService = "postgres";
-        public const string PostgresDatabase = "metricsdb";
         public const string GitlabMetricsCollector = "gitlabmetricscollector";
     }
 }

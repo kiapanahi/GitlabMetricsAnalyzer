@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 
 using Toman.Management.KPIAnalysis.ApiService.Configuration;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Data;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
@@ -25,18 +24,6 @@ internal static class ServiceCollectionExtensions
         // Add configurations
         builder.Services.Configure<GitLabConfiguration>(builder.Configuration.GetSection(GitLabConfiguration.SectionName));
         builder.Services.Configure<MetricsConfiguration>(builder.Configuration.GetSection(MetricsConfiguration.SectionName));
-        builder.Services.Configure<CollectionConfiguration>(builder.Configuration.GetSection(CollectionConfiguration.SectionName));
-        builder.Services.Configure<ExportsConfiguration>(builder.Configuration.GetSection(ExportsConfiguration.SectionName));
-
-        // Add database
-        builder.AddNpgsqlDbContext<GitLabMetricsDbContext>(Constants.Keys.PostgresDatabase, configureDbContextOptions: options =>
-        {
-            options.EnableSensitiveDataLogging();
-            options.EnableDetailedErrors();
-        });
-
-        // Add DbContextFactory for parallel operations
-        builder.Services.AddDbContextFactory<GitLabMetricsDbContext>();
 
         // Add services
         // We'll keep CommitTimeAnalysis and shared infra always registered.
