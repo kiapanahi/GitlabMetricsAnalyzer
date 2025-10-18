@@ -17,16 +17,19 @@ This guide provides comprehensive examples for using the GitLab Metrics Analyzer
 ## API Overview
 
 The GitLab Metrics Analyzer exposes RESTful APIs for:
-- **Manual data collection triggers**
-- **Developer productivity metrics retrieval**
-- **Data export generation**
-- **System health monitoring**
-- **Data quality assessment**
+- **Live metrics calculation** (10 endpoints across user, team, project, pipeline metrics)
+- **Developer productivity analytics** (commit patterns, MR cycle time, collaboration, quality)
+- **Team and project metrics** (aggregated metrics for teams and projects)
+- **Advanced metrics** (bus factor, response time, batch size, etc.)
 
 **Base URL**: `http://localhost:5000` (adjust for your deployment)
 
 **API Versions**: 
 - `v1` (current): `/api/v1/*` - Stable, production-ready endpoints
+
+**Architecture**: Live API-based metrics calculation (no data storage)
+
+**For complete endpoint documentation**, see [ENDPOINT_AUDIT.md](ENDPOINT_AUDIT.md)
 
 ## Authentication
 
@@ -39,27 +42,19 @@ curl -H "Authorization: Bearer your-api-key" "http://localhost:5000/api/v1/metri
 
 ## Versioning Strategy
 
-### Schema Versioning
-All API responses include schema version information:
-
-```json
-{
-  "schemaVersion": "1.0.0",
-  "data": {...},
-  "metadata": {...}
-}
-```
-
 ### API Evolution
-- **v1**: Current stable version
-- **v2**: Future version (backward compatibility maintained)
+- **v1**: Current stable version that returns response data directly without wrapper objects
+- **v2**: Future version (backward compatibility will be maintained)
 
 ### Version Headers
+Version-specific requests are supported via URL path versioning (e.g., `/api/v1/*`, `/api/v2/*`).
+
 ```bash
-# Request specific API version
-curl -H "Accept: application/vnd.gitlab-metrics.v1+json" \
-     "http://localhost:5000/api/v1/metrics/developers"
+# Request v1 API version (current)
+curl "http://localhost:5000/api/v1/metrics/developers"
 ```
+
+**Note**: Schema versioning via response envelopes is not currently implemented. All endpoints return response objects directly.
 
 ## Developer Metrics APIs
 
@@ -89,7 +84,6 @@ curl "http://localhost:5000/api/v1/metrics/developers?projectIds[]=123&projectId
 **Response**:
 ```json
 {
-  "schemaVersion": "1.0.0",
   "data": [
     {
       "developerId": 123,
@@ -187,7 +181,6 @@ curl "http://localhost:5000/api/v1/metrics/developers/123?projectIds[]=456&proje
 **Response**:
 ```json
 {
-  "schemaVersion": "1.0.0", 
   "data": {
     "developerId": 123,
     "username": "john.doe",
@@ -402,16 +395,16 @@ All pattern matching is case-insensitive.
 
 ### Get Advanced Metrics
 
-**Endpoint**: `GET /api/v1/metrics/advanced/{userId}`
+**Endpoint**: `GET /api/v1/{userId}/metrics/advanced`
 
 Calculates 7 advanced metrics for deeper insights into team health, work patterns, and code ownership.
 
 ```bash
 # Get advanced metrics for user 123 (last 30 days)
-curl "http://localhost:5000/api/v1/metrics/advanced/123"
+curl "http://localhost:5000/api/v1/123/metrics/advanced"
 
 # Custom time window (90 days)
-curl "http://localhost:5000/api/v1/metrics/advanced/456?windowDays=90"
+curl "http://localhost:5000/api/v1/456/metrics/advanced?windowDays=90"
 ```
 
 **Path Parameters**:
@@ -487,9 +480,9 @@ curl "http://localhost:5000/api/v1/metrics/advanced/456?windowDays=90"
 - May take longer for users with many MRs
 
 **Team Mapping Note**:
-Cross-team collaboration metric requires team mapping configuration. See the [Team & Project Metrics guide](./TEAM_PROJECT_METRICS.md) for details.
+Cross-team collaboration metric requires team mapping configuration. See the [Metrics Reference guide](./METRICS_REFERENCE.md#team--project-metrics) for details.
 
-See [Advanced Metrics Feature Summary](./ADVANCED_METRICS_FEATURE_SUMMARY.md) for detailed documentation.
+See [Metrics Reference - Advanced Metrics](./METRICS_REFERENCE.md#advanced-metrics) for detailed documentation.
 
 ## Team & Project Metrics APIs
 
@@ -562,7 +555,7 @@ Team metrics require team mapping configuration in `appsettings.json`:
 }
 ```
 
-**For complete documentation**, see [Team & Project Metrics Guide](./TEAM_PROJECT_METRICS.md).
+**For complete documentation**, see [Metrics Reference - Team & Project Metrics](./METRICS_REFERENCE.md#team--project-metrics).
 
 ### Get Metrics Catalog
 
@@ -577,7 +570,6 @@ curl "http://localhost:5000/api/v1/catalog"
 **Response**:
 ```json
 {
-  "schemaVersion": "1.0.0",
   "catalog": {
     "codeContribution": {
       "totalCommits": {
@@ -764,7 +756,6 @@ curl "http://localhost:5000/api/exports/developers?windowDays=7&format=csv" \
   "exportMetadata": {
     "generatedAt": "2024-01-15T10:30:00Z",
     "format": "json",
-    "schemaVersion": "1.0.0",
     "window": {
       "startDate": "2024-01-01T00:00:00Z",
       "endDate": "2024-01-31T23:59:59Z",
@@ -895,9 +886,9 @@ curl "http://localhost:5000/api/data-quality/reports/trends?days=30"
     ]
   },
   "recommendations": [
-    "Consider running incremental collection to fill data gaps",
     "Review bot detection patterns for user 125-127",
-    "Investigate negative line count records"
+    "Investigate negative line count records",
+    "Consider adjusting time window to reduce GitLab API load"
   ]
 }
 ```
@@ -931,10 +922,9 @@ All API endpoints return consistent error responses:
 
 #### Server Errors (5xx)
 - `INTERNAL_ERROR` (500): General server error
-- `DATABASE_ERROR` (500): Database connectivity issues
-- `COLLECTION_ERROR` (500): Data collection failures
-- `EXPORT_GENERATION_ERROR` (500): Export creation failures
 - `GITLAB_API_ERROR` (502): GitLab API connectivity issues
+- `GITLAB_API_TIMEOUT` (504): GitLab API request timeout
+- `CIRCUIT_BREAKER_OPEN` (503): Too many failures, circuit breaker activated
 
 ### Example Error Responses
 
@@ -1016,16 +1006,6 @@ curl "http://localhost:5000/api/v1/metrics/developers?windowDays=365" # Heavy
 ```
 
 ### Response Handling
-
-#### Check Schema Version
-```javascript
-const response = await fetch('/api/v1/metrics/developers');
-const data = await response.json();
-
-if (data.schemaVersion !== '1.0.0') {
-  console.warn('API schema version mismatch, update client');
-}
-```
 
 #### Handle Async Operations
 ```bash

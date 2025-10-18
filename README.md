@@ -1,30 +1,32 @@
 # GitLab Metrics Analyzer
 
-A .NET 9 application that collects developer productivity metrics from GitLab and stores them in PostgreSQL for analysis. Built with .NET Aspire for cloud-native development.
+A .NET 9 REST API that calculates developer productivity metrics from GitLab via live API calls. Built with .NET Aspire for cloud-native development.
 
 ## Features
 
-- **Data Collection**: Collects commits, merge requests, and pipeline data from GitLab API
-- **Resilient Design**: Built-in retry logic and error handling for API failures
-- **Analytics**: Calculates developer productivity metrics like commit frequency, merge request cycle time, and pipeline success rates
-- **Real-time Monitoring**: Comprehensive logging and telemetry with Serilog
+- **Live Metrics Calculation**: Real-time metrics calculated on-demand from GitLab API
+- **Comprehensive Analytics**: 10 REST endpoints covering user, team, project, and pipeline metrics
+- **Resilient Design**: Built-in retry logic, circuit breaker, and timeout handling (Polly)
+- **Developer Insights**: Commit patterns, MR cycle time, collaboration, quality, and code characteristics
+- **Real-time Monitoring**: Comprehensive logging and distributed tracing with OpenTelemetry
+- **Flexible Time Windows**: Query metrics for any time period (1-365 days)
 
 ## Architecture
 
-- **Tech Stack**: .NET 9, Entity Framework Core, PostgreSQL, .NET Aspire
+- **Tech Stack**: .NET 9, ASP.NET Core Minimal APIs, .NET Aspire
 - **Design Pattern**: Vertical slice architecture for each feature
-- **API Integration**: NGitLab client for GitLab API interaction
-- **Data Collection**: Manual trigger workflows for on-demand collection
-- **Resilience**: Built-in retry policies and error handling for API failures
-- **Export System**: Configurable metrics export with multiple formats
+- **API Integration**: Live GitLab API v4 integration with NGitLab client
+- **Metrics Approach**: Real-time calculation (no data storage)
+- **Resilience**: Polly policies (retry, circuit breaker, timeout)
+- **Observability**: Serilog structured logging, OpenTelemetry tracing
 
 ## Getting Started
 
 ### Prerequisites
 
 - .NET 9 SDK
-- PostgreSQL database
 - GitLab instance with API access
+- GitLab Personal Access Token with `api` scope
 - Visual Studio 2022 or VS Code with C# extensions
 
 ### Configuration
@@ -33,27 +35,13 @@ A .NET 9 application that collects developer productivity metrics from GitLab an
    - Create a GitLab Personal Access Token with `api` scope
    - Note your GitLab instance URL
 
-2. **Database Setup**:
-   - Ensure PostgreSQL is running
-   - Create a database for the application
-
-3. **Application Configuration**:
-   Update `appsettings.json`:
+2. **Application Configuration**:
+   Update `appsettings.json` or use environment variables:
    ```json
    {
      "GitLab": {
        "BaseUrl": "https://your-gitlab-instance.com",
-       "Token": "your-token-here"
-     },
-     "ConnectionStrings": {
-       "DefaultConnection": "Host=localhost;Database=GitLabMetrics;Username=your-user;Password=your-password"
-     },
-     "Processing": {
-       "MaxDegreeOfParallelism": 8,
-       "BackfillDays": 180
-     },
-     "Exports": {
-       "Directory": "/data/exports"
+       "Token": "your-token-here"  // Or via env: GitLab__Token
      },
      "Metrics": {
        "Identity": {
@@ -81,6 +69,12 @@ A .NET 9 application that collects developer productivity metrics from GitLab an
    }
    ```
 
+   **Environment Variables** (recommended for secrets):
+   ```bash
+   export GitLab__Token="your-gitlab-token"
+   export GitLab__BaseUrl="https://your-gitlab-instance.com"
+   ```
+
 ### Running the Application
 
 #### Option 1: .NET Aspire (Recommended)
@@ -94,119 +88,95 @@ cd src/Toman.Management.KPIAnalysis.ApiService
 dotnet run
 ```
 
-### Database Migration
 
-The application will automatically apply migrations on startup. To manually run migrations:
-
-```bash
-cd src/Toman.Management.KPIAnalysis.ApiService
-dotnet ef database update
-```
-
-## Manual Data Collection
-
-The system operates through manual trigger workflows instead of automatic scheduling:
-
-### Backfill Collection
-Perform a complete data backfill (last 180 days by default):
-
-```bash
-curl -X POST "http://localhost:5000/gitlab-metrics/collect/backfill" \
-  -H "Content-Type: application/json" \
-  -d '{"triggerSource": "manual"}'
-```
-
-### Monitor Collection Status
-Check the status of a running collection:
-
-```bash
-# Get specific run status
-curl "http://localhost:5000/gitlab-metrics/collect/runs/{runId}"
-
-# List recent runs
-curl "http://localhost:5000/gitlab-metrics/collect/runs?limit=10"
-```
 
 ## API Endpoints
 
-### Health & Status
-- `GET /health` - Application health status
-- `GET /alive` - Liveness check
+All endpoints accept optional `windowDays` or `lookbackDays` query parameter (1-365 days, default: 30).
 
-### Developer Metrics API (v1)
-- `GET /api/v1/metrics/developers` - Paginated developer metrics with filtering
-- `GET /api/v1/metrics/developers/{id}` - Individual developer metrics with history
-- `GET /api/v1/metrics/advanced/{userId}` - Advanced metrics (bus factor, response time, batch size, draft duration, iteration count, idle time, cross-team collaboration)
-- `GET /api/v1/catalog` - Available metrics catalog with schema version
+### User Metrics (6 endpoints)
+- `GET /api/v1/{userId}/analysis/commit-time` - Commit time distribution across 24 hours
+- `GET /api/v1/{userId}/metrics/mr-cycle-time` - Median MR cycle time (P50)
+- `GET /api/v1/{userId}/metrics/flow` - Throughput, WIP, context switching
+- `GET /api/v1/{userId}/metrics/collaboration` - Reviews, approvals, discussions
+- `GET /api/v1/{userId}/metrics/quality` - Rework, reverts, CI success
+- `GET /api/v1/{userId}/metrics/code-characteristics` - Commit size, MR size, file churn
 
-### Data Quality & Exports
-- `GET /api/data-quality/reports` - Data quality assessment reports
-- `GET /api/exports/developers` - Export developer metrics to various formats
-- `GET /api/exports/runs/{runId}/download` - Download specific export run results
+### Pipeline Metrics
+- `GET /api/v1/metrics/pipelines/{projectId}` - 7 pipeline metrics (failed job rate, retry rate, wait time, deployment frequency, duration trends, success rate by branch, coverage trend)
 
-## Data Models
+### Advanced Metrics
+- `GET /api/v1/metrics/advanced/{userId}` - Bus factor, response time, batch size, draft duration, iteration count, idle time, cross-team collaboration
 
-### Core Entities (PRD Aligned)
-- **Developers**: Central developer identity with aliases support
-- **Projects**: GitLab project information
-- **CommitFacts**: Individual commit data with metrics
-- **MergeRequestFacts**: MR lifecycle data with timelines
-- **PipelineFacts**: CI/CD pipeline execution data
-- **ReviewEvents**: Code review activity tracking
-- **DeveloperMetricsAggregates**: Pre-calculated time-series metrics
+### Team Metrics
+- `GET /api/v1/teams/{teamId}/metrics` - Team velocity, cross-project contributions, review coverage
 
-### Calculated Metrics
-- **Developer Metrics**: Commit frequency, review participation, pipeline success
-- **Collaboration Metrics**: Review patterns, knowledge sharing indicators
-- **Quality Metrics**: Pipeline success rates, code revert patterns
-- **Productivity Metrics**: Velocity scores, efficiency indicators
-- **Advanced Metrics**: Bus factor, response time distribution, batch size, draft duration, iteration count, idle time, cross-team collaboration
+### Project Metrics
+- `GET /api/v1/projects/{projectId}/metrics` - Activity score, branch lifecycle, label usage, milestone completion
 
-## Data Export System
+**Complete metrics and API documentation**: See [docs/METRICS_REFERENCE.md](docs/METRICS_REFERENCE.md)  
+**Complete endpoint inventory**: See [docs/ENDPOINT_AUDIT.md](docs/ENDPOINT_AUDIT.md)
 
-### Export Developer Metrics
-Generate comprehensive developer metrics export:
+## Metrics Calculated
 
-```bash
-curl "http://localhost:5000/api/exports/developers?windowDays=90&format=json" \
-  -H "Accept: application/json" \
-  -o developer_metrics.json
-```
+### Developer Metrics
+- **Commit Time Analysis**: Distribution across 24 hours, peak coding times
+- **MR Cycle Time**: Median time from first commit to merge
+- **Flow Metrics**: Throughput, WIP, coding time, review time, context switching
+- **Collaboration Metrics**: Review comments, approvals, discussion threads, review turnaround time
+- **Quality Metrics**: Rework ratio, revert rate, CI success rate, hotfix rate
+- **Code Characteristics**: Commit frequency, size distribution, file churn, message quality
 
-### Available Export Formats
-- **JSON**: Structured data for API consumption
-- **CSV**: Tabular format for spreadsheet analysis  
-- **Excel**: Multi-sheet workbooks with charts and summaries
+### Team & Project Metrics
+- **Team Velocity**: Cross-project contributions, review coverage
+- **Project Health**: Activity score, branch lifecycle, milestone completion
+- **Pipeline Metrics**: Failed job rate, retry rate, wait time, deployment frequency
 
-### Export Configuration
-Configure export settings in `appsettings.json`:
-```json
-{
-  "Exports": {
-    "Directory": "/data/exports"
-  }
-}
-```
+### Advanced Metrics
+- **Bus Factor**: Knowledge distribution risk assessment
+- **Response Time Distribution**: Review responsiveness patterns
+- **Batch Size**: Work batch size analysis
+- **Draft Duration**: Time spent in draft state
+- **Iteration Count**: Number of review iterations
+- **Idle Time**: Time waiting in review
+- **Cross-Team Collaboration**: Inter-team collaboration index
 
 ## Development
 
 ### Project Structure
 ```
 src/
-├── Toman.Management.KPIAnalysis.ApiService/     # Main application
+├── Toman.Management.KPIAnalysis.ApiService/     # Main API application
 │   ├── Features/GitLabMetrics/                  # GitLab integration feature
-│   │   ├── Data/                               # EF Core models and context
-│   │   ├── Infrastructure/                     # External service clients
-│   │   └── Services/                          # Business logic services
-│   └── Configuration/                          # App configuration
+│   │   ├── Infrastructure/                     # GitLab API client (HTTP)
+│   │   ├── Services/                          # Metrics calculation services
+│   │   ├── *Endpoints.cs                      # Minimal API endpoints
+│   │   └── Configuration/                     # Feature configuration
+│   └── Configuration/                          # App-level configuration
 ├── Toman.Management.KPIAnalysis.AppHost/       # Aspire orchestration
-└── Toman.Management.KPIAnalysis.ServiceDefaults/ # Shared service configuration
+└── Toman.Management.KPIAnalysis.ServiceDefaults/ # Shared service defaults
+
+docs/
+├── CURRENT_STATE.md                             # Current architecture (✅ accurate)
+├── ENDPOINT_AUDIT.md                            # All endpoints documented
+├── METRICS_REFERENCE.md                         # Complete metrics reference
+├── API_USAGE_GUIDE.md                           # API usage patterns
+├── CONFIGURATION_GUIDE.md                       # Configuration options
+├── DEPLOYMENT_GUIDE.md                          # Deployment instructions
+└── OPERATIONS_RUNBOOK.md                        # Operations guide
 ```
 
 ### Key Services
-- **IGitLabService**: GitLab API client with health checks
-- **IMetricsCalculationService**: Calculates productivity metrics from raw data
-- **GitLabMetricsDbContext**: EF Core database context with automatic migrations
+- **GitLabHttpClient**: GitLab API v4 client with Polly resilience (retry, circuit breaker, timeout)
+- **CommitTimeAnalysisService**: Commit time distribution analysis
+- **PerDeveloperMetricsService**: MR cycle time and flow metrics
+- **CollaborationMetricsService**: Review and collaboration metrics
+- **QualityMetricsService**: Code quality and CI metrics
+- **CodeCharacteristicsService**: Code patterns and characteristics
+- **PipelineMetricsService**: CI/CD pipeline metrics
+- **AdvancedMetricsService**: Advanced developer analytics
+- **TeamMetricsService**: Team-level aggregations
+- **ProjectMetricsService**: Project-level aggregations
 
 ### Building
 ```bash
@@ -223,34 +193,21 @@ dotnet test
 The application includes comprehensive observability:
 
 ### Health Checks
-- **Application Health**: `GET /health` - Overall system health
-- **Liveness Check**: `GET /alive` - Container liveness probe
 - **GitLab Connectivity**: Automatic GitLab API health validation
-- **Database Connectivity**: PostgreSQL connection health
-
-### Data Quality Monitoring
-Monitor data quality and collection health:
-
-```bash
-# Get data quality reports
-curl "http://localhost:5000/api/data-quality/reports"
-
-# Check recent collection runs
-curl "http://localhost:5000/gitlab-metrics/collect/runs"
-```
+- **Aspire Dashboard**: Real-time telemetry and health monitoring
 
 ### Logging & Telemetry
-- **Structured Logging**: JSON-formatted logs with correlation IDs
-- **OpenTelemetry**: Distributed tracing and metrics collection
-- **Performance Metrics**: Collection timing and throughput statistics
+- **Structured Logging**: Serilog with JSON formatting and correlation IDs
+- **Distributed Tracing**: OpenTelemetry with activity tracking
+- **Metrics Collection**: API request timing, GitLab API call metrics
 - **Error Tracking**: Detailed error reporting with context
 
 ### Key Metrics to Monitor
-- Collection run success rates
-- Data freshness (last successful collection time)
-- API rate limit consumption
-- Database query performance
-- Export generation success rates
+- GitLab API response times
+- API rate limit consumption (GitLab quotas)
+- Endpoint response times
+- Error rates per endpoint
+- Circuit breaker state (Polly resilience)
 
 ## Deployment
 
@@ -264,30 +221,26 @@ The application is designed for containerized deployment with .NET Aspire. It in
 ```bash
 # Build and run with Docker
 docker build -t gitlab-metrics-analyzer .
-docker run -p 5000:8080 -e ConnectionStrings__DefaultConnection="..." gitlab-metrics-analyzer
+docker run -p 5000:8080 \
+  -e GitLab__Token="your-gitlab-token" \
+  -e GitLab__BaseUrl="https://your-gitlab-instance.com" \
+  gitlab-metrics-analyzer
 ```
 
-### Kubernetes Deployment
-The application includes health check endpoints suitable for Kubernetes:
-- Readiness probe: `GET /health`
-- Liveness probe: `GET /alive`
+## Future Roadmap
 
-## Future Roadmap (vNext)
+### Performance Improvements
+- **Response Caching**: Redis/memory cache for frequently requested metrics
+- **Batch GitLab API Calls**: Parallel queries to reduce latency
+- **Query Optimization**: Efficient GitLab API usage patterns
 
-### Planned Scheduling Improvements
-The current v1 system uses manual triggers. Future versions will include:
-
-- **Hangfire Integration**: Automated background job scheduling
-- **Aspire Scheduling**: Cloud-native job orchestration
-- **Configurable Schedules**: Flexible collection timing (daily, weekly, custom)
-- **Rate Limit Optimization**: Intelligent throttling based on GitLab API limits
-
-### Advanced Features in Development
-- **Team Metrics Aggregation**: Cross-developer collaboration analysis
-- **Project Health Scoring**: Automated project quality assessments  
-- **Anomaly Detection**: Statistical outlier identification
+### Feature Enhancements
+- **Authentication & Authorization**: JWT/OAuth for API security
+- **Rate Limiting**: Protect API and GitLab from excessive requests
+- **Webhooks**: Real-time updates from GitLab events
+- **Historical Data Storage** (optional): Persist metrics for trend analysis
 - **Custom Dashboards**: Interactive visualization components
-- **API Rate Limiting**: Built-in rate limiting for external consumers
+- **Export Feature**: CSV/JSON/Excel exports for reporting
 
 ## Troubleshooting
 
@@ -296,34 +249,52 @@ The current v1 system uses manual triggers. Future versions will include:
 1. **GitLab API Connection Failures**:
    - Verify token permissions (`api` scope required)
    - Check network connectivity to GitLab instance
-   - Review rate limiting settings
+   - Review GitLab instance rate limiting
+   - Verify BaseUrl is correct (no trailing slash issues)
 
-2. **Database Connection Issues**:
-   - Ensure PostgreSQL is running
-   - Verify connection string format
-   - Check database permissions
+2. **Slow Response Times**:
+   - Large time windows (>90 days) may be slow
+   - GitLab API may be under load
+   - Check circuit breaker state (may be open)
 
-3. **Missing Data**:
-   - Verify project access permissions in GitLab
-   - Review application logs for API errors
+3. **Empty or Missing Metrics**:
+   - Verify user/project IDs exist in GitLab
+   - Check GitLab permissions for the token
+   - Review bot filtering patterns (may be excluding too much)
+   - Check time window (data may not exist in range)
 
 ### Logging
 
 Logs are structured and include:
 - Request/response details for GitLab API calls
-- Database operation timing
+- Polly resilience policy actions (retries, circuit breaker)
 - Error details with correlation IDs
 - Performance metrics
 
-View logs in the application output or configure external log aggregation.
+View logs in:
+- **Development**: Console output
+- **Aspire Dashboard**: https://localhost:17237
+- **Production**: Configure external log aggregation (e.g., Seq, Elasticsearch)
+
+## Documentation
+
+For more detailed information:
+- **[METRICS_REFERENCE.md](docs/METRICS_REFERENCE.md)** - Complete metrics and API reference
+- **[CURRENT_STATE.md](docs/CURRENT_STATE.md)** - Current architecture overview
+- **[ENDPOINT_AUDIT.md](docs/ENDPOINT_AUDIT.md)** - All endpoints documented with examples
+- **[CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md)** - Configuration options and setup
+- **[API_USAGE_GUIDE.md](docs/API_USAGE_GUIDE.md)** - API usage patterns and examples
+- **[DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)** - Deployment instructions
+- **[OPERATIONS_RUNBOOK.md](docs/OPERATIONS_RUNBOOK.md)** - Operations and maintenance
 
 ## Contributing
 
-1. Follow vertical slice architecture patterns
-2. Use async/await for all I/O operations
-3. Include appropriate error handling and logging
-4. Write tests for complex business logic
-5. Follow C# coding conventions and nullable reference types
+See [.github/copilot-instructions.md](.github/copilot-instructions.md) for coding standards and practices:
+- Vertical slice architecture
+- Async/await patterns
+- File-scoped namespaces
+- Nullable reference types
+- Latest C# features
 
 ## License
 
