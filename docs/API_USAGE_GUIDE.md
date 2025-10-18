@@ -43,7 +43,7 @@ curl -H "Authorization: Bearer your-api-key" "http://localhost:5000/api/v1/metri
 ## Versioning Strategy
 
 ### API Evolution
-- **v1**: Current stable version - APIs return response objects directly without additional envelope wrappers
+- **v1**: Current stable version that returns response data directly without wrapper objects
 - **v2**: Future version (backward compatibility will be maintained)
 
 ### Version Headers
