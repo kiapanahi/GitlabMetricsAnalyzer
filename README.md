@@ -114,7 +114,8 @@ All endpoints accept optional `windowDays` or `lookbackDays` query parameter (1-
 ### Project Metrics
 - `GET /api/v1/projects/{projectId}/metrics` - Activity score, branch lifecycle, label usage, milestone completion
 
-**Complete API documentation**: See `/openapi/internal.json` or [docs/ENDPOINT_AUDIT.md](docs/ENDPOINT_AUDIT.md)
+**Complete metrics and API documentation**: See [docs/METRICS_REFERENCE.md](docs/METRICS_REFERENCE.md)  
+**Complete endpoint inventory**: See [docs/ENDPOINT_AUDIT.md](docs/ENDPOINT_AUDIT.md)
 
 ## Metrics Calculated
 
@@ -275,11 +276,13 @@ View logs in:
 ## Documentation
 
 For more detailed information:
+- **[METRICS_REFERENCE.md](docs/METRICS_REFERENCE.md)** - Complete metrics and API reference
 - **[CURRENT_STATE.md](docs/CURRENT_STATE.md)** - Current architecture overview
 - **[ENDPOINT_AUDIT.md](docs/ENDPOINT_AUDIT.md)** - All endpoints documented with examples
-- **[CONFIGURATION_REVIEW.md](docs/CONFIGURATION_REVIEW.md)** - Configuration analysis
-- **[API_USAGE_GUIDE.md](docs/API_USAGE_GUIDE.md)** - API usage examples
-- **[archived/](docs/archived/)** - Obsolete documentation (historical reference)
+- **[CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md)** - Configuration options and setup
+- **[API_USAGE_GUIDE.md](docs/API_USAGE_GUIDE.md)** - API usage patterns and examples
+- **[DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)** - Deployment instructions
+- **[OPERATIONS_RUNBOOK.md](docs/OPERATIONS_RUNBOOK.md)** - Operations and maintenance
 
 ## Contributing
 

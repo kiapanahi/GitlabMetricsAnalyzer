@@ -490,9 +490,9 @@ curl "http://localhost:5000/api/v1/metrics/advanced/456?windowDays=90"
 - May take longer for users with many MRs
 
 **Team Mapping Note**:
-Cross-team collaboration metric requires team mapping configuration. See the [Team & Project Metrics guide](./TEAM_PROJECT_METRICS.md) for details.
+Cross-team collaboration metric requires team mapping configuration. See the [Metrics Reference guide](./METRICS_REFERENCE.md#team--project-metrics) for details.
 
-See [Advanced Metrics Feature Summary](./ADVANCED_METRICS_FEATURE_SUMMARY.md) for detailed documentation.
+See [Metrics Reference - Advanced Metrics](./METRICS_REFERENCE.md#advanced-metrics) for detailed documentation.
 
 ## Team & Project Metrics APIs
 
@@ -565,7 +565,7 @@ Team metrics require team mapping configuration in `appsettings.json`:
 }
 ```
 
-**For complete documentation**, see [Team & Project Metrics Guide](./TEAM_PROJECT_METRICS.md).
+**For complete documentation**, see [Metrics Reference - Team & Project Metrics](./METRICS_REFERENCE.md#team--project-metrics).
 
 ### Get Metrics Catalog
 

@@ -129,9 +129,8 @@ var analysis = await service.AnalyzeCommitTimeDistributionAsync(userId: 1, lookb
 ## Documentation Updates
 
 Updated the following documentation:
-1. **COMMIT_TIME_ANALYSIS_API.md** - Implementation details section
+1. **METRICS_REFERENCE.md** - Commit Time Analysis section with complete API details
 2. **TESTING_COMMIT_TIME_ANALYSIS.md** - Troubleshooting section
-3. **COMMIT_TIME_ANALYSIS_FEATURE_SUMMARY.md** - Technical details and key features
 
 ## Migration Notes
 
