@@ -46,7 +46,6 @@ The current system has **no manual operations** - it's a stateless API that resp
 - Current system architecture: [CURRENT_STATE.md](CURRENT_STATE.md)
 - API endpoint usage: [ENDPOINT_AUDIT.md](ENDPOINT_AUDIT.md)
 - Configuration options: [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)
-- Historical configuration review: [archive/CONFIGURATION_REVIEW.md](archive/CONFIGURATION_REVIEW.md)
 
 ---
 

@@ -163,8 +163,7 @@ docs/
 ├── API_USAGE_GUIDE.md                           # API usage patterns
 ├── CONFIGURATION_GUIDE.md                       # Configuration options
 ├── DEPLOYMENT_GUIDE.md                          # Deployment instructions
-├── OPERATIONS_RUNBOOK.md                        # Operations guide
-└── archive/                                     # Historical investigation docs
+└── OPERATIONS_RUNBOOK.md                        # Operations guide
 ```
 
 ### Key Services

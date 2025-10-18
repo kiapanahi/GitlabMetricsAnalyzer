@@ -4,8 +4,6 @@
 **Branch**: `main`  
 **Purpose**: Accurate description of the application's actual architecture and functionality
 
-> **Note**: This document supersedes the historical investigation reports now archived in `docs/archive/`.
-
 ---
 
 ## Overview
@@ -394,16 +392,6 @@ GET /api/v1/projects/{projectId}/metrics?windowDays=30
 
 **Used By**: `AdvancedMetricsService`, `CollaborationMetricsService`, `CodeCharacteristicsService`, `TeamMetricsService`
 
-### Previously Removed Configuration
-
-> **Note**: All unused configuration has been successfully removed:
-> - ✅ CollectionConfiguration (removed)
-> - ✅ ExportsConfiguration (removed)
-> - ✅ "Processing" section (removed from appsettings.json)
-> - ✅ "Timezone" section (removed from appsettings.json)
->
-> See `docs/archive/CONFIGURATION_REVIEW.md` for historical details.
-
 ---
 
 ## Project Structure
@@ -465,10 +453,6 @@ GitlabMetricsAnalyzer/
 ├── test/
 │   └── Toman.Management.KPIAnalysis.Tests/          # Unit tests
 ├── docs/                                            # Documentation
-│   ├── archive/                                     # Historical investigation docs
-│   │   ├── README.md                                # Archive explanation
-│   │   ├── INVESTIGATION_REPORT.md                  # 📁 Archived (Phase 1 investigation)
-│   │   └── CONFIGURATION_REVIEW.md                  # 📁 Archived (Phase 1 review)
 │   ├── CURRENT_STATE.md                             # ✅ Current architecture (this file)
 │   ├── ENDPOINT_AUDIT.md                            # ✅ API endpoint audit
 │   ├── API_USAGE_GUIDE.md                           # ⚠️ NEEDS UPDATE (PR #3)
@@ -624,5 +608,4 @@ The presence of database infrastructure, entity models, and migrations is **arch
 
 **Document Status**: ✅ Complete and Current  
 **Last Updated**: October 18, 2025  
-**Phase**: PR #1 - Critical Documentation Cleanup  
-**Historical Documents**: Archived in `docs/archive/`
+**Phase**: PR #1 - Critical Documentation Cleanup
