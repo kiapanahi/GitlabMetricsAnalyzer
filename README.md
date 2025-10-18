@@ -159,8 +159,11 @@ src/
 docs/
 ├── CURRENT_STATE.md                             # Current architecture (✅ accurate)
 ├── ENDPOINT_AUDIT.md                            # All endpoints documented
-├── CONFIGURATION_REVIEW.md                      # Configuration analysis
-└── archived/                                    # Obsolete documentation
+├── METRICS_REFERENCE.md                         # Complete metrics reference
+├── API_USAGE_GUIDE.md                           # API usage patterns
+├── CONFIGURATION_GUIDE.md                       # Configuration options
+├── DEPLOYMENT_GUIDE.md                          # Deployment instructions
+└── OPERATIONS_RUNBOOK.md                        # Operations guide
 ```
 
 ### Key Services
