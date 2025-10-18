@@ -29,7 +29,7 @@ GitLab API ← Live API Calls ← Metrics Services → REST API Endpoints
 - ✅ **Real-time Insights**: No stale data - always current metrics
 - ✅ **Comprehensive Documentation**: 
   - `CURRENT_STATE.md` - Accurate architecture documentation
-  - `INVESTIGATION_REPORT.md` - Detailed analysis of architecture
+  - `archive/INVESTIGATION_REPORT.md` - Detailed analysis of architecture (archived)
   - `ENDPOINT_AUDIT.md` - Complete API endpoint documentation
   - Updated README with v2.0 architecture
 - ✅ **Resilient GitLab Integration**: Polly policies (retry, circuit breaker, timeout)
@@ -216,10 +216,11 @@ All endpoints calculate metrics live from GitLab API:
 **Core Documentation**:
 - `README.md` - Quick start and overview
 - `CURRENT_STATE.md` - Current architecture (100% accurate)
-- `INVESTIGATION_REPORT.md` - Phase 1 findings
 - `ENDPOINT_AUDIT.md` - Complete API reference
-- `CONFIGURATION_GUIDE.md` - Configuration options (with obsolete sections marked)
-- `DEPLOYMENT_GUIDE.md` - Deployment instructions (with database sections marked obsolete)
+- `CONFIGURATION_GUIDE.md` - Configuration options
+- `DEPLOYMENT_GUIDE.md` - Deployment instructions
+- `archive/INVESTIGATION_REPORT.md` - Phase 1 findings (archived)
+- `archive/CONFIGURATION_REVIEW.md` - Configuration analysis (archived)
 
 **Feature Documentation**:
 - Multiple feature-specific docs in `docs/` covering individual metrics

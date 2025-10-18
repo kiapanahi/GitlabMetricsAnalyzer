@@ -465,15 +465,20 @@ GitlabMetricsAnalyzer/
 ├── test/
 │   └── Toman.Management.KPIAnalysis.Tests/          # Unit tests
 ├── docs/                                            # Documentation
-│   ├── INVESTIGATION_REPORT.md                      # ✅ NEW (Phase 1)
-│   ├── ENDPOINT_AUDIT.md                            # ✅ NEW (Phase 1)
-│   ├── CONFIGURATION_REVIEW.md                      # ✅ NEW (Phase 1)
-│   ├── CURRENT_STATE.md                             # ✅ NEW (Phase 1)
-│   ├── API_USAGE_GUIDE.md                           # ⚠️ NEEDS UPDATE
+│   ├── archive/                                     # Historical investigation docs
+│   │   ├── README.md                                # Archive explanation
+│   │   ├── INVESTIGATION_REPORT.md                  # 📁 Archived (Phase 1 investigation)
+│   │   └── CONFIGURATION_REVIEW.md                  # 📁 Archived (Phase 1 review)
+│   ├── CURRENT_STATE.md                             # ✅ Current architecture (this file)
+│   ├── ENDPOINT_AUDIT.md                            # ✅ API endpoint audit
+│   ├── API_USAGE_GUIDE.md                           # ⚠️ NEEDS UPDATE (PR #3)
 │   ├── METRICS_REFERENCE.md                         # ✅ Unified metrics reference
-│   ├── DEPLOYMENT_GUIDE.md                          # ✅ Deployment instructions
-│   ├── CONFIGURATION_GUIDE.md                       # ✅ Configuration options
-│   └── OPERATIONS_RUNBOOK.md                        # ✅ Operations guide
+│   ├── DEPLOYMENT_GUIDE.md                          # ⚠️ NEEDS REWRITE (PR #2)
+│   ├── CONFIGURATION_GUIDE.md                       # ⚠️ NEEDS CLEANUP (PR #2)
+│   ├── OPERATIONS_RUNBOOK.md                        # ⚠️ NEEDS REWRITE (PR #2)
+│   ├── EVENTS_API_IMPLEMENTATION.md                 # ✅ Events API approach
+│   ├── IDENTITY_MAPPING.md                          # ✅ Identity mapping
+│   └── TESTING_COMMIT_TIME_ANALYSIS.md              # ⚠️ NEEDS VERIFICATION (PR #3)
 ```
 
 ---
