@@ -111,7 +111,7 @@ All endpoints are under `/api/v1/`
 
 ---
 
-### 4. Team Metrics Endpoints
+### 3. Team Metrics Endpoints
 **Base Path**: `/api/v1/teams/{teamId}`  
 **Tag**: "Team-level aggregation metrics"  
 **Source**: `TeamMetricsEndpoints.cs`
@@ -137,7 +137,7 @@ All endpoints are under `/api/v1/`
 
 ---
 
-### 5. Project Metrics Endpoints
+### 4. Project Metrics Endpoints
 **Base Path**: `/api/v1/projects/{projectId:long}`  
 **Tag**: "Project-level aggregation metrics"  
 **Source**: `ProjectMetricsEndpoints.cs`

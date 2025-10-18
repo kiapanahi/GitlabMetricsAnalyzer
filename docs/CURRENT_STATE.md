@@ -179,14 +179,13 @@
 
 ### Endpoint Summary
 
-| Group            | Count  | Base Path                           | Purpose                      |
-| ---------------- | ------ | ----------------------------------- | ---------------------------- |
-| User Metrics     | 6      | `/api/v1/{userId:long}`             | Per-developer analytics      |
-| Pipeline Metrics | 1      | `/api/v1/metrics/pipelines`         | CI/CD analytics              |
-| Advanced Metrics | 1      | `/api/v1/{userId:long}`             | Advanced developer analytics |
-| Team Metrics     | 1      | `/api/v1/teams/{teamId}`            | Team-level aggregations      |
-| Project Metrics  | 1      | `/api/v1/projects/{projectId:long}` | Project-level aggregations   |
-| **Total**        | **10** | `/api/v1/`                          | All metrics endpoints        |
+| Group            | Count  | Base Path                           | Purpose                    |
+| ---------------- | ------ | ----------------------------------- | -------------------------- |
+| User Metrics     | 7      | `/api/v1/{userId:long}`             | Per-developer analytics    |
+| Pipeline Metrics | 1      | `/api/v1/metrics/pipelines`         | CI/CD analytics            |
+| Team Metrics     | 1      | `/api/v1/teams/{teamId}`            | Team-level aggregations    |
+| Project Metrics  | 1      | `/api/v1/projects/{projectId:long}` | Project-level aggregations |
+| **Total**        | **10** | `/api/v1/`                          | All metrics endpoints      |
 
 ### User Metrics Endpoints (6)
 
