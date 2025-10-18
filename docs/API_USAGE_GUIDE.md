@@ -42,27 +42,19 @@ curl -H "Authorization: Bearer your-api-key" "http://localhost:5000/api/v1/metri
 
 ## Versioning Strategy
 
-### Schema Versioning
-All API responses include schema version information:
-
-```json
-{
-  "schemaVersion": "1.0.0",
-  "data": {...},
-  "metadata": {...}
-}
-```
-
 ### API Evolution
-- **v1**: Current stable version
-- **v2**: Future version (backward compatibility maintained)
+- **v1**: Current stable version - APIs return response objects directly without additional envelope wrappers
+- **v2**: Future version (backward compatibility will be maintained)
 
 ### Version Headers
+Version-specific requests are supported via URL path versioning (e.g., `/api/v1/*`, `/api/v2/*`).
+
 ```bash
-# Request specific API version
-curl -H "Accept: application/vnd.gitlab-metrics.v1+json" \
-     "http://localhost:5000/api/v1/metrics/developers"
+# Request v1 API version (current)
+curl "http://localhost:5000/api/v1/metrics/developers"
 ```
+
+**Note**: Schema versioning via response envelopes is not currently implemented. All endpoints return response objects directly.
 
 ## Developer Metrics APIs
 
@@ -92,7 +84,6 @@ curl "http://localhost:5000/api/v1/metrics/developers?projectIds[]=123&projectId
 **Response**:
 ```json
 {
-  "schemaVersion": "1.0.0",
   "data": [
     {
       "developerId": 123,
@@ -190,7 +181,6 @@ curl "http://localhost:5000/api/v1/metrics/developers/123?projectIds[]=456&proje
 **Response**:
 ```json
 {
-  "schemaVersion": "1.0.0", 
   "data": {
     "developerId": 123,
     "username": "john.doe",
@@ -580,7 +570,6 @@ curl "http://localhost:5000/api/v1/catalog"
 **Response**:
 ```json
 {
-  "schemaVersion": "1.0.0",
   "catalog": {
     "codeContribution": {
       "totalCommits": {
@@ -767,7 +756,6 @@ curl "http://localhost:5000/api/exports/developers?windowDays=7&format=csv" \
   "exportMetadata": {
     "generatedAt": "2024-01-15T10:30:00Z",
     "format": "json",
-    "schemaVersion": "1.0.0",
     "window": {
       "startDate": "2024-01-01T00:00:00Z",
       "endDate": "2024-01-31T23:59:59Z",
@@ -1018,16 +1006,6 @@ curl "http://localhost:5000/api/v1/metrics/developers?windowDays=365" # Heavy
 ```
 
 ### Response Handling
-
-#### Check Schema Version
-```javascript
-const response = await fetch('/api/v1/metrics/developers');
-const data = await response.json();
-
-if (data.schemaVersion !== '1.0.0') {
-  console.warn('API schema version mismatch, update client');
-}
-```
 
 #### Handle Async Operations
 ```bash
