@@ -24,6 +24,11 @@ public interface IAdvancedMetricsService
 public sealed class AdvancedMetricsResult
 {
     /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Provides deeper insights into code ownership risk, work patterns, review responsiveness, and cross-team collaboration";
+
+    /// <summary>
     /// The GitLab user ID
     /// </summary>
     public required long UserId { get; init; }

@@ -26,6 +26,11 @@ public interface IQualityMetricsService
 public sealed class QualityMetricsResult
 {
     /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Evaluates code quality, test coverage, CI success rates, and frequency of issues requiring fixes or reverts";
+
+    /// <summary>
     /// The GitLab user ID
     /// </summary>
     public required long UserId { get; init; }

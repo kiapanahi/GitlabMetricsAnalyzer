@@ -36,6 +36,11 @@ public interface IPerDeveloperMetricsService
 public sealed class MrCycleTimeResult
 {
     /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Measures the median time from first commit to merge, indicating how quickly code flows through the development pipeline";
+
+    /// <summary>
     /// The GitLab user ID
     /// </summary>
     public required long UserId { get; init; }
@@ -101,6 +106,11 @@ public sealed class ProjectMrSummary
 /// </summary>
 public sealed class FlowMetricsResult
 {
+    /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Tracks development velocity, throughput, and efficiency through the entire development lifecycle from coding to merge";
+
     /// <summary>
     /// The GitLab user ID
     /// </summary>

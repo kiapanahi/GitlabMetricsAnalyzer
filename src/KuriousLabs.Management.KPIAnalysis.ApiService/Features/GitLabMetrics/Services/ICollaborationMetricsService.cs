@@ -24,6 +24,11 @@ public interface ICollaborationMetricsService
 public sealed class CollaborationMetricsResult
 {
     /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Measures code review participation, peer feedback quality, and team collaboration effectiveness";
+
+    /// <summary>
     /// The GitLab user ID
     /// </summary>
     public required long UserId { get; init; }

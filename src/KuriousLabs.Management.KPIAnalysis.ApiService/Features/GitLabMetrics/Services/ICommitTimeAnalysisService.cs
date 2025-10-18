@@ -24,6 +24,11 @@ public interface ICommitTimeAnalysisService
 public sealed class CommitTimeDistributionAnalysis
 {
     /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Analyzes when commits are made throughout the day to identify work patterns and peak productivity hours";
+
+    /// <summary>
     /// The GitLab user ID
     /// </summary>
     public required long UserId { get; init; }

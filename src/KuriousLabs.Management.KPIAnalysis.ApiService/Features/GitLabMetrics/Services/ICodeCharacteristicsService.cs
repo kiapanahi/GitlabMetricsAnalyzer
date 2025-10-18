@@ -24,6 +24,11 @@ public interface ICodeCharacteristicsService
 public sealed class CodeCharacteristicsResult
 {
     /// <summary>
+    /// One-line description of this metric
+    /// </summary>
+    public string Description => "Analyzes coding patterns including commit frequency, change size, file ownership, and adherence to conventions";
+
+    /// <summary>
     /// The GitLab user ID
     /// </summary>
     public required long UserId { get; init; }
