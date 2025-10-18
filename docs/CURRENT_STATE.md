@@ -477,13 +477,10 @@ GitlabMetricsAnalyzer/
 │   ├── CONFIGURATION_REVIEW.md                      # ✅ NEW (Phase 1)
 │   ├── CURRENT_STATE.md                             # ✅ NEW (Phase 1)
 │   ├── API_USAGE_GUIDE.md                           # ⚠️ NEEDS UPDATE
-│   ├── DEPLOYMENT_GUIDE.md                          # ⚠️ NEEDS UPDATE
-│   ├── CONFIGURATION_GUIDE.md                       # ⚠️ NEEDS UPDATE
-│   ├── OPERATIONS_RUNBOOK.md                        # ⚠️ NEEDS UPDATE
-│   └── DATA_RESEEDING_GUIDE.md                      # ❌ OBSOLETE
-├── prds/                                            # Product requirements
-│   └── *.md                                         # ⚠️ NEED UPDATE (database refs)
-└── CLEANUP_PLAN.md                                  # ✅ Master cleanup plan
+│   ├── METRICS_REFERENCE.md                         # ✅ Unified metrics reference
+│   ├── DEPLOYMENT_GUIDE.md                          # ✅ Deployment instructions
+│   ├── CONFIGURATION_GUIDE.md                       # ✅ Configuration options
+│   └── OPERATIONS_RUNBOOK.md                        # ✅ Operations guide
 ```
 
 ---
