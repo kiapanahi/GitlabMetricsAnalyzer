@@ -32,14 +32,14 @@ All endpoints are under `/api/v1/`
 **Tag**: "GitLab user analytics and metrics"  
 **Source**: `UserMetricsEndpoints.cs`
 
-| Method | Path | Handler | Query Params | Description |
-|--------|------|---------|--------------|-------------|
-| GET | `/analysis/commit-time` | `AnalyzeUserCommitTimeDistribution` | `lookbackDays` (optional, default: 30, max: 365) | Analyze commit time distribution across 24 hours |
-| GET | `/metrics/mr-cycle-time` | `CalculateMrCycleTime` | `windowDays` (optional, default: 30, max: 365) | Calculate median MR cycle time (P50) |
-| GET | `/metrics/flow` | `CalculateFlowMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate flow metrics (throughput, WIP, context switching) |
-| GET | `/metrics/collaboration` | `CalculateCollaborationMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate collaboration metrics (reviews, approvals, discussions) |
-| GET | `/metrics/quality` | `CalculateQualityMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate quality metrics (rework, reverts, CI success) |
-| GET | `/metrics/code-characteristics` | `CalculateCodeCharacteristics` | `windowDays` (optional, default: 30, max: 365) | Calculate code characteristics (commit size, MR size, file churn) |
+| Method | Path                            | Handler                             | Query Params                                     | Description                                                       |
+| ------ | ------------------------------- | ----------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
+| GET    | `/analysis/commit-time`         | `AnalyzeUserCommitTimeDistribution` | `lookbackDays` (optional, default: 30, max: 365) | Analyze commit time distribution across 24 hours                  |
+| GET    | `/metrics/mr-cycle-time`        | `CalculateMrCycleTime`              | `windowDays` (optional, default: 30, max: 365)   | Calculate median MR cycle time (P50)                              |
+| GET    | `/metrics/flow`                 | `CalculateFlowMetrics`              | `windowDays` (optional, default: 30, max: 365)   | Calculate flow metrics (throughput, WIP, context switching)       |
+| GET    | `/metrics/collaboration`        | `CalculateCollaborationMetrics`     | `windowDays` (optional, default: 30, max: 365)   | Calculate collaboration metrics (reviews, approvals, discussions) |
+| GET    | `/metrics/quality`              | `CalculateQualityMetrics`           | `windowDays` (optional, default: 30, max: 365)   | Calculate quality metrics (rework, reverts, CI success)           |
+| GET    | `/metrics/code-characteristics` | `CalculateCodeCharacteristics`      | `windowDays` (optional, default: 30, max: 365)   | Calculate code characteristics (commit size, MR size, file churn) |
 
 **Services Used**:
 - `ICommitTimeAnalysisService` (commit-time endpoint)
@@ -60,9 +60,9 @@ All endpoints are under `/api/v1/`
 **Tag**: "Pipeline & CI/CD Metrics"  
 **Source**: `PipelineMetricsEndpoints.cs`
 
-| Method | Path | Handler | Query Params | Description |
-|--------|------|---------|--------------|-------------|
-| GET | `/{projectId:long}` | `CalculatePipelineMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate 7 pipeline metrics: Failed Job Rate, Retry Rate, Wait Time, Deployment Frequency, Duration Trends, Success Rate by Branch, Coverage Trend |
+| Method | Path                | Handler                    | Query Params                                   | Description                                                                                                                                         |
+| ------ | ------------------- | -------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/{projectId:long}` | `CalculatePipelineMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate 7 pipeline metrics: Failed Job Rate, Retry Rate, Wait Time, Deployment Frequency, Duration Trends, Success Rate by Branch, Coverage Trend |
 
 **Services Used**:
 - `IPipelineMetricsService`
@@ -84,13 +84,13 @@ All endpoints are under `/api/v1/`
 ---
 
 ### 3. Advanced Metrics Endpoints
-**Base Path**: `/api/v1/metrics/advanced`  
+**Base Path**: `/api/v1/{userId:long}`  
 **Tag**: "Advanced Metrics"  
 **Source**: `AdvancedMetricsEndpoints.cs`
 
-| Method | Path | Handler | Query Params | Description |
-|--------|------|---------|--------------|-------------|
-| GET | `/{userId:long}` | `CalculateAdvancedMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate 7 advanced developer metrics |
+| Method | Path                | Handler                    | Query Params                                   | Description                            |
+| ------ | ------------------- | -------------------------- | ---------------------------------------------- | -------------------------------------- |
+| GET    | `/metrics/advanced` | `CalculateAdvancedMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate 7 advanced developer metrics |
 
 **Services Used**:
 - `IAdvancedMetricsService`
@@ -111,14 +111,14 @@ All endpoints are under `/api/v1/`
 
 ---
 
-### 4. Team Metrics Endpoints
+### 3. Team Metrics Endpoints
 **Base Path**: `/api/v1/teams/{teamId}`  
 **Tag**: "Team-level aggregation metrics"  
 **Source**: `TeamMetricsEndpoints.cs`
 
-| Method | Path | Handler | Query Params | Description |
-|--------|------|---------|--------------|-------------|
-| GET | `/metrics` | `CalculateTeamMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate team-level aggregated metrics |
+| Method | Path       | Handler                | Query Params                                   | Description                             |
+| ------ | ---------- | ---------------------- | ---------------------------------------------- | --------------------------------------- |
+| GET    | `/metrics` | `CalculateTeamMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate team-level aggregated metrics |
 
 **Services Used**:
 - `ITeamMetricsService`
@@ -137,14 +137,14 @@ All endpoints are under `/api/v1/`
 
 ---
 
-### 5. Project Metrics Endpoints
+### 4. Project Metrics Endpoints
 **Base Path**: `/api/v1/projects/{projectId:long}`  
 **Tag**: "Project-level aggregation metrics"  
 **Source**: `ProjectMetricsEndpoints.cs`
 
-| Method | Path | Handler | Query Params | Description |
-|--------|------|---------|--------------|-------------|
-| GET | `/metrics` | `CalculateProjectMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate project-level aggregated metrics |
+| Method | Path       | Handler                   | Query Params                                   | Description                                |
+| ------ | ---------- | ------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| GET    | `/metrics` | `CalculateProjectMetrics` | `windowDays` (optional, default: 30, max: 365) | Calculate project-level aggregated metrics |
 
 **Services Used**:
 - `IProjectMetricsService`
@@ -288,7 +288,7 @@ GET /api/v1/123/metrics/code-characteristics?windowDays=30
 GET /api/v1/metrics/pipelines/456?windowDays=30
 
 # Test advanced metrics
-GET /api/v1/metrics/advanced/123?windowDays=30
+GET /api/v1/123/metrics/advanced?windowDays=30
 
 # Test team metrics
 GET /api/v1/teams/my-team/metrics?windowDays=30

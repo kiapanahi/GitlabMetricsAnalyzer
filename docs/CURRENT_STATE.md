@@ -46,7 +46,7 @@
 │  • GET /api/v1/{userId}/metrics/quality             │
 │  • GET /api/v1/{userId}/metrics/code-characteristics│
 │  • GET /api/v1/metrics/pipelines/{projectId}        │
-│  • GET /api/v1/metrics/advanced/{userId}            │
+│  • GET /api/v1/{userId}/metrics/advanced            │
 │  • GET /api/v1/teams/{teamId}/metrics               │
 │  • GET /api/v1/projects/{projectId}/metrics         │
 │                                                       │
@@ -179,14 +179,13 @@
 
 ### Endpoint Summary
 
-| Group | Count | Base Path | Purpose |
-|-------|-------|-----------|---------|
-| User Metrics | 6 | `/api/v1/{userId:long}` | Per-developer analytics |
-| Pipeline Metrics | 1 | `/api/v1/metrics/pipelines` | CI/CD analytics |
-| Advanced Metrics | 1 | `/api/v1/metrics/advanced` | Advanced developer analytics |
-| Team Metrics | 1 | `/api/v1/teams/{teamId}` | Team-level aggregations |
-| Project Metrics | 1 | `/api/v1/projects/{projectId:long}` | Project-level aggregations |
-| **Total** | **10** | `/api/v1/` | All metrics endpoints |
+| Group            | Count  | Base Path                           | Purpose                    |
+| ---------------- | ------ | ----------------------------------- | -------------------------- |
+| User Metrics     | 7      | `/api/v1/{userId:long}`             | Per-developer analytics    |
+| Pipeline Metrics | 1      | `/api/v1/metrics/pipelines`         | CI/CD analytics            |
+| Team Metrics     | 1      | `/api/v1/teams/{teamId}`            | Team-level aggregations    |
+| Project Metrics  | 1      | `/api/v1/projects/{projectId:long}` | Project-level aggregations |
+| **Total**        | **10** | `/api/v1/`                          | All metrics endpoints      |
 
 ### User Metrics Endpoints (6)
 
@@ -282,7 +281,7 @@ GET /api/v1/metrics/pipelines/{projectId}?windowDays=30
 ### Advanced Metrics Endpoint (1)
 
 ```
-GET /api/v1/metrics/advanced/{userId}?windowDays=30
+GET /api/v1/{userId}/metrics/advanced?windowDays=30
 ```
 - **Service**: `AdvancedMetricsService`
 - **Returns**:

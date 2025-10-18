@@ -405,16 +405,16 @@ All pattern matching is case-insensitive.
 
 ### Get Advanced Metrics
 
-**Endpoint**: `GET /api/v1/metrics/advanced/{userId}`
+**Endpoint**: `GET /api/v1/{userId}/metrics/advanced`
 
 Calculates 7 advanced metrics for deeper insights into team health, work patterns, and code ownership.
 
 ```bash
 # Get advanced metrics for user 123 (last 30 days)
-curl "http://localhost:5000/api/v1/metrics/advanced/123"
+curl "http://localhost:5000/api/v1/123/metrics/advanced"
 
 # Custom time window (90 days)
-curl "http://localhost:5000/api/v1/metrics/advanced/456?windowDays=90"
+curl "http://localhost:5000/api/v1/456/metrics/advanced?windowDays=90"
 ```
 
 **Path Parameters**:
