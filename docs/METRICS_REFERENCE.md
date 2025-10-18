@@ -35,21 +35,21 @@ GitLab Metrics Analyzer provides 35+ developer productivity and code quality met
 ## Quick API Reference
 
 ### User Metrics
-| Endpoint | Description | Key Metrics |
-|----------|-------------|-------------|
-| `GET /api/v1/{userId}/metrics/flow` | Flow and throughput | Merged MRs, lines changed, coding time, review time |
-| `GET /api/v1/{userId}/metrics/mr-cycle-time` | MR cycle time | P50 and P90 cycle time |
-| `GET /api/v1/{userId}/metrics/quality` | Quality indicators | Rework ratio, revert rate, CI success |
-| `GET /api/v1/{userId}/metrics/code-characteristics` | Code patterns | Commit size, MR size, message quality |
-| `GET /api/v1/{userId}/analysis/commit-time` | Commit patterns | Hourly distribution, peak times |
-| `GET /api/v1/metrics/advanced/{userId}` | Advanced analytics | Bus factor, batch size, iteration count |
+| Endpoint                                            | Description         | Key Metrics                                         |
+| --------------------------------------------------- | ------------------- | --------------------------------------------------- |
+| `GET /api/v1/{userId}/metrics/flow`                 | Flow and throughput | Merged MRs, lines changed, coding time, review time |
+| `GET /api/v1/{userId}/metrics/mr-cycle-time`        | MR cycle time       | P50 and P90 cycle time                              |
+| `GET /api/v1/{userId}/metrics/quality`              | Quality indicators  | Rework ratio, revert rate, CI success               |
+| `GET /api/v1/{userId}/metrics/code-characteristics` | Code patterns       | Commit size, MR size, message quality               |
+| `GET /api/v1/{userId}/analysis/commit-time`         | Commit patterns     | Hourly distribution, peak times                     |
+| `GET /api/v1/{userId}/metrics/advanced`             | Advanced analytics  | Bus factor, batch size, iteration count             |
 
 ### Team & Project Metrics
-| Endpoint | Description | Key Metrics |
-|----------|-------------|-------------|
-| `GET /api/v1/teams/{teamId}/metrics` | Team aggregations | Velocity, review coverage, cross-project work |
-| `GET /api/v1/projects/{projectId}/metrics` | Project health | Activity score, branch lifecycle, milestones |
-| `GET /api/v1/metrics/pipelines/{projectId}` | CI/CD metrics | Failed jobs, retry rate, deployment frequency |
+| Endpoint                                    | Description       | Key Metrics                                   |
+| ------------------------------------------- | ----------------- | --------------------------------------------- |
+| `GET /api/v1/teams/{teamId}/metrics`        | Team aggregations | Velocity, review coverage, cross-project work |
+| `GET /api/v1/projects/{projectId}/metrics`  | Project health    | Activity score, branch lifecycle, milestones  |
+| `GET /api/v1/metrics/pipelines/{projectId}` | CI/CD metrics     | Failed jobs, retry rate, deployment frequency |
 
 **Common Query Parameters:**
 - `windowDays` (optional): Analysis period in days (default: 30, max: 365)
@@ -553,7 +553,7 @@ curl "http://localhost:5000/api/v1/metrics/pipelines/123?windowDays=30"
 
 ### Endpoint
 ```
-GET /api/v1/metrics/advanced/{userId}
+GET /api/v1/{userId}/metrics/advanced
 ```
 
 ### Metrics Calculated
@@ -622,7 +622,7 @@ GET /api/v1/metrics/advanced/{userId}
 ### Example Request
 ```bash
 # Advanced metrics for 30 days
-curl "http://localhost:5000/api/v1/metrics/advanced/123?windowDays=30"
+curl "http://localhost:5000/api/v1/123/metrics/advanced?windowDays=30"
 ```
 
 ### Example Response

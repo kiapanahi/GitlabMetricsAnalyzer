@@ -8,11 +8,11 @@ internal static class AdvancedMetricsEndpoints
 {
     internal static void MapAdvancedMetricsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/metrics/advanced")
+        var group = app.MapGroup("/api/v1/{userId:long}")
             .WithTags("Advanced Metrics")
             .WithOpenApi();
 
-        group.MapGet("/{userId:long}", CalculateAdvancedMetrics)
+        group.MapGet("/metrics/advanced", CalculateAdvancedMetrics)
             .WithName("CalculateAdvancedMetrics")
             .WithSummary("Calculate advanced metrics for a developer")
             .WithDescription("Calculates 7 advanced metrics: Bus Factor, Response Time Distribution, Batch Size, Draft Duration, Iteration Count, Idle Time in Review, and Cross-Team Collaboration Index");
