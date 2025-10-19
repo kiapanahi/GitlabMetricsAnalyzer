@@ -84,7 +84,7 @@ aspire run
 
 #### Option 2: Direct Run
 ```bash
-cd src/Toman.Management.KPIAnalysis.ApiService
+cd src/KuriousLabs.Management.KPIAnalysis.ApiService
 dotnet run
 ```
 
@@ -146,15 +146,15 @@ All endpoints accept optional `windowDays` or `lookbackDays` query parameter (1-
 ### Project Structure
 ```
 src/
-├── Toman.Management.KPIAnalysis.ApiService/     # Main API application
+├── KuriousLabs.Management.KPIAnalysis.ApiService/     # Main API application
 │   ├── Features/GitLabMetrics/                  # GitLab integration feature
 │   │   ├── Infrastructure/                     # GitLab API client (HTTP)
 │   │   ├── Services/                          # Metrics calculation services
 │   │   ├── *Endpoints.cs                      # Minimal API endpoints
 │   │   └── Configuration/                     # Feature configuration
 │   └── Configuration/                          # App-level configuration
-├── Toman.Management.KPIAnalysis.AppHost/       # Aspire orchestration
-└── Toman.Management.KPIAnalysis.ServiceDefaults/ # Shared service defaults
+├── KuriousLabs.Management.KPIAnalysis.AppHost/       # Aspire orchestration
+└── KuriousLabs.Management.KPIAnalysis.ServiceDefaults/ # Shared service defaults
 
 docs/
 ├── CURRENT_STATE.md                             # Current architecture (✅ accurate)

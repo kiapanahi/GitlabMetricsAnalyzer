@@ -131,7 +131,7 @@ The GitLab Metrics Analyzer v1 system consists of:
 
 3. **Run Application**:
    ```bash
-   cd src/Toman.Management.KPIAnalysis.ApiService
+   cd src/KuriousLabs.Management.KPIAnalysis.ApiService
    dotnet run
    ```
 
@@ -157,7 +157,7 @@ The GitLab Metrics Analyzer v1 system consists of:
    FROM base AS final
    WORKDIR /app
    COPY --from=publish /app/publish .
-   ENTRYPOINT ["dotnet", "Toman.Management.KPIAnalysis.ApiService.dll"]
+   ENTRYPOINT ["dotnet", "KuriousLabs.Management.KPIAnalysis.ApiService.dll"]
    ```
 
 2. **Build Image**:
@@ -533,7 +533,7 @@ kubectl apply -f ingress.yaml
   "Logging": {
     "LogLevel": {
       "Default": "Warning",
-      "Toman.Management.KPIAnalysis": "Information"
+      "KuriousLabs.Management.KPIAnalysis": "Information"
     }
   },
   "AllowedHosts": "gitlab-metrics.company.com",

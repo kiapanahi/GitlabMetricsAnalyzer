@@ -100,7 +100,20 @@ The current configuration only requires **two sections**:
     "LogLevel": {
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning",
-      "Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics": "Debug"
+              "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning",
+            "Microsoft.EntityFrameworkCore": "Information",
+            "Hangfire": "Information",
+            "NGitLab": "Debug",
+            "System.Net.Http.HttpClient": "Warning",
+            "Microsoft.Extensions.Http": "Warning",
+            "Microsoft.Extensions.Http.DefaultHttpClientFactory": "Warning",
+            "Microsoft.Extensions.Diagnostics": "Warning",
+            "Microsoft.Hosting.Lifetime": "Information",
+            "KuriousLabs.Management.KPIAnalysis.ApiService": "Debug",
+            "KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics": "Debug",
+              "KuriousLabs.Management.KPIAnalysis": "Debug"
     }
   },
   "Processing": {
@@ -533,7 +546,7 @@ Configure data export functionality:
         "Microsoft": "Warning",
         "Microsoft.AspNetCore": "Warning",
         "Microsoft.EntityFrameworkCore": "Information",
-        "Toman.Management.KPIAnalysis": "Debug"
+        "KuriousLabs.Management.KPIAnalysis": "Debug"
       }
     },
     "WriteTo": [
@@ -571,8 +584,8 @@ Configure data export functionality:
       "Microsoft.AspNetCore": "Warning",
       "Microsoft.EntityFrameworkCore": "Warning",
       "Microsoft.EntityFrameworkCore.Database.Command": "Information",
-      "Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services": "Debug",
-      "Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure": "Information"
+      "KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services": "Debug",
+      "KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure": "Information"
     }
   }
 }

@@ -157,8 +157,8 @@
 ### Logging & Telemetry
 - **Serilog** (structured logging)
 - **OpenTelemetry** (distributed tracing)
-- **Activity Source**: `Toman.Management.KPIAnalysis.GitLabMetrics`
-- **Metrics Meter**: `Toman.Management.KPIAnalysis.GitLabMetrics`
+- **Activity Source**: `KuriousLabs.Management.KPIAnalysis.GitLabMetrics`
+- **Metrics Meter**: `KuriousLabs.Management.KPIAnalysis.GitLabMetrics`
 
 ### Configuration
 - **IOptions Pattern** for strongly-typed configuration
@@ -398,7 +398,7 @@ GET /api/v1/projects/{projectId}/metrics?windowDays=30
 ```
 GitlabMetricsAnalyzer/
 ├── src/
-│   ├── Toman.Management.KPIAnalysis.ApiService/    # Main API project
+│   ├── KuriousLabs.Management.KPIAnalysis.ApiService/    # Main API project
 │   │   ├── Program.cs                               # Entry point, DI setup
 │   │   ├── appsettings.json                         # Production config
 │   │   ├── appsettings.Development.json             # Dev config
@@ -444,13 +444,13 @@ GitlabMetricsAnalyzer/
 │   │   │       │   └── ProjectMetricsService.cs               # ✅ USED
 │   │   │       └── ServiceCollectionExtensions.cs   # DI registration
 │   │   └── Migrations/                              # ❌ UNUSED (30+ files)
-│   ├── Toman.Management.KPIAnalysis.AppHost/        # Aspire AppHost
+│   ├── KuriousLabs.Management.KPIAnalysis.AppHost/        # Aspire AppHost
 │   │   └── Program.cs                               # Aspire orchestration
-│   └── Toman.Management.KPIAnalysis.ServiceDefaults/ # Aspire defaults
+│   └── KuriousLabs.Management.KPIAnalysis.ServiceDefaults/ # Aspire defaults
 │       ├── Extensions.cs                            # Telemetry, health checks
 │       └── Constants.cs                             # Resource names
 ├── test/
-│   └── Toman.Management.KPIAnalysis.Tests/          # Unit tests
+│   └── KuriousLabs.Management.KPIAnalysis.Tests/          # Unit tests
 ├── docs/                                            # Documentation
 │   ├── CURRENT_STATE.md                             # ✅ Current architecture (this file)
 │   ├── ENDPOINT_AUDIT.md                            # ✅ API endpoint audit

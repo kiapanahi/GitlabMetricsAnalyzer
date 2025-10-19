@@ -1,0 +1,28 @@
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+
+public interface IGitLabService
+{
+    Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GitLabProject>> GetProjectsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GitLabProject>> GetGroupProjectsAsync(long groupId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RawCommit>> GetCommitsAsync(long projectId, DateTime? since = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RawMergeRequest>> GetMergeRequestsAsync(long projectId, DateTime? updatedAfter = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RawPipeline>> GetPipelinesAsync(long projectId, DateTime? updatedAfter = null, CancellationToken cancellationToken = default);
+
+    // Comments and collaboration methods
+    Task<IReadOnlyList<RawMergeRequestNote>> GetMergeRequestNotesAsync(long projectId, long mergeRequestIid, CancellationToken cancellationToken = default);
+
+    // User management methods
+    Task<IReadOnlyList<GitLabUser>> GetUsersAsync(CancellationToken cancellationToken = default);
+    Task<GitLabUser?> GetUserByIdAsync(long userId, CancellationToken cancellationToken = default);
+
+    // User-project relationship methods
+    Task<IReadOnlyList<GitLabProject>> GetUserContributedProjectsAsync(long userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserProjectContribution>> GetUserProjectContributionsAsync(long userId, string? userEmail = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GitLabProject>> GetUserProjectsAsync(long userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GitLabProject>> GetUserProjectsByActivityAsync(long userId, string userEmail, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RawCommit>> GetCommitsByUserEmailAsync(long projectId, string userEmail, DateTime? since = null, CancellationToken cancellationToken = default);
+}

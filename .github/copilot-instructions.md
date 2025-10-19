@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-This project is intended to analyze, calculate and measure different KPIs for the engineering team of my company. I work as the VP of engineering at Toman and we want to have a better understanding of our engineering processes and how we can improve them.
+This project is intended to analyze, calculate and measure different KPIs for the engineering team of my company. I work as the VP of engineering at KuriousLabs and we want to have a better understanding of our engineering processes and how we can improve them.
 
 ## Objective
 
@@ -31,9 +31,9 @@ Build a C# application that collects developer productivity metrics from an on-p
 - **GitLab API**: Issues, PRs, discussions data
 
 ## Project Structure
-- **Toman.Management.KPIAnalysis.ApiService** - The main project that contains business logic and APIs
-- **Toman.Management.KPIAnalysis.ServiceDefaults** - Aspire service defaults and telemetry
-- **Toman.Management.KPIAnalysis.Tests** - Unit and integration tests
+- **KuriousLabs.Management.KPIAnalysis.ApiService** - The main project that contains business logic and APIs
+- **KuriousLabs.Management.KPIAnalysis.ServiceDefaults** - Aspire service defaults and telemetry
+- **KuriousLabs.Management.KPIAnalysis.Tests** - Unit and integration tests
 
 ## Code Style
 - Prefer async/await over direct Task handling
@@ -75,7 +75,7 @@ Build a C# application that collects developer productivity metrics from an on-p
 - Test error scenarios
 - Mock external dependencies
 - Use XUnit for component testing
-- Create tests in the Toman.Management.KPIAnalysis.Tests project
+- Create tests in the KuriousLabs.Management.KPIAnalysis.Tests project
 
 ## Documentation
 - Include usage examples in comments
