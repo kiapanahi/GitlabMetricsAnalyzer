@@ -173,6 +173,14 @@
 - **No Database** - All previous database infrastructure has been removed
 - Application is fully stateless with live API calls only
 
+### Model Architecture
+- **DTOs** (`Infrastructure/DTOs/`): Records for JSON deserialization from GitLab API responses
+- **Domain Models** (`Models/Raw/`): Classes used by business logic and services
+- **Intentional Duplication**: Some models (e.g., `GitLabPipelineJob`) exist in both locations
+  - DTO version handles GitLab API JSON structure and naming conventions
+  - Domain model version represents the business entity used by services
+  - Mapping occurs in `GitLabHttpClient` to convert DTOs to domain models
+
 ---
 
 ## API Surface
@@ -187,7 +195,7 @@
 | Project Metrics  | 1      | `/api/v1/projects/{projectId:long}` | Project-level aggregations |
 | **Total**        | **10** | `/api/v1/`                          | All metrics endpoints      |
 
-### User Metrics Endpoints (6)
+### User Metrics Endpoints (7)
 
 #### 1. Commit Time Analysis
 ```
@@ -403,35 +411,48 @@ GitlabMetricsAnalyzer/
 │   │   ├── appsettings.json                         # Production config
 │   │   ├── appsettings.Development.json             # Dev config
 │   │   ├── Configuration/                           # Configuration classes
-│   │   │   ├── MetricsConfiguration.cs              # ✅ USED
-│   │   │   └── ExportsConfiguration.cs              # ❌ UNUSED
-│   │   ├── Data/                                    # Database (unused)
-│   │   │   └── Extensions/
-│   │   │       └── DbContextExtensions.cs           # ❌ UNUSED
+│   │   │   └── MetricsConfiguration.cs              # ✅ USED
 │   │   ├── Features/
 │   │   │   └── GitLabMetrics/
 │   │   │       ├── GitLabMetricsEndpoints.cs        # Endpoint registration
-│   │   │       ├── UserMetricsEndpoints.cs          # 6 user endpoints
+│   │   │       ├── UserMetricsEndpoints.cs          # 7 user endpoints
 │   │   │       ├── PipelineMetricsEndpoints.cs      # 1 pipeline endpoint
-│   │   │       ├── AdvancedMetricsEndpoints.cs      # 1 advanced endpoint
 │   │   │       ├── TeamMetricsEndpoints.cs          # 1 team endpoint
 │   │   │       ├── ProjectMetricsEndpoints.cs       # 1 project endpoint
 │   │   │       ├── Configuration/
-│   │   │       │   ├── GitLabConfiguration.cs       # ✅ USED
-│   │   │       │   └── CollectionConfiguration.cs   # ❌ UNUSED
-│   │   │       ├── Data/
-│   │   │       │   └── GitLabMetricsDbContext.cs    # ❌ UNUSED (20 DbSets)
+│   │   │       │   └── GitLabConfiguration.cs       # ✅ USED
 │   │   │       ├── HealthChecks/
 │   │   │       │   └── GitLabHealthCheck.cs         # ✅ USED
 │   │   │       ├── Infrastructure/
 │   │   │       │   ├── GitLabHttpClient.cs          # ✅ USED (API client)
-│   │   │       │   └── Diagnostics.cs               # ✅ USED (telemetry)
-│   │   │       ├── Models/                          # Entity models
-│   │   │       │   ├── Raw/                         # ❌ UNUSED (5 files)
-│   │   │       │   ├── Fact/                        # ❌ UNUSED (3 files)
-│   │   │       │   ├── PRD/                         # ❌ UNUSED (8 files)
-│   │   │       │   ├── Operational/                 # ❌ UNUSED (2 files)
-│   │   │       │   └── Dim/                         # ❌ UNUSED (2 files)
+│   │   │       │   ├── GitLabService.cs             # ✅ USED (GitLab service)
+│   │   │       │   ├── IGitLabService.cs            # ✅ USED (Interface)
+│   │   │       │   └── DTOs/                        # GitLab API DTOs (10 files)
+│   │   │       │       ├── GitLabBranch.cs          # Branch information
+│   │   │       │       ├── GitLabCommit.cs          # Commit details
+│   │   │       │       ├── GitLabEvent.cs           # User events
+│   │   │       │       ├── GitLabMergeRequest.cs    # Merge request data
+│   │   │       │       ├── GitLabMergeRequestChanges.cs  # MR changes
+│   │   │       │       ├── GitLabMilestone.cs       # Milestone info
+│   │   │       │       ├── GitLabPipeline.cs        # Pipeline data
+│   │   │       │       ├── GitLabPipelineJob.cs     # Job details (DTO)
+│   │   │       │       ├── GitLabProject.cs         # Project metadata
+│   │   │       │       └── GitLabUser.cs            # User information
+│   │   │       │                                    # Note: Some DTOs mirror Raw models
+│   │   │       │                                    # DTOs = JSON deserialization from GitLab API
+│   │   │       │                                    # Raw = Domain models used by services
+│   │   │       ├── Diagnostics.cs                   # ✅ USED (telemetry)
+│   │   │       ├── Models/                          # Domain models
+│   │   │       │   ├── Raw/                         # ✅ USED (8 files)
+│   │   │       │   │   ├── GitLabApiModels.cs       # Common API models
+│   │   │       │   │   ├── GitLabContributedProject.cs  # Contributed project data
+│   │   │       │   │   ├── GitLabPipelineJob.cs     # Pipeline job (domain)
+│   │   │       │   │   ├── RawCommit.cs             # Raw commit model
+│   │   │       │   │   ├── RawJob.cs                # Raw job model
+│   │   │       │   │   ├── RawMergeRequest.cs       # Raw MR model
+│   │   │       │   │   ├── RawMergeRequestNote.cs   # MR note/comment
+│   │   │       │   │   └── RawPipeline.cs           # Raw pipeline model
+│   │   │       │   └── UserProjectContribution.cs   # ✅ USED
 │   │   │       ├── Services/                        # Metrics services
 │   │   │       │   ├── CommitTimeAnalysisService.cs           # ✅ USED
 │   │   │       │   ├── PerDeveloperMetricsService.cs          # ✅ USED
@@ -443,7 +464,6 @@ GitlabMetricsAnalyzer/
 │   │   │       │   ├── TeamMetricsService.cs                  # ✅ USED
 │   │   │       │   └── ProjectMetricsService.cs               # ✅ USED
 │   │   │       └── ServiceCollectionExtensions.cs   # DI registration
-│   │   └── Migrations/                              # ❌ UNUSED (30+ files)
 │   ├── KuriousLabs.Management.KPIAnalysis.AppHost/        # Aspire AppHost
 │   │   └── Program.cs                               # Aspire orchestration
 │   └── KuriousLabs.Management.KPIAnalysis.ServiceDefaults/ # Aspire defaults
@@ -505,9 +525,8 @@ aspire run
 ## What's Working
 
 ✅ **All 10 REST API endpoints** are fully functional:
-- User metrics (6 endpoints)
+- User metrics (7 endpoints including advanced metrics)
 - Pipeline metrics (1 endpoint)
-- Advanced metrics (1 endpoint)
 - Team metrics (1 endpoint)
 - Project metrics (1 endpoint)
 
@@ -547,10 +566,9 @@ aspire run
 - No scheduled background jobs
 - No data enrichment pipelines
 
-❌ **Data Persistence** (designed but never implemented):
-- Database exists but is empty
-- No EF Core queries in any service
-- All data fetched live from GitLab API
+❌ **Data Persistence** (by design - stateless architecture):
+- No data persistence layer
+- All data fetched live from GitLab API on each request
 
 ❌ **Exports Feature** (designed but never implemented):
 - No CSV/JSON file exports
@@ -598,10 +616,10 @@ aspire run
 
 The application is a **fully functional live metrics API** that achieves its core purpose: providing on-demand developer productivity insights from GitLab.
 
-The presence of database infrastructure, entity models, and migrations is **architectural debt** from an initial design that evolved away from data persistence toward real-time API-based metrics.
+The architecture is intentionally **stateless and database-free**, designed for real-time API-based metrics calculation without data persistence overhead.
 
 **Current State**: Production-ready API for live metrics  
-**Recommended Action**: Remove unused database infrastructure to reflect actual architecture
+**Architecture**: Stateless, real-time GitLab API integration
 
 ---
 
