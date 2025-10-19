@@ -173,6 +173,14 @@
 - **No Database** - All previous database infrastructure has been removed
 - Application is fully stateless with live API calls only
 
+### Model Architecture
+- **DTOs** (`Infrastructure/DTOs/`): Records for JSON deserialization from GitLab API responses
+- **Domain Models** (`Models/Raw/`): Classes used by business logic and services
+- **Intentional Duplication**: Some models (e.g., `GitLabPipelineJob`) exist in both locations
+  - DTO version handles GitLab API JSON structure and naming conventions
+  - Domain model version represents the business entity used by services
+  - Mapping occurs in `GitLabHttpClient` to convert DTOs to domain models
+
 ---
 
 ## API Surface
@@ -420,6 +428,9 @@ GitlabMetricsAnalyzer/
 │   │   │       │   ├── GitLabService.cs             # ✅ USED (GitLab service)
 │   │   │       │   ├── IGitLabService.cs            # ✅ USED (Interface)
 │   │   │       │   └── DTOs/                        # GitLab API DTOs (10 files)
+│   │   │       │                                    # Note: Some DTOs mirror Raw models
+│   │   │       │                                    # DTOs = JSON deserialization from GitLab API
+│   │   │       │                                    # Raw = Domain models used by services
 │   │   │       ├── Diagnostics.cs                   # ✅ USED (telemetry)
 │   │   │       ├── Models/                          # Domain models
 │   │   │       │   ├── Raw/                         # ✅ USED (8 files)
