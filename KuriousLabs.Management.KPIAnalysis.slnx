@@ -18,11 +18,11 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Toman.Management.KPIAnalysis.ApiService/Toman.Management.KPIAnalysis.ApiService.csproj" />
-    <Project Path="src/Toman.Management.KPIAnalysis.AppHost/Toman.Management.KPIAnalysis.AppHost.csproj" />
-    <Project Path="src/Toman.Management.KPIAnalysis.ServiceDefaults/Toman.Management.KPIAnalysis.ServiceDefaults.csproj" />
+    <Project Path="src/KuriousLabs.Management.KPIAnalysis.ApiService/KuriousLabs.Management.KPIAnalysis.ApiService.csproj" />
+    <Project Path="src/KuriousLabs.Management.KPIAnalysis.AppHost/KuriousLabs.Management.KPIAnalysis.AppHost.csproj" />
+    <Project Path="src/KuriousLabs.Management.KPIAnalysis.ServiceDefaults/KuriousLabs.Management.KPIAnalysis.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="test/Toman.Management.KPIAnalysis.Tests/Toman.Management.KPIAnalysis.Tests.csproj" />
+    <Project Path="test/KuriousLabs.Management.KPIAnalysis.Tests/KuriousLabs.Management.KPIAnalysis.Tests.csproj" />
   </Folder>
 </Solution>

@@ -4,7 +4,7 @@
     <UserSecretsId>1ce93b33-6791-41c5-9738-685c08f92fe6</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Toman.Management.KPIAnalysis.ServiceDefaults\Toman.Management.KPIAnalysis.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\KuriousLabs.Management.KPIAnalysis.ServiceDefaults\KuriousLabs.Management.KPIAnalysis.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

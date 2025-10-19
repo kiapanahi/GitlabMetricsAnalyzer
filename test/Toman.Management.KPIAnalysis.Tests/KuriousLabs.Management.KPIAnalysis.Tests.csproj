@@ -28,8 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Toman.Management.KPIAnalysis.AppHost/Toman.Management.KPIAnalysis.AppHost.csproj" />
-    <ProjectReference Include="../../src/Toman.Management.KPIAnalysis.ApiService/Toman.Management.KPIAnalysis.ApiService.csproj" />
+    <ProjectReference Include="../../src/KuriousLabs.Management.KPIAnalysis.AppHost/KuriousLabs.Management.KPIAnalysis.AppHost.csproj" />
+    <ProjectReference Include="../../src/KuriousLabs.Management.KPIAnalysis.ApiService/KuriousLabs.Management.KPIAnalysis.ApiService.csproj" />
   </ItemGroup>
 
 </Project>

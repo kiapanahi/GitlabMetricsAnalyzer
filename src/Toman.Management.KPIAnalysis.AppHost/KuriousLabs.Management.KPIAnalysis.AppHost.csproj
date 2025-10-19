@@ -7,8 +7,8 @@
     <UserSecretsId>333f5aa4-3ef8-47ac-b5bb-1bfd9f8551bb</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Toman.Management.KPIAnalysis.ApiService\Toman.Management.KPIAnalysis.ApiService.csproj" />
-    <ProjectReference Include="..\Toman.Management.KPIAnalysis.ServiceDefaults\Toman.Management.KPIAnalysis.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\KuriousLabs.Management.KPIAnalysis.ApiService\KuriousLabs.Management.KPIAnalysis.ApiService.csproj" />
+    <ProjectReference Include="..\KuriousLabs.Management.KPIAnalysis.ServiceDefaults\KuriousLabs.Management.KPIAnalysis.ServiceDefaults.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
