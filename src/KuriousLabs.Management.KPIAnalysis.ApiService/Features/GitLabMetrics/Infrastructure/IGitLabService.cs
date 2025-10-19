@@ -1,7 +1,7 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 public interface IGitLabService
 {

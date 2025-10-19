@@ -1,8 +1,10 @@
 using System.Diagnostics;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+using static KuriousLabs.Management.KPIAnalysis.Constants;
+
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 internal static class Diagnostics
 {
-    internal static readonly ActivitySource ActivitySource = new("Toman.Management.KPIAnalysis.ApiService.GitLabMetrics", Constants.ServiceVersion);
+    internal static readonly ActivitySource ActivitySource = new("KuriousLabs.Management.KPIAnalysis.ApiService.GitLabMetrics", ServiceVersion);
 }

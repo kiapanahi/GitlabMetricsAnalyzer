@@ -1,7 +1,7 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
 /// Service implementation for calculating quality and reliability metrics from live GitLab data

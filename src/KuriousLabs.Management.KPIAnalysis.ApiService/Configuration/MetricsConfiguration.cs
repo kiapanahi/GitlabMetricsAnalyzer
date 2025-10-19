@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Configuration;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Configuration;
 
 /// <summary>
 /// Main configuration class that holds all metrics collection settings

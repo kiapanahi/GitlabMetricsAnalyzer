@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
 /// Service for calculating per-developer metrics from live GitLab data

@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.Tests.Tests;
+namespace KuriousLabs.Management.KPIAnalysis.Tests.Tests;
 
 public class IntegrationTest1
 {

@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 public static class GitLabMetricsEndpoints
 {

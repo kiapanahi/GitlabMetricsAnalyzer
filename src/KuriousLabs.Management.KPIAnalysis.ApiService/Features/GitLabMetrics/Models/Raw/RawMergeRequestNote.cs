@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 /// <summary>
 /// Represents a raw merge request comment/note from GitLab API

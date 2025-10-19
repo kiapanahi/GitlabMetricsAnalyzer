@@ -1,6 +1,6 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
 
 /// <summary>
 /// Represents a project and the user's contribution level to it

@@ -3,16 +3,16 @@ using Microsoft.Extensions.Options;
 
 using Moq;
 
-using Toman.Management.KPIAnalysis.ApiService.Configuration;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Configuration;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
-using RawGitLabCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
-using RawGitLabMergeRequestApprovals = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestApprovals;
-using RawGitLabMergeRequestChanges = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestChanges;
+using RawGitLabCommit = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
+using RawGitLabMergeRequestApprovals = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestApprovals;
+using RawGitLabMergeRequestChanges = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestChanges;
 
-namespace Toman.Management.KPIAnalysis.Tests.Unit;
+namespace KuriousLabs.Management.KPIAnalysis.Tests.Unit;
 
 /// <summary>
 /// Unit tests for TeamMetricsService.

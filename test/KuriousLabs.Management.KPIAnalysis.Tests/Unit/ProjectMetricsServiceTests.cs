@@ -2,21 +2,21 @@ using Microsoft.Extensions.Logging;
 
 using Moq;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
-using GitLabBranch = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs.GitLabBranch;
-using GitLabBranchCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs.GitLabBranchCommit;
-using GitLabMilestone = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs.GitLabMilestone;
-using RawGitLabProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
-using RawGitLabCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
-using RawGitLabMergeRequest = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequest;
-using RawGitLabUser = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
-using RawGitLabContributedProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabContributedProject;
-using RawGitLabMergeRequestApprovals = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestApprovals;
-using RawGitLabMergeRequestChanges = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestChanges;
+using GitLabBranch = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs.GitLabBranch;
+using GitLabBranchCommit = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs.GitLabBranchCommit;
+using GitLabMilestone = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs.GitLabMilestone;
+using RawGitLabProject = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
+using RawGitLabCommit = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
+using RawGitLabMergeRequest = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequest;
+using RawGitLabUser = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
+using RawGitLabContributedProject = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabContributedProject;
+using RawGitLabMergeRequestApprovals = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestApprovals;
+using RawGitLabMergeRequestChanges = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequestChanges;
 
-namespace Toman.Management.KPIAnalysis.Tests.Unit;
+namespace KuriousLabs.Management.KPIAnalysis.Tests.Unit;
 
 /// <summary>
 /// Unit tests for ProjectMetricsService.
