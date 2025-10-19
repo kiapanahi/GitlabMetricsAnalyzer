@@ -83,10 +83,10 @@ All endpoints are under `/api/v1/`
 
 ---
 
-### 3. Advanced Metrics Endpoints
+### 3. Advanced Metrics Endpoint
 **Base Path**: `/api/v1/{userId:long}`  
 **Tag**: "Advanced Metrics"  
-**Source**: `AdvancedMetricsEndpoints.cs`
+**Source**: `UserMetricsEndpoints.cs` (part of 7 user endpoints)
 
 | Method | Path                | Handler                    | Query Params                                   | Description                            |
 | ------ | ------------------- | -------------------------- | ---------------------------------------------- | -------------------------------------- |
@@ -219,9 +219,8 @@ All endpoints depend on:
 Program.cs
   └─> MapGitlabMetricsEndpoints()
        └─> GitLabMetricsEndpoints.cs
-            ├─> MapUserMetricsEndpoints()      (6 endpoints)
+            ├─> MapUserMetricsEndpoints()      (7 endpoints - includes advanced metrics)
             ├─> MapPipelineMetricsEndpoints()  (1 endpoint)
-            ├─> MapAdvancedMetricsEndpoints()  (1 endpoint)
             ├─> MapTeamMetricsEndpoints()      (1 endpoint)
             └─> MapProjectMetricsEndpoints()   (1 endpoint)
 ```
@@ -334,9 +333,8 @@ GET /openapi/internal.json
 
 ### ✅ Working Endpoints (Keep)
 All 10 endpoints are properly implemented and should be retained:
-- User metrics (6 endpoints)
+- User metrics (7 endpoints - including commit time analysis, MR cycle time, flow, collaboration, quality, code characteristics, and advanced metrics)
 - Pipeline metrics (1 endpoint)
-- Advanced metrics (1 endpoint)
 - Team metrics (1 endpoint)
 - Project metrics (1 endpoint)
 
