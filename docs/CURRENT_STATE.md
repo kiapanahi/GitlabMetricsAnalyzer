@@ -428,12 +428,30 @@ GitlabMetricsAnalyzer/
 │   │   │       │   ├── GitLabService.cs             # ✅ USED (GitLab service)
 │   │   │       │   ├── IGitLabService.cs            # ✅ USED (Interface)
 │   │   │       │   └── DTOs/                        # GitLab API DTOs (10 files)
+│   │   │       │       ├── GitLabBranch.cs          # Branch information
+│   │   │       │       ├── GitLabCommit.cs          # Commit details
+│   │   │       │       ├── GitLabEvent.cs           # User events
+│   │   │       │       ├── GitLabMergeRequest.cs    # Merge request data
+│   │   │       │       ├── GitLabMergeRequestChanges.cs  # MR changes
+│   │   │       │       ├── GitLabMilestone.cs       # Milestone info
+│   │   │       │       ├── GitLabPipeline.cs        # Pipeline data
+│   │   │       │       ├── GitLabPipelineJob.cs     # Job details (DTO)
+│   │   │       │       ├── GitLabProject.cs         # Project metadata
+│   │   │       │       └── GitLabUser.cs            # User information
 │   │   │       │                                    # Note: Some DTOs mirror Raw models
 │   │   │       │                                    # DTOs = JSON deserialization from GitLab API
 │   │   │       │                                    # Raw = Domain models used by services
 │   │   │       ├── Diagnostics.cs                   # ✅ USED (telemetry)
 │   │   │       ├── Models/                          # Domain models
 │   │   │       │   ├── Raw/                         # ✅ USED (8 files)
+│   │   │       │   │   ├── GitLabApiModels.cs       # Common API models
+│   │   │       │   │   ├── GitLabContributedProject.cs  # Contributed project data
+│   │   │       │   │   ├── GitLabPipelineJob.cs     # Pipeline job (domain)
+│   │   │       │   │   ├── RawCommit.cs             # Raw commit model
+│   │   │       │   │   ├── RawJob.cs                # Raw job model
+│   │   │       │   │   ├── RawMergeRequest.cs       # Raw MR model
+│   │   │       │   │   ├── RawMergeRequestNote.cs   # MR note/comment
+│   │   │       │   │   └── RawPipeline.cs           # Raw pipeline model
 │   │   │       │   └── UserProjectContribution.cs   # ✅ USED
 │   │   │       ├── Services/                        # Metrics services
 │   │   │       │   ├── CommitTimeAnalysisService.cs           # ✅ USED
