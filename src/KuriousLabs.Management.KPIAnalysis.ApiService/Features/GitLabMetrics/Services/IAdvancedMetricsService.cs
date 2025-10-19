@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
 /// Service for calculating advanced metrics for deeper insights into team health, work patterns, and code ownership

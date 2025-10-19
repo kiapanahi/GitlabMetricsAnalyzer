@@ -1,4 +1,4 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 var builder = WebApplication.CreateBuilder(args);
 

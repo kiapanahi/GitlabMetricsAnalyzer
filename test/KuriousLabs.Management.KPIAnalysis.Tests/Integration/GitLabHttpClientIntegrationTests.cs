@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 
 using Moq;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
-namespace Toman.Management.KPIAnalysis.Tests.Integration;
+namespace KuriousLabs.Management.KPIAnalysis.Tests.Integration;
 
 /// <summary>
 /// Integration tests for GitLabHttpClient to validate API connectivity and resilience.

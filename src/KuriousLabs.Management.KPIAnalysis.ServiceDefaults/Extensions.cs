@@ -16,7 +16,7 @@ namespace Microsoft.Extensions.Hosting;
 // To learn more about using this project, see https://aka.ms/dotnet/aspire/service-defaults
 public static class Extensions
 {
-    private const string ServiceName = "Toman.Management.KPIAnalysis";
+    private const string ServiceName = "KuriousLabs.Management.KPIAnalysis";
     private static readonly string ServiceVersion = typeof(Extensions).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {

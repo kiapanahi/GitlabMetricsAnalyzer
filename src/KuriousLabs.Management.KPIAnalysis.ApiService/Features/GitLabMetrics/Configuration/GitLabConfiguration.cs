@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
 
 public sealed class GitLabConfiguration
 {

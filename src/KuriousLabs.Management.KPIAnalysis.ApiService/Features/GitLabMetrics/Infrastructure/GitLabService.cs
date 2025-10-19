@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Options;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 public sealed class GitLabService : IGitLabService
 {

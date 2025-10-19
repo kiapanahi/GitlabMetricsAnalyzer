@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
 /// <summary>
 /// Represents a project in the GitLab API contributed_projects response.

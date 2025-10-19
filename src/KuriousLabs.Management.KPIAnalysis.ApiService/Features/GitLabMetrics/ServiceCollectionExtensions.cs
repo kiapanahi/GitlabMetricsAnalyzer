@@ -2,13 +2,13 @@ using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Options;
 
-using Toman.Management.KPIAnalysis.ApiService.Configuration;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Configuration;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Configuration;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 internal static class ServiceCollectionExtensions
 {
@@ -16,7 +16,7 @@ internal static class ServiceCollectionExtensions
     {
         builder.Services.AddOpenTelemetry()
         .WithTracing(tracing => tracing.AddSource(Diagnostics.ActivitySource.Name))
-        .WithMetrics(metrics => metrics.AddMeter("Toman.Management.KPIAnalysis.GitLabMetrics"));
+        .WithMetrics(metrics => metrics.AddMeter("KuriousLabs.Management.KPIAnalysis.GitLabMetrics"));
 
         // Add GitLab health check
         builder.Services.AddHealthChecks().AddGitLabHealthCheck();

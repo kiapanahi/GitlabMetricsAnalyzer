@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.HealthChecks;
 
 public sealed class GitLabHealthCheck : IHealthCheck
 {

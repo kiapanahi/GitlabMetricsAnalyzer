@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 
 internal static class ProjectMetricsEndpoints
 {

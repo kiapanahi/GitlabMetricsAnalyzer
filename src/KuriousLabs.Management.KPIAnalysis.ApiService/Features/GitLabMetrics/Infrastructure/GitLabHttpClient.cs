@@ -1,17 +1,17 @@
 using System.Net;
 using System.Text.Json;
 
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-using GitLabCommit = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
-using GitLabCommitStats = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommitStats;
-using GitLabMergeRequest = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequest;
-using GitLabPipeline = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipeline;
-using GitLabPipelineJob = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipelineJob;
-using GitLabProject = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
-using GitLabUser = Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
+using GitLabCommit = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommit;
+using GitLabCommitStats = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabCommitStats;
+using GitLabMergeRequest = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabMergeRequest;
+using GitLabPipeline = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipeline;
+using GitLabPipelineJob = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabPipelineJob;
+using GitLabProject = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabProject;
+using GitLabUser = KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw.GitLabUser;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
 /// <summary>
 /// HTTP client service for making direct GitLab API calls that replace NGitLab library functionality.

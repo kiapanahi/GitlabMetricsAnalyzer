@@ -1,4 +1,4 @@
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
 /// Service for analyzing commit time patterns and distributions

@@ -1,6 +1,6 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Models.Raw;
 
-namespace Toman.Management.KPIAnalysis.Tests.TestFixtures;
+namespace KuriousLabs.Management.KPIAnalysis.Tests.TestFixtures;
 
 /// <summary>
 /// Deterministic test fixtures for GitLab data covering comprehensive edge cases.

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure.DTOs;
 
 public sealed record GitLabBranch(
     [property: JsonPropertyName("name")] string Name,
