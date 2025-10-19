@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-This project is intended to analyze, calculate and measure different KPIs for the engineering team of my company. I work as the VP of engineering at Toman and we want to have a better understanding of our engineering processes and how we can improve them.
+This project is intended to analyze, calculate and measure different KPIs for the engineering team of my company. I work as the VP of engineering at KuriousLabs and we want to have a better understanding of our engineering processes and how we can improve them.
 
 ## Objective
 
