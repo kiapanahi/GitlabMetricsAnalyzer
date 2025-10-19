@@ -100,7 +100,20 @@ The current configuration only requires **two sections**:
     "LogLevel": {
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning",
-              "Toman.Management.KPIAnalysis": "Debug"
+              "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning",
+            "Microsoft.EntityFrameworkCore": "Information",
+            "Hangfire": "Information",
+            "NGitLab": "Debug",
+            "System.Net.Http.HttpClient": "Warning",
+            "Microsoft.Extensions.Http": "Warning",
+            "Microsoft.Extensions.Http.DefaultHttpClientFactory": "Warning",
+            "Microsoft.Extensions.Diagnostics": "Warning",
+            "Microsoft.Hosting.Lifetime": "Information",
+            "KuriousLabs.Management.KPIAnalysis.ApiService": "Debug",
+            "KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics": "Debug",
+              "KuriousLabs.Management.KPIAnalysis": "Debug"
     }
   },
   "Processing": {
