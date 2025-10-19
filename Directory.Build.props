@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AnalysisMode>latest-all</AnalysisMode>
-    <Version>3.0.0</Version>
+    <Version>4.0.0</Version>
     <RootNamespace>Toman.Management.KPIAnalysis</RootNamespace>
 
     <!-- Open Source / Package Metadata -->
