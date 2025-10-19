@@ -11,7 +11,7 @@ aspire run
 
 Or run the API service directly:
 ```powershell
-dotnet run --project src/Toman.Management.KPIAnalysis.ApiService
+dotnet run --project src/KuriousLabs.Management.KPIAnalysis.ApiService
 ```
 
 ### 2. Get a Valid User ID
