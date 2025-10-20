@@ -72,8 +72,6 @@ public sealed class CodeCharacteristicsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
         Assert.Equal(0, result.TotalCommits);
         Assert.Equal(0, result.TotalMergedMrs);
         Assert.Equal(0, result.CommitsPerDay);

@@ -5,6 +5,33 @@ All notable changes to GitLab Metrics Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-10-18
+
+### Added
+- ✅ **User Metrics Aggregation API**: New endpoint `GET /api/v1/{userId}/metrics/all` that concurrently gathers all available user metrics
+  - Executes 7 metric calculations in parallel for maximum performance
+  - Returns comprehensive metrics including:
+    - Commit time distribution analysis
+    - MR cycle time (P50)
+    - Flow and throughput metrics
+    - Collaboration and review metrics
+    - Quality and reliability metrics
+    - Code characteristics
+    - Advanced metrics (Bus Factor, Response Time Distribution, etc.)
+  - Graceful error handling - returns partial results if some metrics fail
+  - Error details included in response for failed metric calculations
+- ✅ **New Services**:
+  - `IUserMetricsAggregationService` - Service interface for concurrent metric aggregation
+  - `UserMetricsAggregationService` - Implementation with parallel execution and error isolation
+- ✅ **Response Model**: `AggregatedUserMetricsResult` for unified metric responses
+
+### Technical Details
+- Leverages `Task.WhenAll` for concurrent execution
+- Each metric calculation is isolated with individual error handling
+- Logging at INFO, DEBUG, and ERROR levels for observability
+- Respects cancellation tokens throughout the async pipeline
+- Compatible with existing query parameters (`windowDays`, `revertDetectionDays`)
+
 ## [2.0.0] - 2025-10-16
 
 ### 🎉 Major Architecture Consolidation

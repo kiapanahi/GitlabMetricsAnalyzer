@@ -24,29 +24,9 @@ public interface ICollaborationMetricsService
 public sealed class CollaborationMetricsResult
 {
     /// <summary>
-    /// The GitLab user ID
+    /// One-line description of this metric
     /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public string Description => "Measures code review participation, peer feedback quality, and team collaboration effectiveness";
 
     /// <summary>
     /// Metric 1: Number of review comments made by developer (as reviewer)

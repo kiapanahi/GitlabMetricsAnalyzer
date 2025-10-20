@@ -55,9 +55,6 @@ public sealed class AdvancedMetricsServiceTests
         var result = await service.CalculateAdvancedMetricsAsync(userId, windowDays);
 
         // Assert
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
-        Assert.Equal(windowDays, result.WindowDays);
         Assert.Equal(0, result.BusFactor);
         Assert.Equal(0, result.ContributingDevelopersCount);
         Assert.Equal(0, result.Top3DevelopersFileChangePercentage);

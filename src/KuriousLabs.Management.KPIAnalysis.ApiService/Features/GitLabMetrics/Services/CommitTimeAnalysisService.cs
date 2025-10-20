@@ -139,12 +139,7 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
 
         return new CommitTimeDistributionAnalysis
         {
-            UserId = userId,
-            Username = user.Username ?? string.Empty,
             Email = user.Email ?? string.Empty,
-            LookbackDays = lookbackDays,
-            AnalysisStartDate = startDate,
-            AnalysisEndDate = endDate,
             TotalCommits = totalCommits,
             HourlyDistribution = hourlyDistribution,
             TimePeriods = timePeriodDistribution,
@@ -201,12 +196,7 @@ public sealed class CommitTimeAnalysisService : ICommitTimeAnalysisService
     {
         return new CommitTimeDistributionAnalysis
         {
-            UserId = user.Id,
-            Username = user.Username ?? string.Empty,
             Email = user.Email ?? string.Empty,
-            LookbackDays = lookbackDays,
-            AnalysisStartDate = startDate,
-            AnalysisEndDate = endDate,
             TotalCommits = 0,
             HourlyDistribution = Enumerable.Range(0, 24).ToDictionary(hour => hour, _ => 0),
             TimePeriods = new TimePeriodDistribution

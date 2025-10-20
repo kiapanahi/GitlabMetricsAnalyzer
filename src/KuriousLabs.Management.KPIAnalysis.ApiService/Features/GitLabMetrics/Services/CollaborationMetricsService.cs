@@ -313,11 +313,6 @@ public sealed class CollaborationMetricsService : ICollaborationMetricsService
 
         return new CollaborationMetricsResult
         {
-            UserId = userId,
-            Username = user.Username ?? "Unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             ReviewCommentsGiven = reviewCommentsGiven,
             ReviewCommentsReceived = reviewCommentsReceived,
             ApprovalsGiven = approvalsGiven,
@@ -423,11 +418,6 @@ public sealed class CollaborationMetricsService : ICollaborationMetricsService
     {
         return new CollaborationMetricsResult
         {
-            UserId = user.Id,
-            Username = user.Username ?? "Unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             ReviewCommentsGiven = 0,
             ReviewCommentsReceived = 0,
             ApprovalsGiven = 0,

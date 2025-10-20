@@ -68,8 +68,6 @@ public sealed class QualityMetricsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
         Assert.Equal(0, result.MergedMrCount);
         Assert.Equal(0, result.ReworkRatio);
         Assert.Equal(0, result.RevertRate);
@@ -243,8 +241,6 @@ public sealed class QualityMetricsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
         Assert.Equal(4, result.MergedMrCount);
 
         // Revert rate: 1 revert out of 4 MRs = 0.25

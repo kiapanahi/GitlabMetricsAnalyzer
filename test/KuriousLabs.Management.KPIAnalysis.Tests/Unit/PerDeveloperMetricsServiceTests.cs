@@ -145,9 +145,6 @@ public sealed class PerDeveloperMetricsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
-        Assert.Equal(windowDays, result.WindowDays);
         Assert.NotNull(result.MrCycleTimeP50H);
         
         // Median of 48h and 96h should be 72h
@@ -194,7 +191,6 @@ public sealed class PerDeveloperMetricsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
         Assert.Null(result.MrCycleTimeP50H);
         Assert.Equal(0, result.MergedMrCount);
         Assert.Equal(0, result.ExcludedMrCount);
@@ -574,9 +570,6 @@ public sealed class PerDeveloperMetricsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
-        Assert.Equal(windowDays, result.WindowDays);
         
         // Metric 1: Merged MRs Count
         Assert.Equal(2, result.MergedMrsCount);
@@ -648,7 +641,6 @@ public sealed class PerDeveloperMetricsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
         Assert.Equal(0, result.MergedMrsCount);
         Assert.Equal(0, result.LinesChanged);
         Assert.Null(result.CodingTimeMedianH);

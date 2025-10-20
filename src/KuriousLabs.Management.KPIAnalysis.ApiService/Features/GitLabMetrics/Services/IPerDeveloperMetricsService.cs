@@ -36,29 +36,9 @@ public interface IPerDeveloperMetricsService
 public sealed class MrCycleTimeResult
 {
     /// <summary>
-    /// The GitLab user ID
+    /// One-line description of this metric
     /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public string Description => "Measures the median time from first commit to merge, indicating how quickly code flows through the development pipeline";
 
     /// <summary>
     /// Median MR cycle time in hours (P50)
@@ -102,29 +82,9 @@ public sealed class ProjectMrSummary
 public sealed class FlowMetricsResult
 {
     /// <summary>
-    /// The GitLab user ID
+    /// One-line description of this metric
     /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public string Description => "Tracks development velocity, throughput, and efficiency through the entire development lifecycle from coding to merge";
 
     /// <summary>
     /// Metric 1: Total merged MRs count

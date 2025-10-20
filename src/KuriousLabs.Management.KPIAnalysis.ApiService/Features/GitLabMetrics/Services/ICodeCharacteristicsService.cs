@@ -24,29 +24,9 @@ public interface ICodeCharacteristicsService
 public sealed class CodeCharacteristicsResult
 {
     /// <summary>
-    /// The GitLab user ID
+    /// One-line description of this metric
     /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public string Description => "Analyzes coding patterns including commit frequency, change size, file ownership, and adherence to conventions";
 
     /// <summary>
     /// Metric 1: Commit Frequency - Average commits per day

@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 using Microsoft.Extensions.Options;
 
 using KuriousLabs.Management.KPIAnalysis.ApiService.Configuration;
@@ -138,11 +136,6 @@ public sealed class AdvancedMetricsService : IAdvancedMetricsService
 
         return new AdvancedMetricsResult
         {
-            UserId = userId,
-            Username = user.Username ?? "unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             BusFactor = busFactor.GiniCoefficient,
             ContributingDevelopersCount = busFactor.DeveloperCount,
             Top3DevelopersFileChangePercentage = busFactor.Top3Percentage,
@@ -626,11 +619,6 @@ public sealed class AdvancedMetricsService : IAdvancedMetricsService
     {
         return new AdvancedMetricsResult
         {
-            UserId = user.Id,
-            Username = user.Username ?? "unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             BusFactor = 0,
             ContributingDevelopersCount = 0,
             Top3DevelopersFileChangePercentage = 0,

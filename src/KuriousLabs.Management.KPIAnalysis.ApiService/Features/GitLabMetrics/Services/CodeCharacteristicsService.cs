@@ -150,11 +150,6 @@ public sealed class CodeCharacteristicsService : ICodeCharacteristicsService
 
         return new CodeCharacteristicsResult
         {
-            UserId = userId,
-            Username = user.Username ?? "Unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             CommitsPerDay = commitFrequencyMetrics.CommitsPerDay,
             CommitsPerWeek = commitFrequencyMetrics.CommitsPerWeek,
             TotalCommits = allCommits.Count,
@@ -448,11 +443,6 @@ public sealed class CodeCharacteristicsService : ICodeCharacteristicsService
     {
         return new CodeCharacteristicsResult
         {
-            UserId = user.Id,
-            Username = user.Username ?? "Unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             CommitsPerDay = 0,
             CommitsPerWeek = 0,
             TotalCommits = 0,

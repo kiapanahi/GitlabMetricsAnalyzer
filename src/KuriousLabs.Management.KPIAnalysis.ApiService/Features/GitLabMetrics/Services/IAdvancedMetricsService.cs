@@ -24,29 +24,9 @@ public interface IAdvancedMetricsService
 public sealed class AdvancedMetricsResult
 {
     /// <summary>
-    /// The GitLab user ID
+    /// One-line description of this metric
     /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
+    public string Description => "Provides deeper insights into code ownership risk, work patterns, review responsiveness, and cross-team collaboration";
 
     /// <summary>
     /// Metric 1: Bus Factor - Code ownership concentration (Gini coefficient 0-1)

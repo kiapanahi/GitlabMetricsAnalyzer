@@ -12,6 +12,11 @@ internal static class UserMetricsEndpoints
             .WithTags("GitLab user analytics and metrics")
             .WithOpenApi();
 
+        group.MapGet("/metrics/all", GetAllUserMetrics)
+            .WithName("GetAllUserMetrics")
+            .WithSummary("Get all available metrics for a user")
+            .WithDescription("Concurrently gathers all implemented user metrics including commit time analysis, MR cycle time, flow metrics, collaboration metrics, quality metrics, code characteristics, and advanced metrics");
+
         group.MapGet("/analysis/commit-time", AnalyzeUserCommitTimeDistribution)
             .WithName("AnalyzeUserCommitTimeDistribution")
             .WithSummary("Analyze commit time distribution for a user")
@@ -46,6 +51,63 @@ internal static class UserMetricsEndpoints
             .WithName("CalculateAdvancedMetrics")
             .WithSummary("Calculate advanced metrics for a developer")
             .WithDescription("Calculates 7 advanced metrics: Bus Factor, Response Time Distribution, Batch Size, Draft Duration, Iteration Count, Idle Time in Review, and Cross-Team Collaboration Index");
+    }
+
+    private static async Task<IResult> GetAllUserMetrics(
+        long userId,
+        [FromQuery] int? windowDays,
+        [FromQuery] int? revertDetectionDays,
+        IUserMetricsAggregationService aggregationService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var days = windowDays ?? 30;
+            var revertDays = revertDetectionDays ?? 30;
+
+            if (days <= 0)
+            {
+                return Results.BadRequest(new { Error = "windowDays must be greater than 0" });
+            }
+
+            if (days > 365)
+            {
+                return Results.BadRequest(new { Error = "windowDays cannot exceed 365 days" });
+            }
+
+            if (revertDays <= 0)
+            {
+                return Results.BadRequest(new { Error = "revertDetectionDays must be greater than 0" });
+            }
+
+            if (revertDays > 90)
+            {
+                return Results.BadRequest(new { Error = "revertDetectionDays cannot exceed 90 days" });
+            }
+
+            var result = await aggregationService.GetAllUserMetricsAsync(
+                userId,
+                days,
+                revertDays,
+                cancellationToken);
+
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.NotFound(new { Error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                title: "Error gathering all user metrics",
+                statusCode: 500);
+        }
     }
 
     private static async Task<IResult> AnalyzeUserCommitTimeDistribution(
