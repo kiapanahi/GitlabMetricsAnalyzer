@@ -1,6 +1,6 @@
-using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
 
-namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
+namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
 /// Service implementation for aggregating all user metrics concurrently
