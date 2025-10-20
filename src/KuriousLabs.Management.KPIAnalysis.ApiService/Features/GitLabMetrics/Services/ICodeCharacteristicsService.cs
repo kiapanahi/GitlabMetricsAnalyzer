@@ -29,31 +29,6 @@ public sealed class CodeCharacteristicsResult
     public string Description => "Analyzes coding patterns including commit frequency, change size, file ownership, and adherence to conventions";
 
     /// <summary>
-    /// The GitLab user ID
-    /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
-
-    /// <summary>
     /// Metric 1: Commit Frequency - Average commits per day
     /// Direction: context-dependent
     /// </summary>

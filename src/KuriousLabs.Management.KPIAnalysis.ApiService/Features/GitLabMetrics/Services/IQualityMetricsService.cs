@@ -31,31 +31,6 @@ public sealed class QualityMetricsResult
     public string Description => "Evaluates code quality, test coverage, CI success rates, and frequency of issues requiring fixes or reverts";
 
     /// <summary>
-    /// The GitLab user ID
-    /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int WindowDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowStart { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime WindowEnd { get; init; }
-
-    /// <summary>
     /// Metric 1: Rework Ratio - MRs with commits after review started
     /// Formula: (count(MRs with commits_after_first_review > 0)) / merged_mrs
     /// Direction: ↓ good

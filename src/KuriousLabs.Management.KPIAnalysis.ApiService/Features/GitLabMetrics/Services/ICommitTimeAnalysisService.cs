@@ -29,34 +29,9 @@ public sealed class CommitTimeDistributionAnalysis
     public string Description => "Analyzes when commits are made throughout the day to identify work patterns and peak productivity hours";
 
     /// <summary>
-    /// The GitLab user ID
-    /// </summary>
-    public required long UserId { get; init; }
-
-    /// <summary>
-    /// The username
-    /// </summary>
-    public required string Username { get; init; }
-
-    /// <summary>
     /// The email address used for the analysis
     /// </summary>
     public required string Email { get; init; }
-
-    /// <summary>
-    /// Number of days analyzed
-    /// </summary>
-    public required int LookbackDays { get; init; }
-
-    /// <summary>
-    /// Start date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime AnalysisStartDate { get; init; }
-
-    /// <summary>
-    /// End date of the analysis period (UTC)
-    /// </summary>
-    public required DateTime AnalysisEndDate { get; init; }
 
     /// <summary>
     /// Total number of commits found

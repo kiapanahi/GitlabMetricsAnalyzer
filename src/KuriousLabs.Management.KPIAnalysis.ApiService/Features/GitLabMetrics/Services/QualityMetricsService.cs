@@ -148,11 +148,6 @@ public sealed class QualityMetricsService : IQualityMetricsService
 
         return new QualityMetricsResult
         {
-            UserId = userId,
-            Username = user.Username ?? "Unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             MergedMrCount = allMergeRequests.Count,
             ReworkRatio = reworkMetrics.Ratio,
             ReworkMrCount = reworkMetrics.Count,
@@ -353,11 +348,6 @@ public sealed class QualityMetricsService : IQualityMetricsService
     {
         return new QualityMetricsResult
         {
-            UserId = user.Id,
-            Username = user.Username ?? "Unknown",
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             MergedMrCount = 0,
             ReworkRatio = 0,
             ReworkMrCount = 0,

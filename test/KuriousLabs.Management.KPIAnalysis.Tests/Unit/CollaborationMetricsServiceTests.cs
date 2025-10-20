@@ -54,9 +54,6 @@ public sealed class CollaborationMetricsServiceTests
         var result = await service.CalculateCollaborationMetricsAsync(userId, windowDays);
 
         // Assert
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("testuser", result.Username);
-        Assert.Equal(windowDays, result.WindowDays);
         Assert.Equal(0, result.ReviewCommentsGiven);
         Assert.Equal(0, result.ReviewCommentsReceived);
         Assert.Equal(0, result.ApprovalsGiven);

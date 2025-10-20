@@ -1,3 +1,5 @@
+using Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Infrastructure;
+
 namespace Toman.Management.KPIAnalysis.ApiService.Features.GitLabMetrics.Services;
 
 /// <summary>
@@ -10,6 +12,7 @@ public sealed class UserMetricsAggregationService(
     IQualityMetricsService qualityMetricsService,
     ICodeCharacteristicsService codeCharacteristicsService,
     IAdvancedMetricsService advancedMetricsService,
+    IGitLabHttpClient gitLabHttpClient,
     ILogger<UserMetricsAggregationService> logger) : IUserMetricsAggregationService
 {
     public async Task<AggregatedUserMetricsResult> GetAllUserMetricsAsync(
@@ -21,6 +24,13 @@ public sealed class UserMetricsAggregationService(
         logger.LogInformation(
             "Starting concurrent aggregation of all metrics for user {UserId} with window of {WindowDays} days",
             userId, windowDays);
+
+        // Fetch user info
+        var user = await gitLabHttpClient.GetUserByIdAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            throw new InvalidOperationException($"User with ID {userId} not found");
+        }
 
         var windowStart = DateTime.UtcNow.AddDays(-windowDays);
         var windowEnd = DateTime.UtcNow;
@@ -88,16 +98,6 @@ public sealed class UserMetricsAggregationService(
         var codeCharacteristicsResult = await codeCharacteristicsTask;
         var advancedMetricsResult = await advancedMetricsTask;
 
-        // Extract username from any available result
-        var username = commitTimeResult?.Username
-            ?? mrCycleTimeResult?.Username
-            ?? flowMetricsResult?.Username
-            ?? collaborationMetricsResult?.Username
-            ?? qualityMetricsResult?.Username
-            ?? codeCharacteristicsResult?.Username
-            ?? advancedMetricsResult?.Username
-            ?? "unknown";
-
         logger.LogInformation(
             "Completed concurrent aggregation of all metrics for user {UserId}. Successful: {SuccessCount}, Failed: {FailureCount}",
             userId,
@@ -107,7 +107,7 @@ public sealed class UserMetricsAggregationService(
         return new AggregatedUserMetricsResult
         {
             UserId = userId,
-            Username = username,
+            Username = user.Username ?? "unknown",
             WindowDays = windowDays,
             WindowStart = windowStart,
             WindowEnd = windowEnd,

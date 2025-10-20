@@ -208,11 +208,6 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
 
         return new MrCycleTimeResult
         {
-            UserId = userId,
-            Username = user.Username ?? string.Empty,
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             MrCycleTimeP50H = cycleTimes.Count == 0 ? null : (decimal?)ComputeMedian(sortedCycleTimes),
             MrCycleTimeP90H = cycleTimes.Count == 0 ? null : (decimal?)ComputePercentile(sortedCycleTimes, 90),
             MergedMrCount = cycleTimes.Count,
@@ -283,11 +278,6 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
     {
         return new MrCycleTimeResult
         {
-            UserId = user.Id,
-            Username = user.Username ?? string.Empty,
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             MrCycleTimeP50H = null,
             MrCycleTimeP90H = null,
             MergedMrCount = 0,
@@ -539,11 +529,6 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
 
         return new FlowMetricsResult
         {
-            UserId = userId,
-            Username = user.Username ?? string.Empty,
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             MergedMrsCount = mergedMrsCount,
             LinesChanged = linesChanged,
             CodingTimeMedianH = codingTimeMedianH,
@@ -564,11 +549,6 @@ public sealed class PerDeveloperMetricsService : IPerDeveloperMetricsService
     {
         return new FlowMetricsResult
         {
-            UserId = user.Id,
-            Username = user.Username ?? string.Empty,
-            WindowDays = windowDays,
-            WindowStart = windowStart,
-            WindowEnd = windowEnd,
             MergedMrsCount = 0,
             LinesChanged = 0,
             CodingTimeMedianH = null,
