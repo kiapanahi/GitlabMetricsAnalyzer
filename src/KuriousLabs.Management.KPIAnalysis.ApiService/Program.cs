@@ -1,4 +1,5 @@
 using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddProblemDetails();
 
 builder.AddGitLabMetricsServices();
+builder.AddJiraMetricsServices();
 
 var app = builder.Build();
 
@@ -30,6 +32,7 @@ if (app.Environment.IsDevelopment())
 app.MapDefaultEndpoints();
 
 app.MapGitlabMetricsEndpoints();
+app.MapJiraMetricsEndpoints();
 
 app.Run();
 
