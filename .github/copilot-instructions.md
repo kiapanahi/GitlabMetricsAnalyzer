@@ -18,17 +18,21 @@ Build a C# application that collects developer productivity metrics from an on-p
 
 ### Technology Stack
 - Use vertical slice architecture for every feature.
-- **.NET 9** with C# latest features, file-scoped namespaces
+- **.NET 10** with C# latest features, file-scoped namespaces
 - **.NET Aspire** for local orchestration and service discovery
 - **Database**: PostgreSQL with EF Core
 - **Serilog** for logging
-- Use **https://www.nuget.org/packages/NGitLab/** for GitLab API integration
 - **Hangfire** for job scheduling
 - Always use minimal APIs.
 
 
 ### External Integrations
 - **GitLab API**: Issues, PRs, discussions data
+- **Jira API**: Boards, projects and issues data
+  - Refer to the official documentation at https://developer.atlassian.com/cloud/jira/platform/rest/v3/ for API details.
+  - Jira that we use is on-premise and is hosted at "https://jira.tomanpay.net/"
+  - License type is "Data Center".
+
 
 ## Project Structure
 - **KuriousLabs.Management.KPIAnalysis.ApiService** - The main project that contains business logic and APIs
@@ -93,7 +97,7 @@ Build a C# application that collects developer productivity metrics from an on-p
 
 ### Package Management
 - Uses **Central Package Management** via `Directory.Packages.props`
-- All projects target **.NET 9** with nullable reference types enabled
+- All projects target **.NET 10** with nullable reference types enabled
 
 ## Git
 - Always write clear and concise commit messages
