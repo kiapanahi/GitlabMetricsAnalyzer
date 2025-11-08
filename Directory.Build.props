@@ -2,14 +2,13 @@
   <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
   <PropertyGroup>
     <!-- Common properties across all projects -->
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AnalysisMode>latest-all</AnalysisMode>
     <Version>4.0.1</Version>
     <RootNamespace>KuriousLabs.Management.KPIAnalysis</RootNamespace>
-
     <!-- Open Source / Package Metadata -->
     <Authors>Kia Raad</Authors>
     <Company>KuriousLabs</Company>
