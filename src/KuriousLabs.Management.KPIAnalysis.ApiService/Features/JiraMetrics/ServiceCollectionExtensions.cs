@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics.Configuration;
 using KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics.HealthChecks;
 using KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics.Infrastructure;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics.Services;
 
 namespace KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics;
 
@@ -60,7 +61,10 @@ internal static class ServiceCollectionExtensions
                 options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
             });
 
-        // Services will be registered here as they are implemented
+        // Register metrics services
+        builder.Services.AddScoped<IIssueTrackingMetricsService, IssueTrackingMetricsService>();
+        builder.Services.AddScoped<IUserJiraMetricsService, UserJiraMetricsService>();
+        builder.Services.AddScoped<IProjectJiraMetricsService, ProjectJiraMetricsService>();
         
         return builder;
     }
