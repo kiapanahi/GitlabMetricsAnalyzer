@@ -1,5 +1,6 @@
 using KuriousLabs.Management.KPIAnalysis.ApiService.Features.GitLabMetrics;
 using KuriousLabs.Management.KPIAnalysis.ApiService.Features.JiraMetrics;
+using KuriousLabs.Management.KPIAnalysis.ApiService.Features.CrossSystemMetrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddProblemDetails();
 
 builder.AddGitLabMetricsServices();
 builder.AddJiraMetricsServices();
+builder.Services.AddCrossSystemMetricsServices();
 
 var app = builder.Build();
 
@@ -33,6 +35,7 @@ app.MapDefaultEndpoints();
 
 app.MapGitlabMetricsEndpoints();
 app.MapJiraMetricsEndpoints();
+app.MapCrossSystemMetricsEndpoints();
 
 app.Run();
 
